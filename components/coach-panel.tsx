@@ -297,6 +297,7 @@ function toApi(turns: StoredTurn[]) {
           id: call.id,
           type: "function",
           function: { name: call.name, arguments: call.arguments },
+          ...(call.thoughtSignature ? { thoughtSignature: call.thoughtSignature } : {}),
         })),
       };
     }

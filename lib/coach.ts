@@ -7,6 +7,8 @@ export type ToolCall = {
   id: string;
   name: string;
   arguments: string;
+  /** Signature renvoyée par Gemini, à recopier au tour suivant. */
+  thoughtSignature?: string;
 };
 
 export type CoachContext = ReturnType<typeof buildCoachContext>;

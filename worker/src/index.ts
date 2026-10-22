@@ -1,4 +1,4 @@
-import { openAiPayload } from "../../lib/coach";
+import { buildAiCall, coachFailure, providerName, readAiMessage, type AiEnv } from "./ai";
 import {
   basicHeader,
   buildIcs,
@@ -14,9 +14,7 @@ import {
   type HttpCall,
 } from "./caldav";
 
-export type Env = {
-  OPENAI_API_KEY?: string;
-  OPENAI_MODEL?: string;
+export type Env = AiEnv & {
   ICLOUD_APP_PASSWORD?: string;
   APP_TOKEN?: string;
   CALDAV_HOST?: string;
@@ -53,30 +51,16 @@ export async function handleRequest(request: Request, env: Env, fetchImpl: Fetch
 }
 
 async function coach(request: Request, env: Env, fetchImpl: FetchLike): Promise<Response> {
-  if (!env.OPENAI_API_KEY) return json({ error: "Le coach n’est pas encore activé." }, 503);
   const body = await readJson(request);
-  const payload = openAiPayload(env.OPENAI_MODEL || "gpt-4o-mini", body.context ?? {}, body.messages);
-  const response = await fetchImpl("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) return json({ error: "Le coach n’a pas pu répondre. Réessayez dans un moment." }, 502);
-  const data = (await response.json()) as {
-    choices?: { message?: { content?: string | null; tool_calls?: { id?: string; function?: { name?: string; arguments?: string } }[] } }[];
-  };
-  const message = data.choices?.[0]?.message;
-  const toolCalls = (message?.tool_calls ?? [])
-    .map((item) => ({
-      id: item.id || "",
-      name: item.function?.name || "",
-      arguments: item.function?.arguments || "{}",
-    }))
-    .filter((item) => item.id && item.name);
-  return json({ message: { role: "assistant", content: message?.content ?? "", tool_calls: toolCalls } }, 200);
+  const call = buildAiCall(env, body.context ?? {}, body.messages);
+  if ("error" in call) return json({ error: call.error }, call.status);
+  const response = await fetchImpl(call.url, { method: "POST", headers: call.headers, body: call.body });
+  if (!response.ok) {
+    const failure = coachFailure(response.status);
+    return json({ error: failure.error }, failure.status);
+  }
+  const data = (await response.json()) as unknown;
+  return json({ message: readAiMessage(providerName(env.AI_PROVIDER), data) }, 200);
 }
 
 async function calendar(request: Request, env: Env, fetchImpl: FetchLike): Promise<Response> {

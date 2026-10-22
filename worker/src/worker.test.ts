@@ -4,8 +4,8 @@ import { handleRequest, resetCalendarCache, type Env } from "./index";
 
 const env: Env = {
   APP_TOKEN: "phone-token",
-  OPENAI_API_KEY: "sk-test",
-  OPENAI_MODEL: "gpt-4o-mini",
+  GEMINI_API_KEY: "AIza-test",
+  AI_MODEL: "gemini-3.8-flash",
   ICLOUD_APP_PASSWORD: "app-pass",
   CALDAV_USER: "florian.lemen@icloud.com",
   CALDAV_HOST: "https://caldav.icloud.com",
@@ -41,15 +41,17 @@ describe("worker", () => {
     expect(response.headers.get("Access-Control-Allow-Origin")).toBeNull();
   });
 
-  it("autorise seulement le site Pages et transmet l’appel au modèle", async () => {
+  it("autorise seulement le site Pages et transmet l’appel à Gemini", async () => {
     const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async () =>
       new Response(
         JSON.stringify({
-          choices: [
+          candidates: [
             {
-              message: {
-                content: "Je regarde le calendrier.",
-                tool_calls: [{ id: "call_1", function: { name: "list_events", arguments: "{\"start\":\"2026-10-25\",\"end\":\"2026-11-01\"}" } }],
+              content: {
+                parts: [
+                  { text: "Je regarde le calendrier." },
+                  { functionCall: { name: "list_events", args: { start: "2026-10-25", end: "2026-11-01" } }, thoughtSignature: "sig-1" },
+                ],
               },
             },
           ],
@@ -72,17 +74,61 @@ describe("worker", () => {
     );
     expect(response.status).toBe(200);
     const sent = fetchImpl.mock.calls[0];
-    expect(sent[0]).toBe("https://api.openai.com/v1/chat/completions");
+    expect(sent[0]).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent");
     const init = sent[1] as RequestInit;
-    expect(new Headers(init.headers).get("Authorization")).toBe("Bearer sk-test");
-    const payload = JSON.parse(String(init.body)) as { model: string; messages: { role: string; content: string }[]; tools: { function: { name: string } }[] };
+    expect(new Headers(init.headers).get("x-goog-api-key")).toBe("AIza-test");
+    const payload = JSON.parse(String(init.body)) as {
+      systemInstruction: { parts: { text: string }[] };
+      contents: { role: string; parts: { text?: string }[] }[];
+      tools: { functionDeclarations: { name: string }[] }[];
+    };
+    expect(payload.systemInstruction.parts[0].text).toMatch(/Chef sport/);
+    expect(payload.contents.some((item) => item.parts.some((part) => part.text === "oublie"))).toBe(false);
+    expect(payload.contents.some((item) => item.parts.some((part) => part.text === "Quoi demain ?"))).toBe(true);
+    expect(payload.tools[0].functionDeclarations.some((item) => item.name === "list_events")).toBe(true);
+    expect(payload.tools[0].functionDeclarations.some((item) => item.name === "create_session")).toBe(true);
+    const raw = JSON.stringify(payload);
+    expect(raw).not.toContain("phone-token");
+    expect(raw).not.toContain("app-pass");
+    expect(raw).not.toContain("AIza-test");
+    const body = (await response.json()) as { message: { content: string; tool_calls: { name: string; arguments: string; thoughtSignature?: string }[] } };
+    expect(body.message.content).toMatch(/calendrier/);
+    expect(body.message.tool_calls[0].name).toBe("list_events");
+    expect(body.message.tool_calls[0].arguments).toContain("2026-10-25");
+    expect(body.message.tool_calls[0].thoughtSignature).toBe("sig-1");
+  });
+
+  it("répond gentiment quand le palier gratuit est saturé", async () => {
+    const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async () =>
+      new Response(JSON.stringify({ error: { code: 429, status: "RESOURCE_EXHAUSTED" } }), { status: 429 }),
+    );
+    const response = await handleRequest(post("/coach", { messages: [{ role: "user", content: "Bonjour" }] }), env, fetchImpl);
+    expect(response.status).toBe(429);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toBe("Le coach souffle un peu, réessayez dans une minute.");
+  });
+
+  it("passe à OpenAI avec un seul réglage", async () => {
+    const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: "D’accord.", tool_calls: [{ id: "call_9", function: { name: "list_events", arguments: "{\"start\":\"2026-10-25\",\"end\":\"2026-10-26\"}" } }] } }],
+        }),
+        { status: 200 },
+      ),
+    );
+    const response = await handleRequest(
+      post("/coach", { messages: [{ role: "user", content: "Demain ?" }] }),
+      { ...env, AI_PROVIDER: "openai", AI_MODEL: undefined, GEMINI_API_KEY: undefined, OPENAI_API_KEY: "sk-test" },
+      fetchImpl,
+    );
+    expect(response.status).toBe(200);
+    const sent = fetchImpl.mock.calls[0];
+    expect(sent[0]).toBe("https://api.openai.com/v1/chat/completions");
+    expect(new Headers((sent[1] as RequestInit).headers).get("Authorization")).toBe("Bearer sk-test");
+    const payload = JSON.parse(String((sent[1] as RequestInit).body)) as { model: string; tools: { function: { name: string } }[] };
     expect(payload.model).toBe("gpt-4o-mini");
-    expect(payload.messages[0].role).toBe("system");
-    expect(payload.messages.some((message) => message.content === "oublie")).toBe(false);
-    expect(payload.tools.some((item) => item.function.name === "list_events")).toBe(true);
     expect(payload.tools.some((item) => item.function.name === "create_session")).toBe(true);
-    expect(JSON.stringify(payload)).not.toContain("phone-token");
-    expect(JSON.stringify(payload)).not.toContain("app-pass");
     const body = (await response.json()) as { message: { tool_calls: { name: string }[] } };
     expect(body.message.tool_calls[0].name).toBe("list_events");
   });

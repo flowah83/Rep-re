@@ -4,7 +4,7 @@ compatibility_date = "2026-10-22"
 workers_dev = true
 
 [vars]
-OPENAI_MODEL = "gpt-4o-mini"
+AI_PROVIDER = "gemini"
 CALDAV_HOST = "https://caldav.icloud.com"
 CALDAV_USER = "florian.lemen@icloud.com"
 CALENDAR_NAME = "Calendrier Flo"

@@ -9,7 +9,7 @@ export type StoredTurn = {
   id: string;
   role: "user" | "assistant" | "tool";
   content: string;
-  toolCalls?: { id: string; name: string; arguments: string }[];
+  toolCalls?: { id: string; name: string; arguments: string; thoughtSignature?: string }[];
   toolCallId?: string;
   pending?: boolean;
 };

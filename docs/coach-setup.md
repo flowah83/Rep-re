@@ -13,13 +13,14 @@ Faites les étapes dans l’ordre. Notez les codes dans un endroit à vous. Ne l
 3. Une fois dedans, ouvrez la page d’accueil du tableau de bord.
 4. À droite, copiez **Account ID**. Gardez-le pour l’étape 5. C’est l’identifiant du compte, pas un mot de passe.
 
-## 2. Créer une clé OpenAI
+## 2. Créer une clé Gemini gratuite
 
-1. Allez sur [platform.openai.com](https://platform.openai.com).
-2. Créez un compte, ou connectez-vous.
-3. Ouvrez **API keys**, puis **Create new secret key**.
-4. Copiez la clé tout de suite. Elle commence par `sk-`. Vous ne la reverrez plus.
-5. Le coach utilise un modèle peu coûteux, `gpt-4o-mini`. Vous pouvez le changer plus tard dans Cloudflare, variable `OPENAI_MODEL`.
+1. Allez sur [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+2. Connectez-vous avec un compte Google.
+3. Touchez **Create API key**, puis créez la clé.
+4. Copiez-la tout de suite. Elle commence souvent par `AIza`. C’est `GEMINI_API_KEY`.
+5. Le palier gratuit suffit. Le coach utilise Gemini Flash (`gemini-3.8-flash`).
+6. Si le coach répond « Le coach souffle un peu, réessayez dans une minute », la limite gratuite est atteinte. Attendez une minute, puis renvoyez le message. Rien n’est cassé.
 
 ## 3. Créer un mot de passe pour le calendrier
 
@@ -51,11 +52,13 @@ Inventez une longue suite de lettres et de chiffres, par exemple 30 caractères,
 
 Dans Cloudflare → Workers et Pages → `repere-coach` → Settings → Variables and Secrets, ajoutez trois secrets (pas des variables visibles) :
 
-1. `OPENAI_API_KEY` : la clé de l’étape 2.
+1. `GEMINI_API_KEY` : la clé de l’étape 2.
 2. `ICLOUD_APP_PASSWORD` : le mot de passe d’application de l’étape 3.
 3. `APP_TOKEN` : le code inventé à l’étape 4.
 
 Ces trois codes restent chez Cloudflare. Ils ne sont pas dans le téléphone, ni dans GitHub, ni dans le code.
+
+Le modèle est déjà `gemini-3.8-flash`. Pour en changer un jour, ajoutez une variable (pas un secret) nommée `AI_MODEL`.
 
 ## 7. L’activer dans Repère
 
@@ -68,3 +71,11 @@ Ces trois codes restent chez Cloudflare. Ils ne sont pas dans le téléphone, ni
 Ensuite, le bouton rond ouvre la conversation. Rien n’est modifié dans l’application ni dans le calendrier tant que vous n’avez pas touché **Appliquer**. **Annuler** ne change rien.
 
 S’il manque l’adresse ou le code, le coach affiche qu’il n’est pas encore activé. L’application ne plante pas.
+
+## Plus tard, si vous voulez OpenAI
+
+Ce n’est pas nécessaire. Le coach est déjà sur Gemini.
+
+1. Dans Cloudflare, sur le Worker, ajoutez la variable `AI_PROVIDER` avec la valeur `openai`.
+2. Ajoutez le secret `OPENAI_API_KEY`.
+3. Si vous aviez mis une variable `AI_MODEL`, remplacez-la par `gpt-4o-mini`. Sinon, laissez-la absente.
