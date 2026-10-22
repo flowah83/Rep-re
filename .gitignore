@@ -1,0 +1,11 @@
+node_modules/
+agent-tools/
+.next/
+out/
+tsconfig.tsbuildinfo
+.DS_Store
+npm-debug.log*
+.env
+.env.*
+!.env.example
+coverage/

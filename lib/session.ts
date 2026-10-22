@@ -1,0 +1,224 @@
+import { epley, hardSetCount, isHardSet, tonnage } from "./calc";
+import type { ExerciseLog, Session, SetLog } from "./types";
+import { formatKg, formatLong, uid } from "./utils";
+
+export function blankExercise(partial: Omit<ExerciseLog, "id" | "sets"> & { sets?: SetLog[] }): ExerciseLog {
+  const sets = partial.sets ?? buildSets(partial.planned.sets, partial.planned.loadKg, false);
+  return { ...partial, id: uid(), sets };
+}
+
+export function buildSets(count: number, loadKg: number | null, warmup: boolean): SetLog[] {
+  return Array.from({ length: count }, () => ({
+    id: uid(),
+    loadKg,
+    reps: null,
+    rpe: null,
+    warmup,
+    done: false,
+  }));
+}
+
+export function nextUndone(ex: ExerciseLog): SetLog | undefined {
+  return ex.sets.find((s) => !s.done);
+}
+
+export function patchSet(session: Session, exerciseId: string, setId: string, patch: Partial<SetLog>): Session {
+  return {
+    ...session,
+    exercises: session.exercises.map((ex) =>
+      ex.id !== exerciseId
+        ? ex
+        : { ...ex, sets: ex.sets.map((s) => (s.id === setId ? { ...s, ...patch } : s)) },
+    ),
+  };
+}
+
+export function stepValue(current: number | null, delta: number, fallback: number, min = 0): number {
+  const base = current == null ? fallback : current;
+  return Math.max(min, Math.round((base + delta) * 100) / 100);
+}
+
+export function cycleRpe(current: number | null): number | null {
+  if (current == null) return 6;
+  if (current >= 10) return null;
+  return current + 1;
+}
+
+export function completeSet(session: Session, exerciseId: string, setId: string): Session {
+  const ex = session.exercises.find((e) => e.id === exerciseId);
+  const set = ex?.sets.find((s) => s.id === setId);
+  if (!ex || !set) return session;
+  const reps = set.reps ?? ex.planned.reps ?? 0;
+  const loadKg = set.loadKg ?? ex.planned.loadKg;
+  const done = !set.done;
+  let next = patchSet(session, exerciseId, setId, {
+    done,
+    reps: done ? reps : set.reps,
+    loadKg,
+    rpe: done ? (set.rpe ?? (set.warmup ? null : ex.planned.rpe)) : set.rpe,
+  });
+  if (done && !set.warmup) {
+    next = { ...next, restEndsAt: Date.now() + ex.planned.restSec * 1000 };
+  } else if (!done) {
+    next = { ...next, restEndsAt: null };
+  }
+  return next;
+}
+
+export function startSession(session: Session): Session {
+  return {
+    ...session,
+    status: "active",
+    startedAt: session.startedAt ?? new Date().toISOString(),
+  };
+}
+
+export function finishSession(session: Session): Session {
+  return {
+    ...session,
+    status: "done",
+    endedAt: new Date().toISOString(),
+    restEndsAt: null,
+  };
+}
+
+export type CompareKind = "tenu" | "presque" | "au-dessus" | "charge-inedite" | "en-dessous" | "vide";
+
+export function compareExercise(
+  ex: ExerciseLog,
+  prior: Session[],
+): { kind: CompareKind; line: string } {
+  const work = ex.sets.filter(isHardSet);
+  if (work.length === 0) return { kind: "vide", line: "Pas encore noté." };
+  const repsList = work.map((s) => s.reps ?? 0);
+  const loads = work.map((s) => s.loadKg ?? 0);
+  const maxLoad = Math.max(...loads);
+  const plannedLoad = ex.planned.loadKg;
+  const plannedReps = ex.planned.reps;
+  const repsText = repsList.join(", ");
+  const rpes = work.map((s) => s.rpe).filter((r): r is number => r != null);
+  const rpeText = rpes.length ? ` RPE ${rpes.join(", ")}.` : "";
+
+  const seenBefore = prior.some((session) =>
+    session.exercises.some(
+      (other) =>
+        other.name === ex.name &&
+        other.sets.some((s) => isHardSet(s) && (s.loadKg ?? 0) >= maxLoad - 0.01),
+    ),
+  );
+
+  if (plannedLoad != null && maxLoad > plannedLoad + 0.01) {
+    const kind: CompareKind = seenBefore ? "au-dessus" : "charge-inedite";
+    return {
+      kind,
+      line: `Prévu ${formatKg(plannedLoad)} kg. Fait ${formatKg(maxLoad)} kg × ${repsText}.${rpeText}`,
+    };
+  }
+
+  const meets =
+    plannedReps == null ||
+    work.every((s, i) => (s.reps ?? 0) >= plannedReps && (plannedLoad == null || (loads[i] ?? 0) >= plannedLoad - 0.01));
+  if (meets) {
+    return {
+      kind: "tenu",
+      line: plannedLoad != null ? `Tenu : ${formatKg(plannedLoad)} kg × ${repsText}.${rpeText}` : `Fait ${repsText}.${rpeText}`,
+    };
+  }
+  const close =
+    plannedReps != null && work.every((s) => (s.reps ?? 0) >= plannedReps - 1);
+  if (close) {
+    return {
+      kind: "presque",
+      line: `Prévu ${plannedReps} répétitions. Fait ${repsText}.${rpeText}`,
+    };
+  }
+  return {
+    kind: "en-dessous",
+    line: `Prévu ${plannedReps ?? "—"} répétitions. Fait ${repsText}.${rpeText}`,
+  };
+}
+
+export function summaryText(session: Session, prior: Session[]): string {
+  const minutes = session.startedAt
+    ? Math.max(1, Math.round(((session.endedAt ? Date.parse(session.endedAt) : Date.now()) - Date.parse(session.startedAt)) / 60000))
+    : null;
+  const lines = [
+    `${formatLong(session.date)} — ${session.title}, faite.`,
+    `${minutes ? `${minutes} min. ` : ""}${hardSetCount(session.exercises)} séries de travail. ${formatKg(tonnage(session.exercises))} kg déplacés.`,
+  ];
+  for (const ex of session.exercises) {
+    const work = ex.sets.filter(isHardSet);
+    if (!work.length) continue;
+    const bits = work.map((s) => `${s.loadKg ?? 0}×${s.reps}`).join(", ");
+    const cmp = compareExercise(ex, prior);
+    lines.push(`${ex.name} : ${bits}. ${cmp.line}`);
+  }
+  if (session.noteForCoach?.trim()) lines.push(`Note : ${session.noteForCoach.trim()}`);
+  return lines.join("\n");
+}
+
+export function reportJson(session: Session) {
+  const minutes = session.startedAt
+    ? Math.max(1, Math.round(((session.endedAt ? Date.parse(session.endedAt) : Date.now()) - Date.parse(session.startedAt)) / 60000))
+    : null;
+  return {
+    date: session.date,
+    titre: session.title,
+    terminee: session.status === "done",
+    duree_min: minutes,
+    series_dures: hardSetCount(session.exercises),
+    kilos_deplaces: tonnage(session.exercises),
+    note_pour_le_coach: session.noteForCoach ?? "",
+    exercices: session.exercises.map((ex) => ({
+      nom: ex.name,
+      prevu: {
+        series: ex.planned.sets,
+        repetitions: ex.planned.reps,
+        charge_kg: ex.planned.loadKg,
+      },
+      fait: ex.sets
+        .filter((s) => s.done)
+        .map((s) => ({
+          charge_kg: s.loadKg,
+          repetitions: s.reps,
+          rpe: s.rpe,
+          echauffement: s.warmup,
+        })),
+    })),
+  };
+}
+
+export function lastPerformance(sessions: Session[], name: string, beforeId?: string): string | null {
+  const done = sessions
+    .filter((s) => s.id !== beforeId && s.status !== "planned" && s.exercises.some((e) => e.name === name))
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+  const session = done[0];
+  if (!session) return null;
+  const ex = session.exercises.find((e) => e.name === name);
+  if (!ex) return null;
+  const work = ex.sets.filter(isHardSet);
+  if (!work.length) return null;
+  const loads = new Set(work.map((s) => s.loadKg));
+  if (loads.size !== 1) {
+    return work.map((s) => `${formatKg(s.loadKg ?? 0)}×${s.reps}`).join(", ");
+  }
+  return `${formatKg(work[0].loadKg ?? 0)} kg × ${work.map((s) => s.reps).join(", ")}`;
+}
+
+export function bestE1rmLabel(sessions: Session[], name: string): { kg: number; detail: string } | null {
+  let best: { kg: number; load: number; reps: number; date: string } | null = null;
+  for (const session of sessions) {
+    if (session.status === "planned") continue;
+    for (const ex of session.exercises) {
+      if (ex.name !== name) continue;
+      for (const set of ex.sets) {
+        if (!isHardSet(set) || set.loadKg == null || set.reps == null) continue;
+        const est = epley(set.loadKg, set.reps);
+        if (est == null) continue;
+        if (!best || est > best.kg) best = { kg: est, load: set.loadKg, reps: set.reps, date: session.date };
+      }
+    }
+  }
+  if (!best) return null;
+  return { kg: best.kg, detail: `${formatKg(best.load)} kg × ${best.reps}` };
+}

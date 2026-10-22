@@ -1,0 +1,96 @@
+export type Pattern =
+  | "hpush"
+  | "hpull"
+  | "vpush"
+  | "vpull"
+  | "squat"
+  | "hinge"
+  | "lunge"
+  | "curl"
+  | "tricep"
+  | "lateral"
+  | "calf"
+  | "core";
+
+export type Muscle =
+  | "pectoraux"
+  | "epaules"
+  | "triceps"
+  | "biceps"
+  | "dos"
+  | "quadriceps"
+  | "ischios"
+  | "fessiers"
+  | "mollets"
+  | "abdos";
+
+export type SetLog = {
+  id: string;
+  loadKg: number | null;
+  reps: number | null;
+  rpe: number | null;
+  warmup: boolean;
+  done: boolean;
+};
+
+export type Planned = {
+  sets: number;
+  reps: number | null;
+  loadKg: number | null;
+  restSec: number;
+  rpe: number | null;
+};
+
+export type ExerciseLog = {
+  id: string;
+  name: string;
+  pattern: Pattern;
+  stepKg: number;
+  cues: string[];
+  muscles: Muscle[];
+  note?: string;
+  planned: Planned;
+  sets: SetLog[];
+};
+
+export type SessionStatus = "planned" | "active" | "done";
+
+export type Session = {
+  id: string;
+  date: string;
+  time?: string;
+  title: string;
+  intention?: string;
+  coachNote?: string;
+  noteForMe?: string;
+  noteForCoach?: string;
+  status: SessionStatus;
+  startedAt?: string;
+  endedAt?: string;
+  source: "coach" | "manual" | "demo";
+  restEndsAt?: number | null;
+  exercises: ExerciseLog[];
+};
+
+export type CustomExercise = {
+  id: string;
+  name: string;
+  pattern: Pattern;
+  cues: string[];
+};
+
+export type Settings = {
+  onboarded: boolean;
+  theme: "system" | "light" | "dark";
+  barKg: number;
+  lastBackupAt?: string;
+};
+
+export type BackupFile = {
+  app: "repere";
+  version: 1;
+  exportedAt: string;
+  settings: Settings;
+  sessions: Session[];
+  customExercises: CustomExercise[];
+};
