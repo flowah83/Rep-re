@@ -101,7 +101,7 @@ button:active { transform: scale(0.98); }
   position: relative;
 }
 .screen {
-  padding: calc(14px + env(safe-area-inset-top)) 20px calc(92px + env(safe-area-inset-bottom));
+  padding: calc(14px + env(safe-area-inset-top)) 20px calc(156px + env(safe-area-inset-bottom));
 }
 .boot {
   min-height: 100dvh;
@@ -819,3 +819,127 @@ h1.title {
   font-size: 14px;
   font-weight: 640;
 }
+
+.coach-fab {
+  position: fixed;
+  z-index: 24;
+  right: max(16px, calc(50% - 240px + 16px));
+  bottom: calc(86px + env(safe-area-inset-bottom));
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 28px;
+  background: var(--btn-bg);
+  color: var(--btn-ink);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  display: grid;
+  place-items: center;
+}
+.app:has(.overlay) .coach-fab {
+  bottom: calc(18px + env(safe-area-inset-bottom));
+}
+.app:has([data-testid="rest-timer"]) .coach-fab {
+  top: 42%;
+  bottom: auto;
+}
+.app:has(.coach-fab) .overlay-in {
+  padding-right: 78px;
+}
+.progressions { margin-top: 8px; }
+.progression {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--line);
+}
+.progression b { display: block; font-size: 14px; letter-spacing: -0.02em; }
+.progression .num { margin: 4px 0 0; font-size: 17px; font-weight: 620; letter-spacing: -0.03em; }
+.progression .choice { margin-top: 8px; justify-content: flex-start; }
+.progression .btn { margin-top: 0; height: 42px; width: auto; flex: none; padding: 0 16px; font-size: 15px; }
+.coach-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(22px);
+  color: var(--ink);
+}
+.coach-sheet-in {
+  width: min(100%, 480px);
+  height: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg);
+}
+.coach-head {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.coach-head strong { font-size: 17px; letter-spacing: -0.03em; }
+.coach-head span { justify-self: end; }
+.coach-log {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 16px 8px;
+}
+.coach-note, .coach-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+.coach-note h2, .coach-card h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  letter-spacing: -0.03em;
+}
+.coach-note p, .coach-card li { margin: 0; color: var(--ink-soft); font-size: 15px; line-height: 1.4; }
+.coach-card ul { margin: 0; padding-left: 18px; }
+.coach-card li + li { margin-top: 6px; }
+.coach-msg { display: flex; flex-direction: column; margin: 0 0 10px; }
+.coach-msg.user { align-items: flex-end; }
+.coach-msg.assistant { align-items: flex-start; }
+.coach-msg p {
+  max-width: 86%;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 18px;
+  line-height: 1.4;
+  font-size: 16px;
+  white-space: pre-wrap;
+}
+.coach-msg.user p { background: var(--btn-bg); color: var(--btn-ink); border-bottom-right-radius: 6px; }
+.coach-msg.assistant p { background: var(--bg-elev-2); border-bottom-left-radius: 6px; }
+.coach-msg .coach-card { width: min(100%, 360px); margin-top: 8px; }
+.coach-actions { display: flex; gap: 8px; margin-top: 12px; }
+.coach-actions .btn { margin-top: 0; height: 46px; }
+.coach-wait { color: var(--ink-soft); font-size: 14px; }
+.coach-compose {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg-elev) 88%, transparent);
+}
+.coach-compose .field { margin: 0; }
+.coach-send {
+  flex: none;
+  height: 46px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--btn-bg);
+  color: var(--btn-ink);
+  font-weight: 650;
+  font-size: 15px;
+}
+.coach-send:disabled { opacity: 0.45; }

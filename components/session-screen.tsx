@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/app-context";
+import { ProgressionBlock } from "@/components/progression-block";
 import { lastPerformance, completeSet, cycleRpe, patchSet } from "@/lib/session";
 import type { ExerciseLog, Session, SetLog } from "@/lib/types";
 import { formatClock, formatKg, uid } from "@/lib/utils";
@@ -70,6 +71,7 @@ export function SessionScreen({ id }: { id: string }) {
           <p className="last num">{previous ? `La dernière fois · ${previous}` : "Pas encore d’historique pour ce geste."}</p>
         </section>
         <div className="sets">
+          <ProgressionBlock session={session} exerciseId={exercise.id} />
           <div className="sethead">
             <span>Série</span>
             <span>kg</span>

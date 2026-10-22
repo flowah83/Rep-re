@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useApp } from "@/components/app-context";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
+import { loadCoachConfig, saveCoachConfig } from "@/lib/coach-store";
 import { toCsv } from "@/lib/db";
 import { CATALOG, PATTERN_LABEL } from "@/lib/exercises";
 import { importSummary, type ImportPreview } from "@/lib/history";
@@ -61,6 +62,7 @@ function SettingsSheet() {
         </Button>
       </div>
       <p className="fine">Barre actuelle : {formatKg(app.settings.barKg)} kg. Sert seulement au calcul des disques.</p>
+      <CoachSettings />
       <Button onClick={() => app.setSheet("import")}>Importer</Button>
       <Button variant="ghost" onClick={() => { app.setEditId(null); app.setSheet("edit"); }}>
         Créer une séance
@@ -146,6 +148,54 @@ function SettingsSheet() {
         Pour l’installer : dans Safari, touchez Partager, puis « Sur l’écran d’accueil », et ouvrez Repère comme une app. Le minuteur
         peut garder l’écran allumé une fois l’app installée. Sur iPhone, le site ne peut pas vibrer. Le compte à rebours reste le signal fiable.
       </p>
+    </>
+  );
+}
+
+function CoachSettings() {
+  const app = useApp();
+  const [url, setUrl] = useState("");
+  const [token, setToken] = useState("");
+  useEffect(() => {
+    const current = loadCoachConfig();
+    setUrl(current.url);
+    setToken(current.token);
+  }, []);
+  return (
+    <>
+      <div className="fieldlabel">Coach</div>
+      <p className="fine">
+        L’adresse du service et le code secret, une seule fois sur ce téléphone. Sans ces deux informations, le coach reste éteint. Les
+        suggestions de charge marchent quand même.
+      </p>
+      <input
+        className="field"
+        data-testid="coach-url"
+        value={url}
+        placeholder="Adresse du service"
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck={false}
+        onChange={(event) => setUrl(event.target.value)}
+      />
+      <input
+        className="field"
+        data-testid="coach-token"
+        type="password"
+        value={token}
+        placeholder="Code secret"
+        autoCapitalize="off"
+        autoCorrect="off"
+        onChange={(event) => setToken(event.target.value)}
+      />
+      <Button
+        onClick={() => {
+          saveCoachConfig({ url, token });
+          app.flash(url.trim() && token.trim() ? "Coach enregistré sur ce téléphone." : "Coach effacé de ce téléphone.");
+        }}
+      >
+        Enregistrer le coach
+      </Button>
     </>
   );
 }

@@ -1,6 +1,6 @@
 # Repère
 
-Carnet de musculation pour iPhone, ajouté à l’écran d’accueil. Les séances restent sur le téléphone. Chef sport écrit le plan. Repère ne propose pas les charges.
+Carnet de musculation pour iPhone, ajouté à l’écran d’accueil. Les séances restent sur le téléphone. Chef sport écrit le plan. Avant une séance, Repère peut suggérer une charge à partir des séries récentes : on l’accepte ou on l’ignore. Le coach, s’il est activé, est décrit dans `docs/coach-setup.md`.
 
 ## Lancer
 
@@ -104,3 +104,7 @@ Ce lien contient la poussée du 22 octobre 2026 : développé couché 4×6 à 80
 La première ouverture est vide. L’exemple fictif se charge dans les réglages, et s’efface sans toucher aux vraies séances.
 
 Les maquettes validées restent dans `mockups/`. L’audit est dans `docs/audit.md`.
+
+## Coach
+
+Le bouton Coach est sur chaque écran. Sans adresse ni code secret dans Réglages, il explique seulement qu’il n’est pas activé. Les suggestions de charge ne passent pas par ce service : elles relisent les séries déjà notées sur le téléphone. L’installation du service est dans `docs/coach-setup.md`.

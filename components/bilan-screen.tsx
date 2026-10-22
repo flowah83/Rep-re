@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useApp } from "@/components/app-context";
+import { appendCoachNotices } from "@/lib/coach";
+import { markCoachNoticesSent, pendingCoachNoticeLines } from "@/lib/coach-store";
 import { hardSetCount, tonnage } from "@/lib/calc";
 import { cardioSummary } from "@/lib/history";
 import { compareExercise, formatPerformedSet, reportJson, summaryText, type CompareKind } from "@/lib/session";
@@ -8,6 +11,7 @@ import { formatDuration, formatInt, formatLong } from "@/lib/utils";
 
 export function BilanScreen({ id }: { id: string }) {
   const app = useApp();
+  const [, refreshNotices] = useState(0);
   const session = app.sessions.find((item) => item.id === id);
   if (!session) return null;
   const prior = app.sessions.filter((item) => item.id !== session.id && item.status === "done" && item.date <= session.date);
@@ -16,17 +20,19 @@ export function BilanScreen({ id }: { id: string }) {
   const held = rows.filter((row) => row.kind === "tenu");
   const shown = notable.length ? notable : held.slice(0, 1);
   const extraHeld = notable.length ? held.length : Math.max(0, held.length - 1);
-  const text = summaryText(session, prior);
+  const text = appendCoachNotices(summaryText(session, prior), pendingCoachNoticeLines());
   const minutes =
     session.startedAt && session.endedAt ? formatDuration(Date.parse(session.endedAt) - Date.parse(session.startedAt)) : "—";
 
   const share = async () => {
-    const fresh = summaryText(session, prior);
+    const fresh = appendCoachNotices(summaryText(session, prior), pendingCoachNoticeLines());
     const file = new File([JSON.stringify(reportJson(session), null, 2)], `repere-${session.date}.json`, { type: "application/json" });
     try {
       if (navigator.share) {
         if (navigator.canShare?.({ files: [file] })) await navigator.share({ title: `Repère — ${session.title}`, text: fresh, files: [file] });
         else await navigator.share({ title: `Repère — ${session.title}`, text: fresh });
+        markCoachNoticesSent();
+        refreshNotices((value) => value + 1);
         return;
       }
     } catch (error) {
@@ -34,6 +40,8 @@ export function BilanScreen({ id }: { id: string }) {
     }
     try {
       await navigator.clipboard.writeText(fresh);
+      markCoachNoticesSent();
+      refreshNotices((value) => value + 1);
       app.flash("Texte copié. Vous pouvez le coller à Chef sport.");
     } catch {
       app.flash("Le partage n’est pas disponible sur cet appareil. Le texte reste affiché pour le copier.");

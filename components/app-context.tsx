@@ -57,6 +57,7 @@ type Api = {
   saveSession: (session: Session) => Promise<void>;
   updateSession: (id: string, updater: (session: Session) => Session) => Promise<void>;
   removeSession: (id: string) => Promise<void>;
+  replaceSessions: (sessions: Session[], customs?: CustomExercise[]) => Promise<void>;
   updateSettings: (patch: Partial<Settings>) => Promise<void>;
   importPlanText: (raw: string) => Promise<string | null>;
   importPreview: ImportPreview | null;
@@ -232,8 +233,30 @@ export function AppProvider({
       saveSession,
       updateSession,
       removeSession: async (id) => {
-        setSessions((current) => current.filter((session) => session.id !== id));
+        sessionsRef.current = sessionsRef.current.filter((session) => session.id !== id);
+        setSessions(sessionsRef.current);
         await deleteSession(id);
+      },
+      replaceSessions: async (nextSessions, nextCustoms) => {
+        const previous = sessionsRef.current;
+        const ids = new Set(nextSessions.map((session) => session.id));
+        for (const session of previous) {
+          if (!ids.has(session.id)) await deleteSession(session.id);
+        }
+        const previousJson = new Map(previous.map((session) => [session.id, JSON.stringify(session)]));
+        for (const session of nextSessions) {
+          if (previousJson.get(session.id) !== JSON.stringify(session)) await putSession(session);
+        }
+        sessionsRef.current = nextSessions;
+        setSessions(nextSessions);
+        if (nextCustoms) {
+          for (const custom of nextCustoms) {
+            const known = customsRef.current.find((item) => item.id === custom.id);
+            if (!known || known.name !== custom.name || known.pattern !== custom.pattern) await saveCustom(custom);
+          }
+          customsRef.current = nextCustoms;
+          setCustoms(nextCustoms);
+        }
       },
       updateSettings: async (patch) => {
         const next = { ...settingsRef.current, ...patch };

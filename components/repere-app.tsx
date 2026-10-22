@@ -7,6 +7,7 @@ import { GestureScreen } from "@/components/gesture-screen";
 import { HistoryScreen } from "@/components/history-screen";
 import { ProgressScreen } from "@/components/progress-screen";
 import { SessionScreen } from "@/components/session-screen";
+import { CoachLayer } from "@/components/coach-panel";
 import { Sheets } from "@/components/sheets";
 import { TodayScreen } from "@/components/today-screen";
 import { ImportSummary } from "@/components/sheets";
@@ -66,6 +67,7 @@ function Shell() {
       {app.overlay?.kind === "gesture" ? <GestureScreen sessionId={app.overlay.sessionId} exerciseId={app.overlay.exerciseId} /> : null}
       {app.overlay?.kind === "bilan" ? <BilanScreen id={app.overlay.id} /> : null}
       <Sheets />
+      <CoachLayer />
     </div>
   );
 }
