@@ -1,0 +1,6278 @@
+{
+ "athlete": "Florian LE MEN",
+ "genere_le": "2026-10-23T08:03",
+ "conventions": "null = inconnu (jamais inventé). charge_kg : barre = kg total ; haltères = kg par main (unite 'kg/main') ; 'kg/jambe' unilatéral ; PDC = poids du corps. RIR et RPE tels que notés, aucun calculé.",
+ "comptes": {
+  "seances_musculation_classeur": 22,
+  "series_numerotees": 366,
+  "lignes_series_classeur": 369,
+  "exercices_sans_detail_series": 3,
+  "entrees_cardio_classeur": 12,
+  "seances_ajoutees_depuis_export_sante": 3,
+  "total_seances": 37
+ },
+ "seances": [
+  {
+   "date": "2026-07-16",
+   "type": "musculation",
+   "titre": "Upper force",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Référence « Validé 16/07 ». RPE de référence : 8, non attribué individuellement aux séries.",
+     "id_historique": "H001",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 62.5,
+       "repetitions": 5,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Référence datée validée ; rapport initial non relu",
+       "id_serie": "S0001"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 62.5,
+       "repetitions": 5,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Référence datée validée ; rapport initial non relu",
+       "id_serie": "S0002"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 62.5,
+       "repetitions": 5,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Référence datée validée ; rapport initial non relu",
+       "id_serie": "S0003"
+      },
+      {
+       "serie": 4,
+       "charge_kg": 62.5,
+       "repetitions": 5,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Référence datée validée ; rapport initial non relu",
+       "id_serie": "S0004"
+      },
+      {
+       "serie": 5,
+       "charge_kg": 62.5,
+       "repetitions": 5,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Référence datée validée ; rapport initial non relu",
+       "id_serie": "S0005"
+      }
+     ]
+    },
+    {
+     "nom": "Développé militaire barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Référence « Validé 16/07 ». RPE de référence : NM, non attribué individuellement aux séries.",
+     "id_historique": "H002",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 32.5,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Référence datée validée ; rapport initial non relu",
+       "id_serie": "S0006"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 32.5,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Référence datée validée ; rapport initial non relu",
+       "id_serie": "S0007"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 32.5,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Référence datée validée ; rapport initial non relu",
+       "id_serie": "S0008"
+      },
+      {
+       "serie": 4,
+       "charge_kg": 32.5,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Référence datée validée ; rapport initial non relu",
+       "id_serie": "S0009"
+      }
+     ]
+    },
+    {
+     "nom": "Tirage vertical prise non précisée",
+     "materiel_id": "M_LAT_HIST",
+     "unite": "kg",
+     "notes": "Référence « Validé 16/07 ». RPE de référence : 7, non attribué individuellement aux séries.",
+     "id_historique": "H003",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 65,
+       "repetitions": 5,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Référence datée validée ; rapport initial non relu",
+       "id_serie": "S0010"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 65,
+       "repetitions": 5,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Référence datée validée ; rapport initial non relu",
+       "id_serie": "S0011"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 65,
+       "repetitions": 5,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Référence datée validée ; rapport initial non relu",
+       "id_serie": "S0012"
+      },
+      {
+       "serie": 4,
+       "charge_kg": 65,
+       "repetitions": 5,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Référence datée validée ; rapport initial non relu",
+       "id_serie": "S0013"
+      },
+      {
+       "serie": 5,
+       "charge_kg": 65,
+       "repetitions": 5,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Référence datée validée ; rapport initial non relu",
+       "id_serie": "S0014"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-07-16",
+   "type": "cardio",
+   "titre": "Course – Footing léger déclaré",
+   "notes": "Footing léger de 45 min après Upper force, déclaré le 17/07. Pas de rapport de montre relu.",
+   "source": "perfs.xlsx (onglet Cardio)",
+   "cardio": {
+    "sport": "Course",
+    "type_seance": "Footing léger déclaré",
+    "duree": "0:45:00",
+    "duree_min": 45.0,
+    "distance_km": null,
+    "rpe_seance": null,
+    "allure_source_km": null,
+    "allure_calculee_km": null,
+    "srpe": null,
+    "fc_moy": null,
+    "fc_max": null,
+    "d_plus_m": null,
+    "statut_preuve": "Déclaration retrouvée dans conversation",
+    "source": "Conversation utilisateur du 17/07/2026 09:56:57Z",
+    "id_cardio": "C001"
+   },
+   "exercices": []
+  },
+  {
+   "date": "2026-07-17",
+   "type": "musculation",
+   "titre": "Lower Force · séance de référence",
+   "notes": "Libellés de programme dans la séance : Lower Force · séance de référence ; Lower",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Back squat",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "5×5 effectué. S5 : même charge que S4, RIR 1; charge exacte et RPE S5 non renseignés. Sensation musculaire normale 7,5/10. | Barre",
+     "id_historique": "H004",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 5,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0015"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 5,
+       "rpe": 9,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0016"
+      },
+      {
+       "serie": 3,
+       "charge_kg": null,
+       "repetitions": 5,
+       "rpe": 9,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0017"
+      },
+      {
+       "serie": 4,
+       "charge_kg": null,
+       "repetitions": 5,
+       "rpe": 9,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0018"
+      },
+      {
+       "serie": 5,
+       "charge_kg": null,
+       "repetitions": 5,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0019"
+      }
+     ]
+    },
+    {
+     "nom": "Leg curl couché unilatéral",
+     "materiel_id": "M_CURL_JUL_UNI",
+     "unite": "kg/jambe",
+     "notes": "Machine non identifiée",
+     "id_historique": "H005",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 10,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/jambe",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0020"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 10,
+       "repetitions": 12,
+       "rpe": 8.5,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg/jambe",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0021"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 10,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/jambe",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0022"
+      }
+     ]
+    },
+    {
+     "nom": "Presse à cuisses",
+     "materiel_id": "M_PRESSE_JUL",
+     "unite": "kg",
+     "notes": "Machine et charge à noter la prochaine fois; ne pas utiliser 80 kg comme cible automatique. | Matériel / modèle non identifié",
+     "id_historique": "H006",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 5,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0023"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 5,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0024"
+      },
+      {
+       "serie": 3,
+       "charge_kg": null,
+       "repetitions": 5,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0025"
+      },
+      {
+       "serie": 4,
+       "charge_kg": null,
+       "repetitions": 5,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0026"
+      }
+     ]
+    },
+    {
+     "nom": "Romanian deadlift",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "4×5 effectué. S4 : même charge que S3 et RIR 3; charge exacte de S3–S4 et RPE S4 non renseignés. Prescription 4×8 non validée. | Barre",
+     "id_historique": "H007",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 40,
+       "repetitions": 5,
+       "rpe": 7,
+       "rir": 4,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0027"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 45,
+       "repetitions": 5,
+       "rpe": 7,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0028"
+      },
+      {
+       "serie": 3,
+       "charge_kg": null,
+       "repetitions": 5,
+       "rpe": 7,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0029"
+      },
+      {
+       "serie": 4,
+       "charge_kg": null,
+       "repetitions": 5,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0030"
+      }
+     ]
+    },
+    {
+     "nom": "Split squat bulgare",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Objectif suivant : 3×8 à ≥2 RIR. | Matériel / modèle non identifié",
+     "id_historique": "H008",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 8,
+       "repetitions": 7,
+       "rpe": 9,
+       "rir": 0,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0031"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 8,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0032"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 6,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0033"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-07-18",
+   "type": "cardio",
+   "titre": "Natation – Continue facile",
+   "notes": "RPE non noté.",
+   "source": "perfs.xlsx (onglet Cardio)",
+   "cardio": {
+    "sport": "Natation",
+    "type_seance": "Continue facile",
+    "duree": "0:45:00",
+    "duree_min": 45.0,
+    "distance_km": null,
+    "rpe_seance": null,
+    "allure_source_km": null,
+    "allure_calculee_km": null,
+    "srpe": null,
+    "fc_moy": null,
+    "fc_max": null,
+    "d_plus_m": null,
+    "statut_preuve": "Rapport consigné",
+    "source": "F1 / Cardio / indice exporté 29",
+    "id_cardio": "C002"
+   },
+   "exercices": []
+  },
+  {
+   "date": "2026-07-20",
+   "type": "musculation",
+   "titre": "Upper Hypertrophie A · bench prioritaire",
+   "notes": "Libellés de programme dans la séance : Upper hypertrophie ; Upper Hypertrophie A · bench prioritaire",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Curl incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Haltères",
+     "id_historique": "H009",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 8,
+       "repetitions": 14,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0034"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 8,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0035"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 8,
+       "repetitions": 9,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0036"
+      }
+     ]
+    },
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "3×8 validé à ≥2 RIR et RPE ≤8. | Barre",
+     "id_historique": "H010",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 55,
+       "repetitions": 8,
+       "rpe": 8,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0037"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 55,
+       "repetitions": 8,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0038"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 55,
+       "repetitions": 8,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0039"
+      }
+     ]
+    },
+    {
+     "nom": "Développé incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Le « 2 kg/main » de S1 est interprété comme 20 kg/main; à confirmer. Viser 12/12/11 puis 3×12 à ≥2 RIR. Charge S1 laissée vide : « 2 kg » possiblement 20, non confirmé. | Haltères par main",
+     "id_historique": "H011",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 12,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0040"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 20,
+       "repetitions": 11,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0041"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 20,
+       "repetitions": 10,
+       "rpe": 9,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0042"
+      }
+     ]
+    },
+    {
+     "nom": "Extension triceps corde au-dessus tête",
+     "materiel_id": "M_TRICEPS_OH",
+     "unite": "kg",
+     "notes": "Poulie non identifiée",
+     "id_historique": "H012",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 15,
+       "repetitions": 14,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0043"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 17.5,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0044"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 17.5,
+       "repetitions": 11,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0045"
+      }
+     ]
+    },
+    {
+     "nom": "Oiseau haltères poitrine appuyée",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Banc 45°",
+     "id_historique": "H013",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 7,
+       "repetitions": 10,
+       "rpe": 9,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0046"
+      }
+     ]
+    },
+    {
+     "nom": "Row poitrine appuyée machine",
+     "materiel_id": "M_ROW_HIST",
+     "unite": "kg",
+     "notes": "Dernière série à RIR 1/RPE 9 : valider 3×12 à ≥2 RIR avant +5 kg. | Matériel / modèle non identifié",
+     "id_historique": "H014",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 55,
+       "repetitions": 12,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0047"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 55,
+       "repetitions": 12,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0048"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 55,
+       "repetitions": 12,
+       "rpe": 9,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0049"
+      }
+     ]
+    },
+    {
+     "nom": "Tirage vertical prise neutre",
+     "materiel_id": "M_LAT_HIST",
+     "unite": "kg",
+     "notes": "Prochaine cible : 10/10/10 à RIR 2 avant toute hausse de charge. | Matériel / modèle non identifié",
+     "id_historique": "H015",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 55,
+       "repetitions": 9,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0050"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 55,
+       "repetitions": 9,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0051"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 55,
+       "repetitions": 9,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0052"
+      }
+     ]
+    },
+    {
+     "nom": "Élévations latérales haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Haltères",
+     "id_historique": "H016",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 6,
+       "repetitions": 16,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0053"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 6,
+       "repetitions": 14,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0054"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 6,
+       "repetitions": 13,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0055"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-07-20",
+   "type": "cardio",
+   "titre": "Course – Z2 annoncée",
+   "notes": "Allure 6:35/km.",
+   "source": "perfs.xlsx (onglet Cardio)",
+   "cardio": {
+    "sport": "Course",
+    "type_seance": "Z2 annoncée",
+    "duree": "0:55:00",
+    "duree_min": 55.0,
+    "distance_km": 8,
+    "rpe_seance": 6,
+    "allure_source_km": "6:35",
+    "allure_calculee_km": "6:52",
+    "srpe": 330,
+    "fc_moy": null,
+    "fc_max": null,
+    "d_plus_m": null,
+    "statut_preuve": "Rapport consigné",
+    "source": "F1 / Cardio / indice exporté 30",
+    "id_cardio": "C003"
+   },
+   "exercices": []
+  },
+  {
+   "date": "2026-07-21",
+   "type": "musculation",
+   "titre": "Lower Hypertrophie A · stimulus/fatigue optimisé",
+   "notes": "Libellés de programme dans la séance : Lower Hypertrophie A · stimulus/fatigue optimisé ; Lower hypertrophie",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Back squat",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "3×8 validé à RIR 2 et RPE 8. Technique et douleur anormale non renseignées; revenir à 42,5 kg si la première série à 45 kg dépasse RPE 8. | Barre",
+     "id_historique": "H017",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 42.5,
+       "repetitions": 8,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0056"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 42.5,
+       "repetitions": 8,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0057"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 42.5,
+       "repetitions": 8,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0058"
+      }
+     ]
+    },
+    {
+     "nom": "Hip thrust machine",
+     "materiel_id": "M_HIP_JUL",
+     "unite": "kg",
+     "notes": "Substitution hip thrust machine. Répétitions non mesurées : aucune hausse avant 2×12 avec pause nette et ≥2 RIR. | Matériel / modèle non identifié",
+     "id_historique": "H018",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 20,
+       "repetitions": null,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0059"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 20,
+       "repetitions": null,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0060"
+      }
+     ]
+    },
+    {
+     "nom": "Leg curl couché unilatéral",
+     "materiel_id": "M_CURL_JUL_UNI",
+     "unite": "kg/jambe",
+     "notes": "Prone leg curl unilatéral. Comparer et progresser uniquement sur la même machine. | Matériel / modèle non identifié",
+     "id_historique": "H019",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 20,
+       "repetitions": 11,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/jambe",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0061"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 20,
+       "repetitions": 11,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/jambe",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0062"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 20,
+       "repetitions": 11,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/jambe",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0063"
+      }
+     ]
+    },
+    {
+     "nom": "Mollets debout machine",
+     "materiel_id": "M_MOLLETS_JUL",
+     "unite": "kg",
+     "notes": "Machine de juillet",
+     "id_historique": "H020",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 30,
+       "repetitions": 18,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0064"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 30,
+       "repetitions": 16,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0065"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 30,
+       "repetitions": 16,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0066"
+      }
+     ]
+    },
+    {
+     "nom": "Split squat bulgare",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Trop proche de l’échec. Prochaine fois : commence par la jambe gauche, fais le même nombre de répétitions à droite et garde 2–3 RIR. | Haltères par main",
+     "id_historique": "H021",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 6,
+       "repetitions": 8,
+       "rpe": 9,
+       "rir": 1,
+       "cote": "D",
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0067"
+      },
+      {
+       "serie": 1,
+       "charge_kg": 6,
+       "repetitions": 7,
+       "rpe": 9,
+       "rir": 1,
+       "cote": "G",
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0068"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 6,
+       "repetitions": 8,
+       "rpe": 9,
+       "rir": 1,
+       "cote": "D",
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0069"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 6,
+       "repetitions": 8,
+       "rpe": 9,
+       "rir": 1,
+       "cote": "G",
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0070"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 6,
+       "repetitions": 7,
+       "rpe": 9,
+       "rir": 1,
+       "cote": "D",
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0071"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 6,
+       "repetitions": 7,
+       "rpe": 9,
+       "rir": 1,
+       "cote": "G",
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0072"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-07-21",
+   "type": "cardio",
+   "titre": "Natation – Continue facile",
+   "notes": "",
+   "source": "perfs.xlsx (onglet Cardio)",
+   "cardio": {
+    "sport": "Natation",
+    "type_seance": "Continue facile",
+    "duree": "0:40:00",
+    "duree_min": 40.0,
+    "distance_km": null,
+    "rpe_seance": 5,
+    "allure_source_km": null,
+    "allure_calculee_km": null,
+    "srpe": 200,
+    "fc_moy": null,
+    "fc_max": null,
+    "d_plus_m": null,
+    "statut_preuve": "Rapport consigné",
+    "source": "F1 / Cardio / indice exporté 31",
+    "id_cardio": "C004"
+   },
+   "exercices": []
+  },
+  {
+   "date": "2026-07-23",
+   "type": "musculation",
+   "titre": "Upper Force · volume contrôlé V5.4",
+   "notes": "Libellés de programme dans la séance : Upper force ; Upper Force · volume contrôlé V5.4",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Curl marteau haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "S2 : « RIR 9 » interprété RPE 9/RIR 1 dans ancien fichier. Conservé comme ambigu, RIR/RPE S2 vides. | Haltères",
+     "id_historique": "H022",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 8,
+       "repetitions": 12,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0073"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 8,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0074"
+      }
+     ]
+    },
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "4×5; S4 RPE 9. Viser 4×6 ≤RPE 8 avant +2,5 kg. | Barre",
+     "id_historique": "H023",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 62.5,
+       "repetitions": 5,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0075"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 62.5,
+       "repetitions": 5,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0076"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 62.5,
+       "repetitions": 5,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0077"
+      },
+      {
+       "serie": 4,
+       "charge_kg": 62.5,
+       "repetitions": 5,
+       "rpe": 9,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0078"
+      }
+     ]
+    },
+    {
+     "nom": "Développé militaire barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "3×8 validé. Reprise 30→32,5 avant 35 kg. | Barre",
+     "id_historique": "H024",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 32.5,
+       "repetitions": 8,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0079"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 32.5,
+       "repetitions": 8,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0080"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 32.5,
+       "repetitions": 8,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0081"
+      }
+     ]
+    },
+    {
+     "nom": "Extension triceps haltère au-dessus tête",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Déclaré par main, installation à confirmer",
+     "id_historique": "H025",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 8,
+       "repetitions": 12,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0082"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 8,
+       "repetitions": 12,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0083"
+      }
+     ]
+    },
+    {
+     "nom": "Oiseau haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Position non précisée",
+     "id_historique": "H026",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 5,
+       "repetitions": null,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0084"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 5,
+       "repetitions": null,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0085"
+      }
+     ]
+    },
+    {
+     "nom": "Row assis machine",
+     "materiel_id": "M_ROW_HIST",
+     "unite": "kg",
+     "notes": "3×10 validé. Reprise 55→60 avant 65 kg. | Matériel / modèle non identifié",
+     "id_historique": "H027",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 10,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0086"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 10,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0087"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 60,
+       "repetitions": 10,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0088"
+      }
+     ]
+    },
+    {
+     "nom": "Tirage vertical prise neutre",
+     "materiel_id": "M_LAT_HIST",
+     "unite": "kg",
+     "notes": "4×6 validé, poulie neutre. Revalider 65 kg après la reprise. | Matériel / modèle non identifié",
+     "id_historique": "H028",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 65,
+       "repetitions": 6,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0089"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 65,
+       "repetitions": 6,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0090"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 65,
+       "repetitions": 6,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0091"
+      },
+      {
+       "serie": 4,
+       "charge_kg": 65,
+       "repetitions": 6,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0092"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-07-23",
+   "type": "cardio",
+   "titre": "Course – Endurance",
+   "notes": "Distance et RPE absents.",
+   "source": "perfs.xlsx (onglet Cardio)",
+   "cardio": {
+    "sport": "Course",
+    "type_seance": "Endurance",
+    "duree": "0:55:00",
+    "duree_min": 55.0,
+    "distance_km": null,
+    "rpe_seance": null,
+    "allure_source_km": null,
+    "allure_calculee_km": null,
+    "srpe": null,
+    "fc_moy": null,
+    "fc_max": null,
+    "d_plus_m": null,
+    "statut_preuve": "Rapport consigné",
+    "source": "F1 / Cardio / indice exporté 32",
+    "id_cardio": "C005"
+   },
+   "exercices": []
+  },
+  {
+   "date": "2026-07-26",
+   "type": "musculation",
+   "titre": "Lower Force B · sans redondance",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Back squat",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Prévu le 25, réalisé le 26 après la Z2. 4×6 propres; aucune hausse forcée au retour du bloc sans salle. | Barre",
+     "id_historique": "H029",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 47.5,
+       "repetitions": 6,
+       "rpe": 7,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0093"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 47.5,
+       "repetitions": 6,
+       "rpe": 7,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0094"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 47.5,
+       "repetitions": 6,
+       "rpe": 7,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0095"
+      },
+      {
+       "serie": 4,
+       "charge_kg": 47.5,
+       "repetitions": 6,
+       "rpe": 7,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0096"
+      }
+     ]
+    },
+    {
+     "nom": "Leg curl couché bilatéral",
+     "materiel_id": "M_CURL_JUL_BI",
+     "unite": "kg",
+     "notes": "Le mode bilatéral ne se déduit pas en doublant la charge unilatérale. Viser 3×12, puis 3×15. | Matériel / modèle non identifié",
+     "id_historique": "H030",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 25,
+       "repetitions": 11,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0097"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 25,
+       "repetitions": 11,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0098"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 25,
+       "repetitions": 11,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0099"
+      }
+     ]
+    },
+    {
+     "nom": "Presse à cuisses",
+     "materiel_id": "M_PRESSE_JUL",
+     "unite": "kg",
+     "notes": "3×10 validé; viser 3×11 puis 3×12 à RIR 2 avant +5 kg sur la même machine. | Matériel / modèle non identifié",
+     "id_historique": "H031",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 80,
+       "repetitions": 10,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0100"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 80,
+       "repetitions": 10,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0101"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 80,
+       "repetitions": 10,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0102"
+      }
+     ]
+    },
+    {
+     "nom": "Romanian deadlift",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Répétitions NM; ressenti un peu dur. Valider 3×8 documentées avant +2,5 kg. | Barre",
+     "id_historique": "H032",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 40,
+       "repetitions": null,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0103"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 40,
+       "repetitions": null,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0104"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 40,
+       "repetitions": null,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0105"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-07-26",
+   "type": "cardio",
+   "titre": "Course – Endurance",
+   "notes": "Distance et RPE absents.",
+   "source": "perfs.xlsx (onglet Cardio)",
+   "cardio": {
+    "sport": "Course",
+    "type_seance": "Endurance",
+    "duree": "1:00:00",
+    "duree_min": 60.0,
+    "distance_km": null,
+    "rpe_seance": null,
+    "allure_source_km": null,
+    "allure_calculee_km": null,
+    "srpe": null,
+    "fc_moy": null,
+    "fc_max": null,
+    "d_plus_m": null,
+    "statut_preuve": "Rapport consigné",
+    "source": "F1 / Cardio / indice exporté 33",
+    "id_cardio": "C006"
+   },
+   "exercices": []
+  },
+  {
+   "date": "2026-07-27",
+   "type": "musculation",
+   "titre": "Upper hypertrophie B",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Curl incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Charge par main",
+     "id_historique": "H033",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 8,
+       "repetitions": 13,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0106"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 8,
+       "repetitions": 12,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0107"
+      }
+     ]
+    },
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Prise standard",
+     "id_historique": "H034",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 55,
+       "repetitions": 8,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0108"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 55,
+       "repetitions": 8,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0109"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 55,
+       "repetitions": 8,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0110"
+      }
+     ]
+    },
+    {
+     "nom": "Développé incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Charge par main",
+     "id_historique": "H035",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 20,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0111"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 20,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0112"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 20,
+       "repetitions": 10,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0113"
+      }
+     ]
+    },
+    {
+     "nom": "Extension triceps corde au-dessus tête",
+     "materiel_id": "M_TRICEPS_OH",
+     "unite": "kg",
+     "notes": "Poulie",
+     "id_historique": "H036",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 15,
+       "repetitions": 15,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0114"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 15,
+       "repetitions": 13,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0115"
+      }
+     ]
+    },
+    {
+     "nom": "Oiseau poulie ou reverse pec-deck",
+     "materiel_id": "M_OISEAU_JUL",
+     "unite": "kg",
+     "notes": "Appareil exact non identifié",
+     "id_historique": "H037",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 10,
+       "repetitions": 12,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0116"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 10,
+       "repetitions": 12,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0117"
+      }
+     ]
+    },
+    {
+     "nom": "Row poulie assis",
+     "materiel_id": "M_ROW_CABLE_JUL",
+     "unite": "kg",
+     "notes": "Remplacement du row poitrine appuyée  S2 : reps NM dans Historique séries et CR du 27/07, malgré 10 dans la reprise ultérieure. Charge réduite | Remplacement du row poitrine appuyée |  S2 : reps NM dans Historique séries et CR du 27/07, malgré 10 dans la reprise ultérieure. | Charge réduite | Même poulie / poignée",
+     "id_historique": "H038",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 40,
+       "repetitions": 10,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0118"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 40,
+       "repetitions": null,
+       "rpe": 9,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Divergence résolue par source de juillet",
+       "id_serie": "S0119"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 35,
+       "repetitions": 10,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0120"
+      }
+     ]
+    },
+    {
+     "nom": "Tirage vertical prise neutre",
+     "materiel_id": "M_LAT_HIST",
+     "unite": "kg",
+     "notes": "Même machine / poignée",
+     "id_historique": "H039",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 55,
+       "repetitions": 10,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0121"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 55,
+       "repetitions": 10,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0122"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 55,
+       "repetitions": 8,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0123"
+      }
+     ]
+    },
+    {
+     "nom": "Élévations latérales haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Charge par main",
+     "id_historique": "H040",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 6,
+       "repetitions": 18,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0124"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 6,
+       "repetitions": 15,
+       "rpe": 8,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0125"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 6,
+       "repetitions": 14,
+       "rpe": 9,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0126"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-07-29",
+   "type": "musculation",
+   "titre": "Upper pré-vacances",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Curl incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Charge par main",
+     "id_historique": "H041",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 8,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0127"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 8,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0128"
+      }
+     ]
+    },
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Dernière série à 1 RIR | Prise standard",
+     "id_historique": "H042",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 62.5,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0129"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 62.5,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0130"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 62.5,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0131"
+      },
+      {
+       "serie": 4,
+       "charge_kg": 62.5,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0132"
+      }
+     ]
+    },
+    {
+     "nom": "Développé militaire barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Standardisé",
+     "id_historique": "H043",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 32.5,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0133"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 32.5,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0134"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 32.5,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0135"
+      }
+     ]
+    },
+    {
+     "nom": "Extension triceps corde au-dessus tête",
+     "materiel_id": "M_TRICEPS_OH",
+     "unite": "kg",
+     "notes": "Série jugée facile Charge augmentée | Série jugée facile | Charge augmentée | Poulie",
+     "id_historique": "H044",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 15,
+       "repetitions": 20,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0136"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 17.5,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0137"
+      }
+     ]
+    },
+    {
+     "nom": "Row assis machine",
+     "materiel_id": "M_ROW_HIST",
+     "unite": "kg",
+     "notes": "Même machine",
+     "id_historique": "H045",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0138"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0139"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 60,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0140"
+      }
+     ]
+    },
+    {
+     "nom": "Tirage vertical prise neutre",
+     "materiel_id": "M_LAT_HIST",
+     "unite": "kg",
+     "notes": "Même machine / poignée",
+     "id_historique": "H046",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0141"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0142"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 60,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0143"
+      }
+     ]
+    },
+    {
+     "nom": "Élévations latérales haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Charge par main",
+     "id_historique": "H047",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 6,
+       "repetitions": 19,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0144"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 6,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0145"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 6,
+       "repetitions": 13,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0146"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-07-30",
+   "type": "cardio",
+   "titre": "Course – Type non renseigné",
+   "notes": "Distance, allure et RPE global non communiqués.",
+   "source": "perfs.xlsx (onglet Cardio)",
+   "cardio": {
+    "sport": "Course",
+    "type_seance": "Type non renseigné",
+    "duree": "1:05:00",
+    "duree_min": 65.0,
+    "distance_km": null,
+    "rpe_seance": null,
+    "allure_source_km": null,
+    "allure_calculee_km": null,
+    "srpe": null,
+    "fc_moy": null,
+    "fc_max": null,
+    "d_plus_m": null,
+    "statut_preuve": "Rapport consigné",
+    "source": "F1 / Cardio / indice exporté 34",
+    "id_cardio": "C007"
+   },
+   "exercices": []
+  },
+  {
+   "date": "2026-08-04",
+   "type": "cardio",
+   "titre": "Course – Type non renseigné",
+   "notes": "Après trois jours de festival ; distance, allure et RPE global non communiqués.",
+   "source": "perfs.xlsx (onglet Cardio)",
+   "cardio": {
+    "sport": "Course",
+    "type_seance": "Type non renseigné",
+    "duree": "1:05:00",
+    "duree_min": 65.0,
+    "distance_km": null,
+    "rpe_seance": null,
+    "allure_source_km": null,
+    "allure_calculee_km": null,
+    "srpe": null,
+    "fc_moy": null,
+    "fc_max": null,
+    "d_plus_m": null,
+    "statut_preuve": "Rapport consigné",
+    "source": "F1 / Cardio / indice exporté 35",
+    "id_cardio": "C008"
+   },
+   "exercices": []
+  },
+  {
+   "date": "2026-08-22",
+   "type": "musculation",
+   "titre": "Upper hypertrophie — reprise",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Curl incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Charge/RIR/RPE NM. | Charge par main",
+     "id_historique": "H048",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0147"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0148"
+      }
+     ]
+    },
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Série ajoutée ; ne pas répéter. | Prise standard",
+     "id_historique": "H049",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 55,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0149"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 55,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0150"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 55,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0151"
+      },
+      {
+       "serie": 4,
+       "charge_kg": 55,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0152"
+      }
+     ]
+    },
+    {
+     "nom": "Développé incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "RIR/RPE NM. | Charge par main",
+     "id_historique": "H050",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 18,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0153"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 18,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0154"
+      }
+     ]
+    },
+    {
+     "nom": "Extension triceps corde au-dessus tête",
+     "materiel_id": "M_TRICEPS_OH",
+     "unite": "kg",
+     "notes": "RIR/RPE NM. | Poulie",
+     "id_historique": "H051",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 15,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0155"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 17.5,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0156"
+      }
+     ]
+    },
+    {
+     "nom": "Oiseau / reverse pec-deck",
+     "materiel_id": "M_OISEAU_0822",
+     "unite": "kg",
+     "notes": "Variante, charge, RIR et RPE NM. | Variante et charge NM",
+     "id_historique": "H052",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0157"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0158"
+      }
+     ]
+    },
+    {
+     "nom": "Row assis machine",
+     "materiel_id": "M_ROW_HIST",
+     "unite": "kg",
+     "notes": "60 kg choisi ; RIR 2. | Même machine",
+     "id_historique": "H053",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0159"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 11,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0160"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 60,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0161"
+      }
+     ]
+    },
+    {
+     "nom": "Tractions",
+     "materiel_id": "BARRE_TRACTIONS",
+     "unite": "PDC",
+     "notes": "Nouvelle référence ; RIR/RPE NM. | Prise NM / poids du corps",
+     "id_historique": "H054",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "PDC",
+       "repos_reel_s": 60,
+       "precision": "Source détaillée",
+       "id_serie": "S0162"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "PDC",
+       "repos_reel_s": 60,
+       "precision": "Source détaillée",
+       "id_serie": "S0163"
+      },
+      {
+       "serie": 3,
+       "charge_kg": null,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "PDC",
+       "repos_reel_s": 60,
+       "precision": "Source détaillée",
+       "id_serie": "S0164"
+      }
+     ]
+    },
+    {
+     "nom": "Élévations latérales haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Charge/RIR/RPE NM. | Charge par main",
+     "id_historique": "H055",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 20,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0165"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0166"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-08-25",
+   "type": "musculation",
+   "titre": "Upper force — reprise",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Curl incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "S2 omise dans Performances détaillées mais explicitement enregistrée dans Musculation et Quotidien. | Charge par main",
+     "id_historique": "H056",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 8,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0167"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 8,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Résumé décliné en séries",
+       "id_serie": "S0168"
+      }
+     ]
+    },
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Prise standard",
+     "id_historique": "H057",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 57.5,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0169"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 57.5,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0170"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 57.5,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0171"
+      }
+     ]
+    },
+    {
+     "nom": "Développé militaire barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Standardisé",
+     "id_historique": "H058",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 30,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0172"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 30,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0173"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 30,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0174"
+      }
+     ]
+    },
+    {
+     "nom": "Extension triceps corde au-dessus tête",
+     "materiel_id": "M_TRICEPS_OH",
+     "unite": "kg",
+     "notes": "Poulie",
+     "id_historique": "H059",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 17.5,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0175"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 17.5,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0176"
+      }
+     ]
+    },
+    {
+     "nom": "Row assis machine",
+     "materiel_id": "M_ROW_HIST",
+     "unite": "kg",
+     "notes": "Même machine",
+     "id_historique": "H060",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 65,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0177"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 65,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0178"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 65,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0179"
+      }
+     ]
+    },
+    {
+     "nom": "Tirage vertical prise neutre",
+     "materiel_id": "M_LAT_HIST",
+     "unite": "kg",
+     "notes": "Troisième série non rapportée ; seules les séries effectuées sont inscrites. | Même machine / poignée",
+     "id_historique": "H061",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0180"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0181"
+      }
+     ]
+    },
+    {
+     "nom": "Élévations latérales haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "RIR non communiqué. | Charge par main",
+     "id_historique": "H062",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 6,
+       "repetitions": 16,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0182"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 6,
+       "repetitions": 13,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0183"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-08-30",
+   "type": "musculation",
+   "titre": "Upper hypertrophie",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Curl poulie",
+     "materiel_id": "M_CURL_CABLE",
+     "unite": "kg",
+     "notes": "Réalisation confirmée ; performances NM. | Poulie | Exercice confirmé effectué ; nombre de séries, charges et reps inconnus.",
+     "id_historique": "H063",
+     "series": [],
+     "detail_series_inconnu": true
+    },
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Répétitions NM. | Prise standard",
+     "id_historique": "H064",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 55,
+       "repetitions": null,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0185"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 55,
+       "repetitions": null,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0186"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 55,
+       "repetitions": null,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0187"
+      }
+     ]
+    },
+    {
+     "nom": "Développé incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Charge par main",
+     "id_historique": "H065",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 18,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0188"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 18,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0189"
+      }
+     ]
+    },
+    {
+     "nom": "Extension triceps corde",
+     "materiel_id": "M_TRICEPS_CORDE",
+     "unite": "kg",
+     "notes": "Réalisation confirmée ; performances NM. | Poulie | Exercice confirmé effectué ; nombre de séries, charges et reps inconnus.",
+     "id_historique": "H066",
+     "series": [],
+     "detail_series_inconnu": true
+    },
+    {
+     "nom": "Oiseau poulie",
+     "materiel_id": "M_OISEAU_0830",
+     "unite": "kg",
+     "notes": "Réalisation confirmée ; performances NM. | Poulie | Exercice confirmé effectué ; nombre de séries, charges et reps inconnus.",
+     "id_historique": "H067",
+     "series": [],
+     "detail_series_inconnu": true
+    },
+    {
+     "nom": "Row poitrine appuyée machine",
+     "materiel_id": "M_ROW_HIST",
+     "unite": "kg",
+     "notes": "Même machine",
+     "id_historique": "H068",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0192"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0193"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 60,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0194"
+      }
+     ]
+    },
+    {
+     "nom": "Tirage vertical prise neutre",
+     "materiel_id": "M_LAT_HIST",
+     "unite": "kg",
+     "notes": "Charge NM. | Même machine / poignée",
+     "id_historique": "H069",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0195"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0196"
+      },
+      {
+       "serie": 3,
+       "charge_kg": null,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0197"
+      }
+     ]
+    },
+    {
+     "nom": "Élévations latérales haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Charge par main",
+     "id_historique": "H070",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 6,
+       "repetitions": 17,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0198"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 6,
+       "repetitions": 14,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0199"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 6,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0200"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-09-04",
+   "type": "musculation",
+   "titre": "Upper force",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Prise standard",
+     "id_historique": "H071",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0201"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0202"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 60,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0203"
+      }
+     ]
+    },
+    {
+     "nom": "Développé militaire barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Standardisé",
+     "id_historique": "H072",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 30,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0204"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 30,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0205"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 30,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0206"
+      }
+     ]
+    },
+    {
+     "nom": "Row assis machine",
+     "materiel_id": "M_ROW_HIST",
+     "unite": "kg",
+     "notes": "Charge NM. | Même machine",
+     "id_historique": "H073",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0207"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0208"
+      },
+      {
+       "serie": 3,
+       "charge_kg": null,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0209"
+      }
+     ]
+    },
+    {
+     "nom": "Tirage vertical prise neutre",
+     "materiel_id": "M_LAT_HIST",
+     "unite": "kg",
+     "notes": "Même machine / poignée",
+     "id_historique": "H074",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0210"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0211"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 60,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0212"
+      }
+     ]
+    },
+    {
+     "nom": "Élévations latérales haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Charge par main",
+     "id_historique": "H075",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 6,
+       "repetitions": 17,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0213"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 6,
+       "repetitions": 14,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0214"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-09-07",
+   "type": "musculation",
+   "titre": "Upper hypertrophie",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Curl incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Variante incliné conservée séparément du curl poulie. | Charge par main",
+     "id_historique": "H076",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 8,
+       "repetitions": 14,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0215"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 8,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0216"
+      }
+     ]
+    },
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Deux hausses de difficulté ; dernière série à 0 RIR, pas de hausse validée. | Prise standard",
+     "id_historique": "H077",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 55,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 4,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0217"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0218"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 60,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 0,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0219"
+      }
+     ]
+    },
+    {
+     "nom": "Développé incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Charge par main",
+     "id_historique": "H078",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 18,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0220"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 18,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0221"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 18,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0222"
+      }
+     ]
+    },
+    {
+     "nom": "Extension triceps corde",
+     "materiel_id": "M_TRICEPS_CORDE",
+     "unite": "kg",
+     "notes": "Poulie, position à standardiser",
+     "id_historique": "H079",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 15,
+       "repetitions": 14,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0223"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 15,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0224"
+      }
+     ]
+    },
+    {
+     "nom": "Row poitrine appuyée machine",
+     "materiel_id": "M_ROW_HIST",
+     "unite": "kg",
+     "notes": "Même machine",
+     "id_historique": "H080",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0225"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0226"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 60,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0227"
+      }
+     ]
+    },
+    {
+     "nom": "Tractions",
+     "materiel_id": "BARRE_TRACTIONS",
+     "unite": "PDC (lest NM)",
+     "notes": "Ne pas assimiler aux 60 kg du tirage poulie. | Prise et assistance/lest NM",
+     "id_historique": "H081",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "PDC (lest NM)",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0228"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "PDC (lest NM)",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0229"
+      },
+      {
+       "serie": 3,
+       "charge_kg": null,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "PDC (lest NM)",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0230"
+      }
+     ]
+    },
+    {
+     "nom": "Élévations latérales haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "6 kg prescrits, pas une mesure de charge confirmée. | Charge par main",
+     "id_historique": "H082",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 18,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0231"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0232"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-09-11",
+   "type": "musculation",
+   "titre": "Upper A",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Curl incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Haltères",
+     "id_historique": "H083",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 8,
+       "repetitions": 14,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0233"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 8,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0234"
+      }
+     ]
+    },
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Date réelle 11/09 malgré en-tête du modèle 12/09. | Barre",
+     "id_historique": "H084",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 57.5,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0235"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 57.5,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0236"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 57.5,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0237"
+      }
+     ]
+    },
+    {
+     "nom": "Développé militaire barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Barre",
+     "id_historique": "H085",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 30,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0238"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 30,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0239"
+      }
+     ]
+    },
+    {
+     "nom": "Extension triceps corde",
+     "materiel_id": "M_TRICEPS_CORDE",
+     "unite": "kg",
+     "notes": "Poulie corde ; position à standardiser",
+     "id_historique": "H086",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 15,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0240"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 15,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0241"
+      }
+     ]
+    },
+    {
+     "nom": "Row poitrine appuyée machine",
+     "materiel_id": "M_ROW_HIST",
+     "unite": "kg",
+     "notes": "Machine poitrine appuyée",
+     "id_historique": "H087",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0242"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0243"
+      }
+     ]
+    },
+    {
+     "nom": "Tractions",
+     "materiel_id": "BARRE_TRACTIONS",
+     "unite": "PDC / lest NM",
+     "notes": "4 séries réellement rapportées ; substitution au tirage vertical. | Prise et assistance/lest NM",
+     "id_historique": "H088",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "PDC / lest NM",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0244"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 9,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "PDC / lest NM",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0245"
+      },
+      {
+       "serie": 3,
+       "charge_kg": null,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "PDC / lest NM",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0246"
+      },
+      {
+       "serie": 4,
+       "charge_kg": null,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "PDC / lest NM",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0247"
+      }
+     ]
+    },
+    {
+     "nom": "Élévations latérales haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "RIR non renseigné. | Haltères",
+     "id_historique": "H089",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 6,
+       "repetitions": 17,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0248"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 6,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0249"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-09-13",
+   "type": "musculation",
+   "titre": "Lower — reprise",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Back squat",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Barre",
+     "id_historique": "H090",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 40,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0250"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 40,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 3,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0251"
+      }
+     ]
+    },
+    {
+     "nom": "Leg curl couché bilatéral",
+     "materiel_id": "M_CURL_SEP13",
+     "unite": "kg",
+     "notes": "35 kg enregistré tel que déclaré ; ne pas convertir les machines. | Appareil du 13/09 ; comparaison juillet non confirmée",
+     "id_historique": "H091",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 35,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0252"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 35,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0253"
+      }
+     ]
+    },
+    {
+     "nom": "Mollets à la presse à cuisses",
+     "materiel_id": "M_PRESSE_MOLLETS_SEP13",
+     "unite": "kg",
+     "notes": "Une seule série documentée ; deuxième non renseignée. Variante distincte des mollets machine. | Presse à cuisses, variante mollets",
+     "id_historique": "H092",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0254"
+      }
+     ]
+    },
+    {
+     "nom": "Presse à cuisses",
+     "materiel_id": "M_PRESSE_0913",
+     "unite": "kg",
+     "notes": "Une seule série documentée ; deuxième non renseignée. | Machine / réglages à préciser",
+     "id_historique": "H093",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 70,
+       "repetitions": 11,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0255"
+      }
+     ]
+    },
+    {
+     "nom": "Romanian deadlift",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Barre",
+     "id_historique": "H094",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 35,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 4,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0256"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 35,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 4,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0257"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-09-15",
+   "type": "musculation",
+   "titre": "Upper B",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Curl incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Haltères",
+     "id_historique": "H095",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 8,
+       "repetitions": 14,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0258"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 8,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0259"
+      }
+     ]
+    },
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Barre",
+     "id_historique": "H096",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0260"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0261"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 60,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0262"
+      }
+     ]
+    },
+    {
+     "nom": "Extension triceps corde",
+     "materiel_id": "M_TRICEPS_CORDE",
+     "unite": "kg",
+     "notes": "Charge réelle 15 kg, et non 17,5 kg prescrits. | Poulie corde ; position à standardiser",
+     "id_historique": "H097",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 15,
+       "repetitions": 18,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0263"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 15,
+       "repetitions": 13,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0264"
+      }
+     ]
+    },
+    {
+     "nom": "Oiseau haltères poitrine appuyée",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Haltères, poitrine appuyée",
+     "id_historique": "H098",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 5,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0265"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 5,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0266"
+      }
+     ]
+    },
+    {
+     "nom": "Row poitrine appuyée machine",
+     "materiel_id": "M_ROW_HIST",
+     "unite": "kg",
+     "notes": "« 10ème » interprété comme 10 répétitions, à confirmer. La valeur 10 reste une interprétation non confirmée : conservée uniquement dans la note et le brut. | Machine poitrine appuyée",
+     "id_historique": "H099",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 65,
+       "repetitions": null,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Répétitions ambiguës",
+       "id_serie": "S0267"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 65,
+       "repetitions": null,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Répétitions ambiguës",
+       "id_serie": "S0268"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 65,
+       "repetitions": null,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Répétitions ambiguës",
+       "id_serie": "S0269"
+      }
+     ]
+    },
+    {
+     "nom": "Tractions",
+     "materiel_id": "BARRE_TRACTIONS",
+     "unite": "PDC / lest NM",
+     "notes": "RIR non renseigné. | Prise et assistance/lest NM",
+     "id_historique": "H100",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "PDC / lest NM",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0270"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 9,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "PDC / lest NM",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0271"
+      }
+     ]
+    },
+    {
+     "nom": "Élévations latérales haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Haltères",
+     "id_historique": "H101",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 6,
+       "repetitions": 18,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0272"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 6,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0273"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-09-15",
+   "type": "cardio",
+   "titre": "Course – Facile déclarée",
+   "notes": "45 minutes tranquilles le matin ; RPE, distance et heure de fin NM.",
+   "source": "perfs.xlsx (onglet Cardio)",
+   "cardio": {
+    "sport": "Course",
+    "type_seance": "Facile déclarée",
+    "duree": "0:45:00",
+    "duree_min": 45.0,
+    "distance_km": null,
+    "rpe_seance": null,
+    "allure_source_km": null,
+    "allure_calculee_km": null,
+    "srpe": null,
+    "fc_moy": null,
+    "fc_max": null,
+    "d_plus_m": null,
+    "statut_preuve": "Rapport consigné",
+    "source": "F1 / Cardio / indice exporté 36",
+    "id_cardio": "C009"
+   },
+   "exercices": []
+  },
+  {
+   "date": "2026-09-18",
+   "type": "musculation",
+   "titre": "Upper A",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Curl poulie",
+     "materiel_id": "M_CURL_CABLE",
+     "unite": "kg",
+     "notes": "Remplace le curl incliné. Référence séparée : aucune conversion vers les haltères. | Poulie (poignée NM)",
+     "id_historique": "H102",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 17.5,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0274"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 17.5,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0275"
+      }
+     ]
+    },
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Trois répétitions de plus que le 15/09, avec RIR réduit sur S2 et S3. | Barre",
+     "id_historique": "H103",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0276"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0277"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 60,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0278"
+      }
+     ]
+    },
+    {
+     "nom": "Développé incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Deux séries confirmées par l’utilisateur ; charges par main. | Haltères, par main",
+     "id_historique": "H104",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 18,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0279"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 18,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0280"
+      }
+     ]
+    },
+    {
+     "nom": "Développé militaire barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Charge explicitement confirmée sur les deux séries. | Barre",
+     "id_historique": "H105",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 30,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0281"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 30,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0282"
+      }
+     ]
+    },
+    {
+     "nom": "Extension triceps corde",
+     "materiel_id": "M_TRICEPS_CORDE",
+     "unite": "kg",
+     "notes": "15 kg = prescription seulement. Charge réalisée à confirmer. | Poulie (charge NM)",
+     "id_historique": "H106",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 17,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0283"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0284"
+      }
+     ]
+    },
+    {
+     "nom": "Row poitrine appuyée machine",
+     "materiel_id": "M_ROW_HIST",
+     "unite": "kg",
+     "notes": "S2 « idem » = 65 kg ×12, RIR 2. Comparer sur même machine/réglages. | Machine",
+     "id_historique": "H107",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 65,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0285"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 65,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0286"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 65,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0287"
+      }
+     ]
+    },
+    {
+     "nom": "Tractions",
+     "materiel_id": "BARRE_TRACTIONS",
+     "unite": null,
+     "notes": "Deux séries confirmées. Charge, prise et assistance/lest non renseignés. | Prise/aide/lest NM",
+     "id_historique": "H108",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": null,
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0288"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": null,
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0289"
+      }
+     ]
+    },
+    {
+     "nom": "Élévations latérales haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "6 kg/main = prescription seulement. Charge réalisée à confirmer. | Haltères (charge NM)",
+     "id_historique": "H109",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 16,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0290"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 13,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0291"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-09-22",
+   "type": "musculation",
+   "titre": "Upper",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Curl incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Variante réalisée : incliné haltères. Ne valide pas une progression à la poulie. | Haltères, par main",
+     "id_historique": "H110",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 8,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0292"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 8,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0293"
+      }
+     ]
+    },
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_SEP22",
+     "unite": "kg",
+     "notes": "Une seule série renseignée. Masse de barre et charge totale inconnues. S2/S3 non renseignées, pas considérées comme non réalisées. Ressenti : barre lourde, possiblement >20 kg. | Barre de masse inconnue",
+     "id_historique": "H111",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 6,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0294"
+      }
+     ]
+    },
+    {
+     "nom": "Développé incliné barre",
+     "materiel_id": "BARRE_SEP22",
+     "unite": "kg",
+     "notes": "40 kg déclarés. Inclusion du poids de barre non précisée. Variante barre distincte des haltères ; ne valide pas 20 kg/main. | Barre (remplace haltères)",
+     "id_historique": "H112",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 40,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0295"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 40,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0296"
+      }
+     ]
+    },
+    {
+     "nom": "Développé militaire barre",
+     "materiel_id": "BARRE_SEP22",
+     "unite": "kg",
+     "notes": "Deux mentions contradictoires : première 9/9 à 30 kg RIR 2 ; seconde « Série 1 : 10 rep série 2 : 9 rep rir 2 ». S1 = 9 ou 10, à confirmer. Deux séries comptées, pas quatre. | Barre",
+     "id_historique": "H113",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 30,
+       "repetitions": null,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0297"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 30,
+       "repetitions": 9,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0298"
+      }
+     ]
+    },
+    {
+     "nom": "Extension triceps corde",
+     "materiel_id": "M_TRICEPS_CORDE",
+     "unite": "kg",
+     "notes": "Charge réalisée 20 kg. RIR réel non renseigné : ne pas reprendre le RIR 2 prescrit. | Poulie / corde",
+     "id_historique": "H114",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 20,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0299"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 20,
+       "repetitions": 13,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0300"
+      }
+     ]
+    },
+    {
+     "nom": "Row poitrine appuyée machine",
+     "materiel_id": "M_ROW_SEP22",
+     "unite": "kg",
+     "notes": "S3 idem S2. Baisse à 50 kg effectuée. Identité de machine inconnue : aucune conclusion sur une baisse de force vs 65 kg auparavant. | Machine / réglages à confirmer",
+     "id_historique": "H115",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 55,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0301"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 50,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0302"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 50,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0303"
+      }
+     ]
+    },
+    {
+     "nom": "Tirage vertical prise serrée",
+     "materiel_id": "M_LAT_SERRÉ_SEP22",
+     "unite": "kg",
+     "notes": "Trois séries explicitement réalisées, S2/S3 idem S1. Remplace les tractions. Machine et orientation des mains NM. | Poulie / prise serrée",
+     "id_historique": "H116",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 65,
+       "repetitions": 9,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0304"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 65,
+       "repetitions": 9,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0305"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 65,
+       "repetitions": 9,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0306"
+      }
+     ]
+    },
+    {
+     "nom": "Élévations latérales haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Charge et RIR renseignés pour les deux séries. | Haltères, par main",
+     "id_historique": "H117",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 6,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0307"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 6,
+       "repetitions": 13,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0308"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-09-23",
+   "type": "musculation",
+   "titre": "Lower — consolidation",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Back squat",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "S2 réalisée, confirmation utilisateur du 23/09 (« Oui et oui »). Charge, répétitions et RIR de S2 non précisés. | Barre",
+     "id_historique": "H118",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 40,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0309"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": null,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Série faite ; détails non renseignés",
+       "id_serie": "S0310"
+      }
+     ]
+    },
+    {
+     "nom": "Leg curl",
+     "materiel_id": "M_CURL_SEP23",
+     "unite": "kg",
+     "notes": "S1 et S2 à 25 kg, charge S2 confirmée par l’utilisateur le 23/09. Variante non précisée. | Assis/allongé et machine NM",
+     "id_historique": "H119",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 25,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0311"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 25,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0312"
+      }
+     ]
+    },
+    {
+     "nom": "Mollets machine",
+     "materiel_id": "M_MOLLETS_SEP23",
+     "unite": "kg",
+     "notes": "Autre machine explicitement indiquée. S2 idem S1. Nouveau repère distinct des mollets à la presse à 60 kg. | Autre machine, type NM",
+     "id_historique": "H120",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 30,
+       "repetitions": 14,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0313"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 30,
+       "repetitions": 14,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0314"
+      }
+     ]
+    },
+    {
+     "nom": "Presse à cuisses",
+     "materiel_id": "M_PRESSE_0923",
+     "unite": "kg",
+     "notes": "S2 idem S1. Charge réalisée 80 kg. Identité de machine non confirmée. | Machine / réglages NM",
+     "id_historique": "H121",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 80,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0315"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 80,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0316"
+      }
+     ]
+    },
+    {
+     "nom": "Romanian deadlift",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "S2 idem S1. Charge réalisée 40 kg, différente de la prescription. | Barre",
+     "id_historique": "H122",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 40,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0317"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 40,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0318"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-09-24",
+   "type": "musculation",
+   "titre": "Upper",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Curl incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "15/13 à 8 kg/main et RIR2. | Haltères",
+     "id_historique": "H123",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 8,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0319"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 8,
+       "repetitions": 13,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0320"
+      }
+     ]
+    },
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "7/7/7 à RIR2 déclaré. | Barre",
+     "id_historique": "H124",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0321"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0322"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 60,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0323"
+      }
+     ]
+    },
+    {
+     "nom": "Développé incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "20 kg/main réalisés ; S2 idem S1. | Haltères",
+     "id_historique": "H125",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 20,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0324"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 20,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0325"
+      }
+     ]
+    },
+    {
+     "nom": "Développé militaire barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Charge et RIR confirmés pour les deux séries. | Barre",
+     "id_historique": "H126",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 30,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0326"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 30,
+       "repetitions": 9,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0327"
+      }
+     ]
+    },
+    {
+     "nom": "Rowing",
+     "materiel_id": "M_LOW_TG",
+     "unite": "kg",
+     "notes": "Nouvelle machine. S3 : charge et RIR non répétés, à confirmer. | Low row Technogym — autre machine",
+     "id_historique": "H127",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0328"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 11,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0329"
+      },
+      {
+       "serie": 3,
+       "charge_kg": null,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0330"
+      }
+     ]
+    },
+    {
+     "nom": "Tractions",
+     "materiel_id": "BARRE_TRACTIONS",
+     "unite": null,
+     "notes": "Tractions réalisées à la place du tirage. Repos entre séries : 90 secondes. RIR, prise et assistance/lest NM. | Prise / assistance / lest NM",
+     "id_historique": "H128",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 11,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": null,
+       "repos_reel_s": 90,
+       "precision": "Source détaillée",
+       "id_serie": "S0331"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": null,
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0332"
+      }
+     ]
+    },
+    {
+     "nom": "Élévations latérales haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "S2 : 14 reps ; charge et RIR non répétés, à confirmer. | Haltères",
+     "id_historique": "H129",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 6,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0333"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 14,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0334"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-09-26",
+   "type": "cardio",
+   "titre": "Course – Nike Run Club",
+   "notes": "Chiffres retrouvés dans un récapitulatif du 13/10. Capture/export initial non relu. Pas utilisés comme résultats de test ni record validé. Confirmé dans l'export Apple Santé (heure de Tokyo du téléphone ; date locale France = 26/09).",
+   "source": "perfs.xlsx (onglet Cardio)",
+   "cardio": {
+    "sport": "Course",
+    "type_seance": "Nike Run Club",
+    "duree": "1:04:28",
+    "duree_min": 64.47,
+    "distance_km": 10.03,
+    "rpe_seance": null,
+    "allure_source_km": "6:26",
+    "allure_calculee_km": "6:25",
+    "srpe": null,
+    "fc_moy": null,
+    "fc_max": null,
+    "d_plus_m": null,
+    "statut_preuve": "Confirmé par l'export Apple Santé (Nike Run Club) ; workbook : Résumé assistant uniquement ; original à récupérer",
+    "source": "Récapitulatif assistant du 13/10/2026 22:05:12Z, retrouvé par recherche de contexte",
+    "id_cardio": "C010",
+    "export_apple_sante": {
+     "debut": "2026-09-27 01:00:49 +0900",
+     "fin": "2026-09-27 02:05:42 +0900",
+     "duree_min": 64.47,
+     "distance_km": 10.031,
+     "energie_active_kcal": 748.8,
+     "fc": "aucun échantillon FC pendant la sortie"
+    }
+   },
+   "exercices": []
+  },
+  {
+   "date": "2026-09-28",
+   "type": "musculation",
+   "titre": "Upper",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Curl incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Charge et RIR confirmés. | Haltères",
+     "id_historique": "H130",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 8,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0335"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 8,
+       "repetitions": 14,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0336"
+      }
+     ]
+    },
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Charge et RIR confirmés. | Barre",
+     "id_historique": "H131",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0337"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0338"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 60,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0339"
+      }
+     ]
+    },
+    {
+     "nom": "Développé incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Deux séries confirmées. | Haltères",
+     "id_historique": "H132",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 20,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0340"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 20,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0341"
+      }
+     ]
+    },
+    {
+     "nom": "Développé militaire barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "S2 idem. | Barre",
+     "id_historique": "H133",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 30,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0342"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 30,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0343"
+      }
+     ]
+    },
+    {
+     "nom": "Extension triceps corde",
+     "materiel_id": "M_TRICEPS_CORDE",
+     "unite": "kg",
+     "notes": "Charge réalisée 15 kg. | Poulie",
+     "id_historique": "H134",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 15,
+       "repetitions": 17,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0344"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 15,
+       "repetitions": 13,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0345"
+      }
+     ]
+    },
+    {
+     "nom": "Rowing",
+     "materiel_id": "M_UPPER_TG",
+     "unite": "kg",
+     "notes": "S2/S3 : charge et RIR non répétés. Machine distincte du Low Row. | Upper Back Technogym",
+     "id_historique": "H135",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 40,
+       "repetitions": 11,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0346"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0347"
+      },
+      {
+       "serie": 3,
+       "charge_kg": null,
+       "repetitions": 9,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0348"
+      }
+     ]
+    },
+    {
+     "nom": "Tractions",
+     "materiel_id": "BARRE_TRACTIONS",
+     "unite": null,
+     "notes": "Repos entre séries : 90 s. RIR non renseigné. | Prise neutre ; assistance/lest NM",
+     "id_historique": "H136",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": null,
+       "repos_reel_s": 90,
+       "precision": "Source détaillée",
+       "id_serie": "S0349"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": null,
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0350"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-09-29",
+   "type": "cardio",
+   "titre": "Course – Nike Run Club",
+   "notes": "Chiffres retrouvés dans un récapitulatif du 13/10. Capture/export initial non relu. Pas utilisés comme résultats de test ni record validé. Confirmé dans l'export Apple Santé (heure de Tokyo du téléphone ; date locale France = 29/09).",
+   "source": "perfs.xlsx (onglet Cardio)",
+   "cardio": {
+    "sport": "Course",
+    "type_seance": "Nike Run Club",
+    "duree": "0:57:56",
+    "duree_min": 57.93,
+    "distance_km": 9.63,
+    "rpe_seance": null,
+    "allure_source_km": "6:01",
+    "allure_calculee_km": "6:00",
+    "srpe": null,
+    "fc_moy": null,
+    "fc_max": null,
+    "d_plus_m": null,
+    "statut_preuve": "Confirmé par l'export Apple Santé (Nike Run Club) ; workbook : Résumé assistant uniquement ; original à récupérer",
+    "source": "Récapitulatif assistant du 13/10/2026 22:05:12Z, retrouvé par recherche de contexte",
+    "id_cardio": "C011",
+    "export_apple_sante": {
+     "debut": "2026-09-29 13:57:17 +0900",
+     "fin": "2026-09-29 14:55:15 +0900",
+     "duree_min": 57.94,
+     "distance_km": 9.633,
+     "energie_active_kcal": 727.9,
+     "fc": "aucun échantillon FC pendant la sortie"
+    }
+   },
+   "exercices": []
+  },
+  {
+   "date": "2026-09-30",
+   "type": "musculation",
+   "titre": "Upper",
+   "notes": "",
+   "source": "perfs.xlsx (onglets Séries/Historique)",
+   "exercices": [
+    {
+     "nom": "Curl incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "S2 idem. | Haltères",
+     "id_historique": "H137",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 8,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0351"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 8,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0352"
+      }
+     ]
+    },
+    {
+     "nom": "Développé couché barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "S2 idem. Charge S3 reprise du contexte de séries à 60 kg, sans changement annoncé. | Barre",
+     "id_historique": "H138",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 60,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0353"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 60,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0354"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 60,
+       "repetitions": 7,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Charge reprise du contexte dans le classeur",
+       "id_serie": "S0355"
+      }
+     ]
+    },
+    {
+     "nom": "Développé incliné haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Charge S2 reprise du contexte à 22 kg/main, sans changement annoncé ; RIR S2 NM. | Haltères",
+     "id_historique": "H139",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 22,
+       "repetitions": 11,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0356"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 22,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Charge reprise du contexte dans le classeur",
+       "id_serie": "S0357"
+      }
+     ]
+    },
+    {
+     "nom": "Développé militaire barre",
+     "materiel_id": "BARRE_LIBRE",
+     "unite": "kg",
+     "notes": "Charge et RIR confirmés. | Barre",
+     "id_historique": "H140",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 30,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0358"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 30,
+       "repetitions": 10,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0359"
+      }
+     ]
+    },
+    {
+     "nom": "Extension triceps corde",
+     "materiel_id": "M_TRICEPS_CORDE",
+     "unite": "kg",
+     "notes": "Charge S2 reprise du contexte à 17,5 kg, sans changement annoncé ; RIR S2 NM. | Poulie",
+     "id_historique": "H141",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 17.5,
+       "repetitions": 19,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0360"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 17.5,
+       "repetitions": 14,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Charge reprise du contexte dans le classeur",
+       "id_serie": "S0361"
+      }
+     ]
+    },
+    {
+     "nom": "Rowing",
+     "materiel_id": "M_ROW_HABITUEL",
+     "unite": "kg",
+     "notes": "Charge 65 kg annoncée pour exercice. RIR S3 NM. Ne pas assimiler aux machines Technogym. | Machine habituelle, modèle à confirmer",
+     "id_historique": "H142",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": 65,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0362"
+      },
+      {
+       "serie": 2,
+       "charge_kg": 65,
+       "repetitions": 12,
+       "rpe": null,
+       "rir": 2,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0363"
+      },
+      {
+       "serie": 3,
+       "charge_kg": 65,
+       "repetitions": 11,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0364"
+      }
+     ]
+    },
+    {
+     "nom": "Tractions",
+     "materiel_id": "BARRE_TRACTIONS",
+     "unite": null,
+     "notes": "Trois séries réalisées, deux prescrites. RIR, repos réel et assistance/lest NM. | Prise neutre prescrite ; variante réalisée à confirmer",
+     "id_historique": "H143",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 13,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": null,
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0365"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 9,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": null,
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0366"
+      },
+      {
+       "serie": 3,
+       "charge_kg": null,
+       "repetitions": 8,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": null,
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0367"
+      }
+     ]
+    },
+    {
+     "nom": "Élévations latérales haltères",
+     "materiel_id": "HALTERES",
+     "unite": "kg/main",
+     "notes": "Charge réalisée non répétée (6 kg/main prescrits). RIR S1 NM, RIR S2 1. | Haltères",
+     "id_historique": "H144",
+     "series": [
+      {
+       "serie": 1,
+       "charge_kg": null,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": null,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0368"
+      },
+      {
+       "serie": 2,
+       "charge_kg": null,
+       "repetitions": 15,
+       "rpe": null,
+       "rir": 1,
+       "cote": null,
+       "unite": "kg/main",
+       "repos_reel_s": null,
+       "precision": "Source détaillée",
+       "id_serie": "S0369"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "date": "2026-10-03",
+   "type": "cardio",
+   "titre": "Course – Nike Run Club",
+   "notes": "Chiffres retrouvés dans un récapitulatif du 13/10. Capture/export initial non relu. Pas utilisés comme résultats de test ni record validé. Confirmé dans l'export Apple Santé (heure de Tokyo du téléphone ; date locale France = 03/10).",
+   "source": "perfs.xlsx (onglet Cardio)",
+   "cardio": {
+    "sport": "Course",
+    "type_seance": "Nike Run Club",
+    "duree": "0:59:43",
+    "duree_min": 59.72,
+    "distance_km": 10.02,
+    "rpe_seance": null,
+    "allure_source_km": "5:58",
+    "allure_calculee_km": "5:57",
+    "srpe": null,
+    "fc_moy": null,
+    "fc_max": null,
+    "d_plus_m": null,
+    "statut_preuve": "Confirmé par l'export Apple Santé (Nike Run Club) ; workbook : Résumé assistant uniquement ; original à récupérer",
+    "source": "Récapitulatif assistant du 13/10/2026 22:05:12Z, retrouvé par recherche de contexte",
+    "id_cardio": "C012",
+    "export_apple_sante": {
+     "debut": "2026-10-04 01:21:47 +0900",
+     "fin": "2026-10-04 02:21:32 +0900",
+     "duree_min": 59.72,
+     "distance_km": 10.023,
+     "energie_active_kcal": 756.5,
+     "fc": "aucun échantillon FC pendant la sortie"
+    }
+   },
+   "exercices": []
+  },
+  {
+   "date": "2026-10-15",
+   "type": "cardio",
+   "titre": "Course – 10 km (Nike Run Club + Apple Watch)",
+   "notes": "Sortie 08:02–09:05 (heure de Tokyo). FC : 742 échantillons Apple Watch pendant la sortie, moyenne simple 148,5 bpm (149 dans l'analyse coach), max 164. Pas une sortie Z2 (tempo modéré).",
+   "source": "Apple Santé export.xml (Workout NRC + records FC Apple Watch)",
+   "cardio": {
+    "sport": "Course",
+    "type_seance": "10 km",
+    "duree": "0:58:30",
+    "duree_min": 58.51,
+    "distance_km": 10.048,
+    "allure_calculee_km": "5:49",
+    "rpe_seance": null,
+    "fc_moy": 148.5,
+    "fc_max": 164,
+    "d_plus_m": null,
+    "energie_active_kcal": 763.4,
+    "statut_preuve": "Export Apple Santé"
+   },
+   "exercices": []
+  },
+  {
+   "date": "2026-10-16",
+   "type": "cardio",
+   "titre": "Vélo (Apple Watch)",
+   "notes": "16:12–18:21 (heure de Tokyo), au Japon.",
+   "source": "Apple Santé export.xml (Workout Apple Watch)",
+   "cardio": {
+    "sport": "Vélo",
+    "type_seance": "Extérieur",
+    "duree": "2:07:53",
+    "duree_min": 127.88,
+    "distance_km": 17.6,
+    "rpe_seance": null,
+    "fc_moy": 69.4,
+    "fc_max": 98,
+    "d_plus_m": 125.4,
+    "energie_active_kcal": 256.2,
+    "statut_preuve": "Export Apple Santé"
+   },
+   "exercices": []
+  },
+  {
+   "date": "2026-10-17",
+   "type": "musculation",
+   "titre": "Renforcement fonctionnel (Apple Watch)",
+   "notes": "09:47–10:17 (heure de Tokyo), 29:44. Probablement la séance aux élastiques évoquée par Florian ; exercices, charges et reps non enregistrés. FC moy. 87,6, max 112. Énergie active 122 kcal.",
+   "source": "Apple Santé export.xml (Workout Apple Watch)",
+   "duree_min": 29.74,
+   "exercices": []
+  }
+ ]
+}

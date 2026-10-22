@@ -2,7 +2,8 @@
 
 import { useApp } from "@/components/app-context";
 import { hardSetCount, tonnage } from "@/lib/calc";
-import { compareExercise, reportJson, summaryText, type CompareKind } from "@/lib/session";
+import { cardioSummary } from "@/lib/history";
+import { compareExercise, formatPerformedSet, reportJson, summaryText, type CompareKind } from "@/lib/session";
 import { formatDuration, formatInt, formatLong } from "@/lib/utils";
 
 export function BilanScreen({ id }: { id: string }) {
@@ -65,6 +66,33 @@ export function BilanScreen({ id }: { id: string }) {
             <span>kg déplacés</span>
           </div>
         </div>
+        {session.cardio ? (
+          <div className="compare">
+            <h3>{session.cardio.sport}</h3>
+            <p>{cardioSummary(session.cardio)}</p>
+          </div>
+        ) : null}
+        {session.exercises.some((exercise) => exercise.detailUnknown || exercise.unit || exercise.sets.some((set) => set.unit || set.rir != null || set.side)) ? (
+          <div className="compare">
+            <h3>Séries notées</h3>
+            {session.exercises.map((exercise) => (
+              <div className="cmp" key={exercise.id}>
+                <div className="r1">
+                  <b>{exercise.name}</b>
+                </div>
+                <p>
+                  {exercise.detailUnknown
+                    ? "détail inconnu"
+                    : exercise.sets.filter((set) => set.done && !set.warmup).map((set) => formatPerformedSet(set, exercise.unit)).join(", ") || "—"}
+                </p>
+              </div>
+            ))}
+            {session.exercises.some((exercise) => exercise.unit === "kg/main" || exercise.sets.some((set) => set.unit === "kg/main")) ? (
+              <p className="fine">Une charge en kg/main est celle d’une seule main. Les kilos déplacés comptent les deux.</p>
+            ) : null}
+          </div>
+        ) : null}
+        {session.cardio ? null : (
         <div className="compare">
           <h3>Par rapport au plan</h3>
           {shown.map((row) => (
@@ -78,6 +106,7 @@ export function BilanScreen({ id }: { id: string }) {
           ))}
           {extraHeld > 0 ? <p className="more">{extraHeld === 1 ? "1 autre exercice tenu." : `${extraHeld} autres exercices tenus.`}</p> : null}
         </div>
+        )}
         <label className="fieldlabel" htmlFor="coach-note">
           Mot pour Chef sport
         </label>

@@ -10,7 +10,8 @@ import {
   saveSession as putSession,
   saveSettings,
 } from "@/lib/db";
-import { mergePlans, parsePlan, planFromLocation } from "@/lib/plan";
+import { importSummary, parseImport, previewImport, textFromLocation, withoutDuplicates, type ImportPreview } from "@/lib/history";
+import { mergePlans } from "@/lib/plan";
 import type { BackupFile, CustomExercise, Session, Settings } from "@/lib/types";
 import { publicBase } from "@/lib/base-path";
 import { localDate } from "@/lib/utils";
@@ -58,6 +59,9 @@ type Api = {
   removeSession: (id: string) => Promise<void>;
   updateSettings: (patch: Partial<Settings>) => Promise<void>;
   importPlanText: (raw: string) => Promise<string | null>;
+  importPreview: ImportPreview | null;
+  confirmImport: () => Promise<void>;
+  dismissImport: () => void;
   restoreBackup: (backup: BackupFile) => Promise<void>;
   loadDemo: () => Promise<void>;
   clearDemo: () => Promise<void>;
@@ -96,7 +100,14 @@ export function AppProvider({
   initial,
 }: {
   children: ReactNode;
-  initial: { settings: Settings; sessions: Session[]; customs: CustomExercise[]; pendingPlan: boolean };
+  initial: {
+    settings: Settings;
+    sessions: Session[];
+    customs: CustomExercise[];
+    pendingPlan: boolean;
+    importPreview: ImportPreview | null;
+    notice: string | null;
+  };
 }) {
   const today = localDate();
   const [settings, setSettings] = useState(initial.settings);
@@ -105,7 +116,7 @@ export function AppProvider({
   const [tab, setTab] = useState<Tab>("today");
   const [selectedDate, setSelectedDate] = useState(today);
   const [overlay, setOverlay] = useState<Overlay>(null);
-  const [sheet, setSheet] = useState<SheetName>(null);
+  const [sheet, setSheet] = useState<SheetName>(initial.importPreview && initial.settings.onboarded ? "import" : null);
   const [editId, setEditId] = useState<string | null>(null);
   const [platesKg, setPlatesKg] = useState(80);
   const [range, setRange] = useState<RangeKey>(84);
@@ -113,12 +124,15 @@ export function AppProvider({
   const [progressName, setProgressName] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [pendingPlan, setPendingPlan] = useState(initial.pendingPlan);
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(initial.importPreview);
   const sessionsRef = useRef(sessions);
   const settingsRef = useRef(settings);
   const customsRef = useRef(customs);
+  const previewRef = useRef(importPreview);
   sessionsRef.current = sessions;
   settingsRef.current = settings;
   customsRef.current = customs;
+  previewRef.current = importPreview;
 
   const flash = (message: string) => {
     setToast(message);
@@ -134,6 +148,10 @@ export function AppProvider({
     media.addEventListener("change", onChange);
     return () => media.removeEventListener("change", onChange);
   }, [settings.theme]);
+
+  useEffect(() => {
+    if (initial.notice) flash(initial.notice);
+  }, [initial.notice]);
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "production") return;
@@ -225,19 +243,77 @@ export function AppProvider({
         await saveSettings(next);
       },
       importPlanText: async (raw) => {
-        const parsed = parsePlan(raw, customsRef.current);
+        const parsed = parseImport(raw, customsRef.current);
         if ("error" in parsed) return parsed.error;
-        const merged = mergePlans(sessionsRef.current, parsed.sessions);
-        setSessions(merged.sessions);
-        for (const session of merged.touched) await putSession(session);
-        if (merged.touched.length === 0) {
-          flash("Ces séances sont déjà en cours ou terminées. Elles restent en place.");
-        } else {
-          flash(merged.touched.length > 1 ? `${merged.touched.length} séances ajoutées au carnet.` : "Séance ajoutée au carnet.");
-          setSheet(null);
-          setTab("today");
+        const preview = previewImport(parsed, sessionsRef.current);
+        previewRef.current = preview;
+        setImportPreview(preview);
+        try {
+          sessionStorage.setItem(PENDING_IMPORT, raw);
+        } catch {
+          /* stockage privé */
         }
+        setSheet("import");
         return null;
+      },
+      importPreview,
+      confirmImport: async () => {
+        const preview = previewRef.current;
+        if (!preview) return;
+        const nextCustoms = [...customsRef.current];
+        for (const custom of preview.created) {
+          if (!nextCustoms.some((item) => item.id === custom.id)) {
+            nextCustoms.push(custom);
+            await saveCustom(custom);
+          }
+        }
+        customsRef.current = nextCustoms;
+        setCustoms(nextCustoms);
+        let nextSessions = sessionsRef.current;
+        let addedCount = 0;
+        if (preview.kind === "history") {
+          const fresh = withoutDuplicates(nextSessions, preview.toAdd).added;
+          addedCount = fresh.length;
+          nextSessions = [...nextSessions, ...fresh];
+          for (const session of fresh) await putSession(session);
+        } else {
+          const merged = mergePlans(nextSessions, preview.planSessions);
+          addedCount = merged.touched.length;
+          nextSessions = merged.sessions;
+          for (const session of merged.touched) await putSession(session);
+        }
+        sessionsRef.current = nextSessions;
+        setSessions(nextSessions);
+        if (!settingsRef.current.onboarded) {
+          const nextSettings = { ...settingsRef.current, onboarded: true };
+          settingsRef.current = nextSettings;
+          setSettings(nextSettings);
+          await saveSettings(nextSettings);
+        }
+        previewRef.current = null;
+        setImportPreview(null);
+        setPendingPlan(false);
+        setSheet(null);
+        try {
+          sessionStorage.removeItem(PENDING_IMPORT);
+          sessionStorage.removeItem("repere-pending-plan");
+        } catch {
+          /* stockage privé */
+        }
+        setTab(preview.kind === "history" ? "history" : "today");
+        flash(addedCount === 0 ? "Rien de nouveau à ajouter." : importSummary(preview)[0]);
+      },
+      dismissImport: () => {
+        previewRef.current = null;
+        setImportPreview(null);
+        setPendingPlan(false);
+        try {
+          sessionStorage.removeItem(PENDING_IMPORT);
+          sessionStorage.removeItem("repere-pending-plan");
+        } catch {
+          /* stockage privé */
+        }
+        setSheet(null);
       },
       restoreBackup: async (backup) => {
         await replaceAll(backup);
@@ -278,19 +354,8 @@ export function AppProvider({
         const next = { ...settingsRef.current, onboarded: true };
         await saveSettings(next);
         setSettings(next);
-        const raw = sessionStorage.getItem("repere-pending-plan");
-        sessionStorage.removeItem("repere-pending-plan");
         setPendingPlan(false);
-        if (!raw) return;
-        const parsed = parsePlan(raw, customsRef.current);
-        if ("error" in parsed) {
-          flash(parsed.error);
-          return;
-        }
-        const merged = mergePlans(sessionsRef.current, parsed.sessions);
-        setSessions(merged.sessions);
-        for (const session of merged.touched) await putSession(session);
-        if (merged.touched.length) flash("Le plan du lien est dans le carnet.");
+        if (previewRef.current) setSheet("import");
       },
       pendingPlan,
       beginSession: async (session) => {
@@ -315,6 +380,7 @@ export function AppProvider({
     progressName,
     toast,
     pendingPlan,
+    importPreview,
   ]);
 
   return (
@@ -331,6 +397,8 @@ export function useBoot() {
     sessions: Session[];
     customs: CustomExercise[];
     pendingPlan: boolean;
+    importPreview: ImportPreview | null;
+    notice: string | null;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -340,27 +408,32 @@ export function useBoot() {
       try {
         const loaded = await loadState();
         if (cancel) return;
-        let pending = false;
-        const fromUrl = planFromLocation(window.location.href);
-        if (fromUrl) {
-          sessionStorage.setItem("repere-pending-plan", fromUrl);
-          const url = new URL(window.location.href);
-          url.searchParams.delete("plan");
-          url.hash = "";
-          history.replaceState(null, "", url.pathname + url.search);
-        }
-        const raw = sessionStorage.getItem("repere-pending-plan");
-        if (raw && loaded.settings.onboarded) {
-          sessionStorage.removeItem("repere-pending-plan");
-          const parsed = parsePlan(raw, loaded.customs);
-          if (!("error" in parsed)) {
-            const merged = mergePlans(loaded.sessions, parsed.sessions);
-            for (const session of merged.touched) await putSession(session);
-            loaded.sessions = merged.sessions;
+        let notice: string | null = null;
+        let preview: ImportPreview | null = null;
+        const fromUrl = await textFromLocation(window.location.href);
+        if (fromUrl.failed) notice = "Ce lien d’import est illisible.";
+        let raw = fromUrl.text;
+        if (raw) {
+          try {
+            sessionStorage.setItem(PENDING_IMPORT, raw);
+          } catch {
+            /* stockage privé */
           }
-        } else if (raw) pending = true;
+          clearImportLocation();
+        } else {
+          try {
+            raw = sessionStorage.getItem(PENDING_IMPORT) || sessionStorage.getItem("repere-pending-plan");
+          } catch {
+            raw = null;
+          }
+        }
+        if (raw) {
+          const parsed = parseImport(raw, loaded.customs);
+          if ("error" in parsed) notice = parsed.error;
+          else preview = previewImport(parsed, loaded.sessions);
+        }
         applyTheme(loaded.settings.theme);
-        if (!cancel) setState({ ...loaded, pendingPlan: pending });
+        if (!cancel) setState({ ...loaded, pendingPlan: Boolean(preview) && !loaded.settings.onboarded, importPreview: preview, notice });
       } catch {
         if (!cancel) setError("Le carnet de ce navigateur n’est pas accessible.");
       }
@@ -370,5 +443,18 @@ export function useBoot() {
     };
   }, []);
 
-  return { state, error, empty: EMPTY };
+  return { state, error, empty: { ...EMPTY, importPreview: null, notice: null, pendingPlan: false } };
+}
+
+const PENDING_IMPORT = "repere-pending-import";
+
+function clearImportLocation() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete("plan");
+  url.searchParams.delete("historique");
+  const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
+  hash.delete("plan");
+  hash.delete("historique");
+  const rest = hash.toString();
+  history.replaceState(null, "", `${url.pathname}${url.search}${rest ? `#${rest}` : ""}`);
 }

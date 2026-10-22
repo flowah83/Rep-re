@@ -20,13 +20,18 @@ export function hardSetCount(exercises: ExerciseLog[]): number {
   return exercises.reduce((n, ex) => n + ex.sets.filter(isHardSet).length, 0);
 }
 
-/** Kilos déplacés : charge écrite × répétitions, séries dures seulement. */
+/** Une charge « kg/main » est celle d’une seule main : le volume compte les deux. */
+export function loadFactor(unit: string | null | undefined): number {
+  return unit === "kg/main" ? 2 : 1;
+}
+
+/** Kilos déplacés : charge écrite × répétitions, séries dures seulement. null n’est pas zéro. */
 export function tonnage(exercises: ExerciseLog[]): number {
   let total = 0;
   for (const ex of exercises) {
     for (const set of ex.sets) {
-      if (!isHardSet(set) || set.loadKg == null) continue;
-      total += set.loadKg * (set.reps ?? 0);
+      if (!isHardSet(set) || set.loadKg == null || set.reps == null) continue;
+      total += set.loadKg * set.reps * loadFactor(set.unit ?? ex.unit);
     }
   }
   return round1(total);
@@ -39,7 +44,7 @@ export function muscleTotals(
 ): Record<Muscle, number> {
   const totals = emptyMuscles();
   for (const session of sessions) {
-    if (session.status === "planned") continue;
+    if (session.cardio || session.status === "planned") continue;
     if (session.date < fromIso || session.date > toIso) continue;
     for (const ex of session.exercises) {
       const n = ex.sets.filter(isHardSet).length;
@@ -98,7 +103,7 @@ export function e1rmSeries(
 export function samplesForExercise(sessions: Session[], name: string) {
   const samples: { date: string; loadKg: number; reps: number }[] = [];
   for (const session of sessions) {
-    if (session.status === "planned") continue;
+    if (session.cardio || session.status === "planned") continue;
     for (const ex of session.exercises) {
       if (ex.name !== name) continue;
       for (const set of ex.sets) {
@@ -142,7 +147,7 @@ export type BestLoad = {
 export function bestLoads(sessions: Session[]): BestLoad[] {
   const map = new Map<string, BestLoad>();
   for (const session of sessions) {
-    if (session.status === "planned") continue;
+    if (session.cardio || session.status === "planned") continue;
     for (const ex of session.exercises) {
       for (const set of ex.sets) {
         if (!isHardSet(set) || set.loadKg == null || set.reps == null || set.loadKg <= 0) continue;

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { toCsv } from "@/lib/db";
 import { CATALOG, PATTERN_LABEL } from "@/lib/exercises";
+import { importSummary, type ImportPreview } from "@/lib/history";
 import { exerciseFromPlan } from "@/lib/plan";
 import { platesPerSide } from "@/lib/calc";
 import type { BackupFile, Pattern, Session } from "@/lib/types";
@@ -60,7 +61,7 @@ function SettingsSheet() {
         </Button>
       </div>
       <p className="fine">Barre actuelle : {formatKg(app.settings.barKg)} kg. Sert seulement au calcul des disques.</p>
-      <Button onClick={() => app.setSheet("import")}>Importer un plan</Button>
+      <Button onClick={() => app.setSheet("import")}>Importer</Button>
       <Button variant="ghost" onClick={() => { app.setEditId(null); app.setSheet("edit"); }}>
         Créer une séance
       </Button>
@@ -151,17 +152,47 @@ function SettingsSheet() {
 
 function ImportSheet() {
   const app = useApp();
+  if (app.importPreview) return <ImportConfirm preview={app.importPreview} />;
+  return <ImportForm />;
+}
+
+export function ImportSummary({ preview }: { preview: ImportPreview }) {
+  const app = useApp();
+  const lines = importSummary(preview);
+  const canSave = preview.kind === "history" ? preview.toAdd.length > 0 : preview.planSessions.length > 0;
+  return (
+    <div data-testid="import-summary">
+      {lines.map((line) => (
+        <p className="lead" key={line}>{line}</p>
+      ))}
+      {canSave ? <Button onClick={() => void app.confirmImport()}>Ajouter au carnet</Button> : null}
+      <Button variant="ghost" onClick={app.dismissImport}>Annuler</Button>
+    </div>
+  );
+}
+
+function ImportConfirm({ preview }: { preview: ImportPreview }) {
+  return (
+    <>
+      <DialogTitle asChild><h2>Ajouter au carnet ?</h2></DialogTitle>
+      <ImportSummary preview={preview} />
+    </>
+  );
+}
+
+function ImportForm() {
+  const app = useApp();
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   return (
     <>
-      <DialogTitle asChild><h2>Plan de Chef sport</h2></DialogTitle>
+      <DialogTitle asChild><h2>Importer</h2></DialogTitle>
       <DialogDescription asChild>
         <p className="lead">
-          Collez le plan, ou ouvrez un lien qui contient #plan=. Une séance déjà commencée ou terminée n’est pas remplacée.
+          Collez un plan ou un historique, ou choisissez un fichier .json. Un lien #plan= ou #historique= s’ouvre ici avant d’être enregistré.
         </p>
       </DialogDescription>
-      <Textarea value={text} onChange={(event) => setText(event.target.value)} placeholder='{ "seances": [ … ] }' aria-label="Texte du plan" />
+      <Textarea value={text} onChange={(event) => setText(event.target.value)} placeholder='{ "seances": [ … ] }' aria-label="Texte à importer" />
       {error ? <p className="err">{error}</p> : null}
       <Button
         onClick={async () => {
@@ -169,7 +200,7 @@ function ImportSheet() {
           setError(message);
         }}
       >
-        Ajouter au carnet
+        Lire
       </Button>
       <label className="btn ghost" style={{ marginTop: 8 }}>
         Choisir un fichier
@@ -189,7 +220,7 @@ function ImportSheet() {
                   return;
                 }
               } catch {
-                setError("Ce fichier n’est pas un plan lisible.");
+                setError("Ce fichier n’est pas lisible.");
                 return;
               }
               setText(raw);

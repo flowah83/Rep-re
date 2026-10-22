@@ -48,8 +48,8 @@ export function completeSet(session: Session, exerciseId: string, setId: string)
   const ex = session.exercises.find((e) => e.id === exerciseId);
   const set = ex?.sets.find((s) => s.id === setId);
   if (!ex || !set) return session;
-  const reps = set.reps ?? ex.planned.reps ?? 0;
-  const loadKg = set.loadKg ?? ex.planned.loadKg;
+  const reps = set.reps != null ? set.reps : ex.planned.reps != null ? ex.planned.reps : null;
+  const loadKg = set.loadKg != null ? set.loadKg : ex.planned.loadKg != null ? ex.planned.loadKg : null;
   const done = !set.done;
   let next = patchSet(session, exerciseId, setId, {
     done,
@@ -91,8 +91,14 @@ export function compareExercise(
   const work = ex.sets.filter(isHardSet);
   if (work.length === 0) return { kind: "vide", line: "Pas encore noté." };
   const repsList = work.map((s) => s.reps ?? 0);
-  const loads = work.map((s) => s.loadKg ?? 0);
-  const maxLoad = Math.max(...loads);
+  const knownLoads = work.map((s) => s.loadKg).filter((load): load is number => load != null);
+  const maxLoad = knownLoads.length ? Math.max(...knownLoads) : null;
+  if (maxLoad == null) {
+    const rpes = work.map((s) => s.rpe).filter((r): r is number => r != null);
+    const rpeText = rpes.length ? ` RPE ${rpes.join(", ")}.` : "";
+    return { kind: "tenu", line: `Fait ${repsList.join(", ")}, charge non notée.${rpeText}` };
+  }
+  const loads = work.map((s) => s.loadKg);
   const plannedLoad = ex.planned.loadKg;
   const plannedReps = ex.planned.reps;
   const repsText = repsList.join(", ");
@@ -103,7 +109,7 @@ export function compareExercise(
     session.exercises.some(
       (other) =>
         other.name === ex.name &&
-        other.sets.some((s) => isHardSet(s) && (s.loadKg ?? 0) >= maxLoad - 0.01),
+        other.sets.some((s) => isHardSet(s) && s.loadKg != null && s.loadKg >= maxLoad - 0.01),
     ),
   );
 
@@ -117,7 +123,7 @@ export function compareExercise(
 
   const meets =
     plannedReps == null ||
-    work.every((s, i) => (s.reps ?? 0) >= plannedReps && (plannedLoad == null || (loads[i] ?? 0) >= plannedLoad - 0.01));
+    work.every((s, i) => (s.reps ?? 0) >= plannedReps && (plannedLoad == null || (loads[i] != null && loads[i] >= plannedLoad - 0.01)));
   if (meets) {
     return {
       kind: "tenu",
@@ -144,12 +150,18 @@ export function summaryText(session: Session, prior: Session[]): string {
     : null;
   const lines = [
     `${formatLong(session.date)} — ${session.title}, faite.`,
-    `${minutes ? `${minutes} min. ` : ""}${hardSetCount(session.exercises)} séries de travail. ${formatKg(tonnage(session.exercises))} kg déplacés.`,
+    session.cardio
+      ? cardioLine(session)
+      : `${minutes ? `${minutes} min. ` : ""}${hardSetCount(session.exercises)} séries de travail. ${formatKg(tonnage(session.exercises))} kg déplacés.`,
   ];
   for (const ex of session.exercises) {
-    const work = ex.sets.filter(isHardSet);
-    if (!work.length) continue;
-    const bits = work.map((s) => `${s.loadKg ?? 0}×${s.reps}`).join(", ");
+    if (ex.detailUnknown) {
+      lines.push(`${ex.name} : détail inconnu.`);
+      continue;
+    }
+    const done = ex.sets.filter((set) => set.done && !set.warmup);
+    if (!done.length) continue;
+    const bits = done.map((set) => formatPerformedSet(set, ex.unit)).join(", ");
     const cmp = compareExercise(ex, prior);
     lines.push(`${ex.name} : ${bits}. ${cmp.line}`);
   }
@@ -182,6 +194,9 @@ export function reportJson(session: Session) {
           charge_kg: s.loadKg,
           repetitions: s.reps,
           rpe: s.rpe,
+          rir: s.rir ?? null,
+          cote: s.side ?? null,
+          unite: s.unit ?? ex.unit ?? null,
           echauffement: s.warmup,
         })),
     })),
@@ -190,7 +205,7 @@ export function reportJson(session: Session) {
 
 export function lastPerformance(sessions: Session[], name: string, beforeId?: string): string | null {
   const done = sessions
-    .filter((s) => s.id !== beforeId && s.status !== "planned" && s.exercises.some((e) => e.name === name))
+    .filter((s) => s.id !== beforeId && !s.cardio && s.status !== "planned" && s.exercises.some((e) => e.name === name))
     .sort((a, b) => (a.date < b.date ? 1 : -1));
   const session = done[0];
   if (!session) return null;
@@ -198,17 +213,13 @@ export function lastPerformance(sessions: Session[], name: string, beforeId?: st
   if (!ex) return null;
   const work = ex.sets.filter(isHardSet);
   if (!work.length) return null;
-  const loads = new Set(work.map((s) => s.loadKg));
-  if (loads.size !== 1) {
-    return work.map((s) => `${formatKg(s.loadKg ?? 0)}×${s.reps}`).join(", ");
-  }
-  return `${formatKg(work[0].loadKg ?? 0)} kg × ${work.map((s) => s.reps).join(", ")}`;
+  return work.map((set) => formatPerformedSet(set, ex.unit)).join(", ");
 }
 
 export function bestE1rmLabel(sessions: Session[], name: string): { kg: number; detail: string } | null {
   let best: { kg: number; load: number; reps: number; date: string } | null = null;
   for (const session of sessions) {
-    if (session.status === "planned") continue;
+    if (session.cardio || session.status === "planned") continue;
     for (const ex of session.exercises) {
       if (ex.name !== name) continue;
       for (const set of ex.sets) {
@@ -221,4 +232,36 @@ export function bestE1rmLabel(sessions: Session[], name: string): { kg: number; 
   }
   if (!best) return null;
   return { kg: best.kg, detail: `${formatKg(best.load)} kg × ${best.reps}` };
+}
+
+export function formatPerformedSet(set: SetLog, exerciseUnit?: string | null): string {
+  const unit = set.unit ?? exerciseUnit ?? null;
+  const side = set.side ? `${set.side} ` : "";
+  const load = formatLoad(set.loadKg, unit);
+  const reps = set.reps == null ? "—" : String(set.reps);
+  const extra: string[] = [];
+  if (set.rpe != null) extra.push(`RPE ${formatKg(set.rpe)}`);
+  if (set.rir != null) extra.push(`RIR ${formatKg(set.rir)}`);
+  if (set.restRealSec != null) extra.push(`repos ${Math.round(set.restRealSec)} s`);
+  return `${side}${load} × ${reps}${extra.length ? ` (${extra.join(", ")})` : ""}`;
+}
+
+function formatLoad(load: number | null, unit: string | null): string {
+  if (load == null) {
+    if (unit && /pdc/i.test(unit)) return "PDC";
+    return "—";
+  }
+  if (unit === "kg/main") return `${formatKg(load)} kg/main`;
+  if (unit === "kg/jambe") return `${formatKg(load)} kg/jambe`;
+  if (unit && /pdc/i.test(unit)) return `${formatKg(load)} kg`;
+  return `${formatKg(load)} kg`;
+}
+
+function cardioLine(session: Session): string {
+  const cardio = session.cardio;
+  if (!cardio) return "";
+  const bits = [cardio.sport];
+  if (cardio.durationMin != null) bits.push(`${Math.round(cardio.durationMin)} min`);
+  if (cardio.distanceKm != null) bits.push(`${formatKg(cardio.distanceKm)} km`);
+  return bits.join(", ");
 }

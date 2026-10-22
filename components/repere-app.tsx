@@ -9,6 +9,7 @@ import { ProgressScreen } from "@/components/progress-screen";
 import { SessionScreen } from "@/components/session-screen";
 import { Sheets } from "@/components/sheets";
 import { TodayScreen } from "@/components/today-screen";
+import { ImportSummary } from "@/components/sheets";
 import { Button } from "@/components/ui/button";
 
 export function RepereApp() {
@@ -92,10 +93,9 @@ function Onboarding() {
   return (
     <div className="onboard" data-testid="app-ready">
       <div className="markr" aria-hidden="true">R</div>
-      <div className="spacer" />
+      {app.importPreview ? <ImportSummary preview={app.importPreview} /> : <div className="spacer" />}
       <h1>{current.title}</h1>
       <p>{current.body}</p>
-      {app.pendingPlan ? <p>Un plan est déjà prêt dans le lien. Il sera ajouté quand vous commencerez.</p> : null}
       <div className="dots" aria-hidden="true">
         {STEPS.map((_, index) => (
           <i key={index} className={index === step ? "on" : ""} />

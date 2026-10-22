@@ -4,7 +4,7 @@ import { useApp } from "@/components/app-context";
 import { Mannequin } from "@/components/mannequin";
 import { isHardSet } from "@/lib/calc";
 import { MUSCLE_LABEL } from "@/lib/exercises";
-import { bestE1rmLabel } from "@/lib/session";
+import { bestE1rmLabel, formatPerformedSet } from "@/lib/session";
 import { formatKg, formatLong } from "@/lib/utils";
 
 export function GestureScreen({ sessionId, exerciseId }: { sessionId: string; exerciseId: string }) {
@@ -14,13 +14,13 @@ export function GestureScreen({ sessionId, exerciseId }: { sessionId: string; ex
   if (!session || !exercise) return null;
   const best = bestE1rmLabel(app.sessions, exercise.name);
   const recent = app.sessions
-    .filter((item) => item.status !== "planned" && item.id !== session.id)
+    .filter((item) => !item.cardio && item.status !== "planned" && item.id !== session.id)
     .flatMap((item) => {
       const match = item.exercises.find((entry) => entry.name === exercise.name);
       if (!match) return [];
       const work = match.sets.filter(isHardSet);
       if (!work.length) return [];
-      return [{ date: item.date, line: work.map((set) => `${formatKg(set.loadKg ?? 0)}×${set.reps}`).join(", ") }];
+      return [{ date: item.date, line: work.map((set) => formatPerformedSet(set, match.unit)).join(", ") }];
     })
     .sort((a, b) => (a.date < b.date ? 1 : -1))
     .slice(0, 3);

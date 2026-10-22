@@ -1,0 +1,732 @@
+{
+ "semaine": "2026-10-25",
+ "seances": [
+  {
+   "date": "2026-10-25",
+   "heure": "10:00",
+   "titre": "Upper B",
+   "intention": "reprise",
+   "note": "Upper B. Semaine 1 (reprise après le Japon) : tout est déjà dans ton calendrier iCloud. Charges à 90–95 % de tes derniers repères, RIR 2–3.",
+   "exercices": [
+    {
+     "nom": "Développé incliné haltères",
+     "series": 3,
+     "repetitions": 10,
+     "charge_kg": 20,
+     "repos_secondes": 120,
+     "rpe_vise": 7,
+     "echauffement": [
+      {
+       "charge_kg": 12,
+       "repetitions": 10
+      }
+     ],
+     "note": "Plage 10–12 reps. Kg par haltère."
+    },
+    {
+     "nom": "Tirage vertical prise serrée",
+     "series": 3,
+     "repetitions": 9,
+     "charge_kg": 60,
+     "repos_secondes": 120,
+     "rpe_vise": 7,
+     "note": "Plage 9–10 reps."
+    },
+    {
+     "nom": "Développé couché barre",
+     "series": 2,
+     "repetitions": 8,
+     "charge_kg": 52.5,
+     "repos_secondes": 180,
+     "rpe_vise": 7,
+     "echauffement": [
+      {
+       "charge_kg": 20,
+       "repetitions": 10
+      },
+      {
+       "charge_kg": 40,
+       "repetitions": 5
+      }
+     ],
+     "note": "Plage 8–10 reps."
+    },
+    {
+     "nom": "Oiseau haltères",
+     "series": 2,
+     "repetitions": 15,
+     "charge_kg": 4,
+     "repos_secondes": 75,
+     "rpe_vise": 7,
+     "note": "4–5 kg par haltère."
+    },
+    {
+     "nom": "Extension triceps corde",
+     "series": 2,
+     "repetitions": 12,
+     "charge_kg": 15,
+     "repos_secondes": 75,
+     "rpe_vise": 7,
+     "note": "Plage 12–15 reps, 15–17,5 kg."
+    },
+    {
+     "nom": "Développé militaire barre",
+     "series": 2,
+     "repetitions": 8,
+     "charge_kg": 27.5,
+     "repos_secondes": 150,
+     "rpe_vise": 7,
+     "note": "Plage 8–10 reps. Seulement si la nuque (C7 gauche) ne réagit pas du tout. Sinon tu sautes l'exercice."
+    }
+   ]
+  },
+  {
+   "date": "2026-10-26",
+   "heure": "17:30",
+   "titre": "Course Z2",
+   "intention": "endurance",
+   "note": "Soir de garde. 45–50 min facile, FC 125–140 bpm (tu dois pouvoir parler). Frontale ou parcours éclairé.",
+   "exercices": [
+    {
+     "nom": "Course à pied Z2",
+     "series": 1,
+     "repetitions": null,
+     "charge_kg": null,
+     "repos_secondes": 0,
+     "rpe_vise": 4,
+     "note": "45–50 min, FC 125–140 bpm. Note la distance et la FC moyenne."
+    }
+   ]
+  },
+  {
+   "date": "2026-10-27",
+   "heure": "08:00",
+   "titre": "Natation / mobilité (option)",
+   "intention": "récupération",
+   "note": "Lendemain de garde : léger, en option. 20–30 min de nage facile à RPE 4–5 (note la distance), sinon repos ou mobilité.",
+   "exercices": [
+    {
+     "nom": "Natation facile",
+     "series": 1,
+     "repetitions": null,
+     "charge_kg": null,
+     "repos_secondes": 0,
+     "rpe_vise": 4,
+     "note": "20–30 min continu facile. Note la distance."
+    }
+   ]
+  },
+  {
+   "date": "2026-10-28",
+   "heure": "17:00",
+   "titre": "Lower A",
+   "intention": "reprise",
+   "note": "Lower A (soir de garde). Semaine 1 (reprise après le Japon) : tout est déjà dans ton calendrier iCloud. Charges à 90–95 % de tes derniers repères, RIR 2–3.",
+   "exercices": [
+    {
+     "nom": "Squat barre",
+     "series": 3,
+     "repetitions": 8,
+     "charge_kg": 37.5,
+     "repos_secondes": 180,
+     "rpe_vise": 7,
+     "echauffement": [
+      {
+       "charge_kg": 20,
+       "repetitions": 8
+      },
+      {
+       "charge_kg": 30,
+       "repetitions": 5
+      }
+     ],
+     "note": "Back squat. Monte à 40 kg si RIR 3 ou plus."
+    },
+    {
+     "nom": "Soulevé de terre roumain",
+     "series": 3,
+     "repetitions": 10,
+     "charge_kg": 37.5,
+     "repos_secondes": 150,
+     "rpe_vise": 7,
+     "echauffement": [
+      {
+       "charge_kg": 20,
+       "repetitions": 8
+      }
+     ],
+     "note": "RDL, dos neutre."
+    },
+    {
+     "nom": "Ischios machine (flexion des jambes)",
+     "series": 2,
+     "repetitions": 12,
+     "charge_kg": 22.5,
+     "repos_secondes": 90,
+     "rpe_vise": 7,
+     "note": "Leg curl machine."
+    },
+    {
+     "nom": "Mollets machine",
+     "series": 2,
+     "repetitions": 15,
+     "charge_kg": 27.5,
+     "repos_secondes": 75,
+     "rpe_vise": 7
+    },
+    {
+     "nom": "Crunch poulie",
+     "series": 2,
+     "repetitions": 12,
+     "charge_kg": null,
+     "repos_secondes": 60,
+     "rpe_vise": 7,
+     "note": "Charge à choisir pour RIR 2–3."
+    }
+   ]
+  },
+  {
+   "date": "2026-10-30",
+   "heure": "17:00",
+   "titre": "Upper A",
+   "intention": "reprise",
+   "note": "Upper A (vendredi soir, tu es frais). Semaine 1 (reprise après le Japon) : tout est déjà dans ton calendrier iCloud. Charges à 90–95 % de tes derniers repères, RIR 2–3.",
+   "exercices": [
+    {
+     "nom": "Développé couché barre",
+     "series": 3,
+     "repetitions": 6,
+     "charge_kg": 55,
+     "repos_secondes": 180,
+     "rpe_vise": 7,
+     "echauffement": [
+      {
+       "charge_kg": 20,
+       "repetitions": 10
+      },
+      {
+       "charge_kg": 40,
+       "repetitions": 5
+      },
+      {
+       "charge_kg": 47.5,
+       "repetitions": 3
+      }
+     ],
+     "note": "Plage 6–8 reps."
+    },
+    {
+     "nom": "Rowing machine",
+     "series": 3,
+     "repetitions": 10,
+     "charge_kg": 60,
+     "repos_secondes": 120,
+     "rpe_vise": 7,
+     "note": "Plage 10–12 reps. Note le modèle de la machine."
+    },
+    {
+     "nom": "Développé incliné haltères",
+     "series": 2,
+     "repetitions": 10,
+     "charge_kg": 20,
+     "repos_secondes": 120,
+     "rpe_vise": 7,
+     "note": "Plage 10–12 reps. Kg par haltère."
+    },
+    {
+     "nom": "Tractions",
+     "series": 2,
+     "repetitions": 8,
+     "charge_kg": null,
+     "repos_secondes": 120,
+     "rpe_vise": 7,
+     "note": "Poids du corps, plage 8–10 reps, RIR 2–3."
+    },
+    {
+     "nom": "Élévations latérales",
+     "series": 3,
+     "repetitions": 15,
+     "charge_kg": 6,
+     "repos_secondes": 60,
+     "rpe_vise": 7,
+     "note": "Kg par haltère."
+    },
+    {
+     "nom": "Curl haltères",
+     "series": 2,
+     "repetitions": 12,
+     "charge_kg": 8,
+     "repos_secondes": 75,
+     "rpe_vise": 7,
+     "note": "Curl incliné sur banc. Plage 12–15 reps. Kg par haltère."
+    }
+   ]
+  },
+  {
+   "date": "2026-10-31",
+   "heure": "17:00",
+   "titre": "Lower B + mini-WOD",
+   "intention": "reprise",
+   "note": "Lower B (soir de garde). Semaine 1 (reprise après le Japon) : tout est déjà dans ton calendrier iCloud. Charges à 90–95 % de tes derniers repères, RIR 2–3. Mini-WOD en option, RPE 6–7 maximum.",
+   "exercices": [
+    {
+     "nom": "Presse à cuisses",
+     "series": 3,
+     "repetitions": 10,
+     "charge_kg": 75,
+     "repos_secondes": 150,
+     "rpe_vise": 7,
+     "echauffement": [
+      {
+       "charge_kg": 40,
+       "repetitions": 10
+      }
+     ]
+    },
+    {
+     "nom": "Ischios machine (flexion des jambes)",
+     "series": 2,
+     "repetitions": 12,
+     "charge_kg": 22.5,
+     "repos_secondes": 90,
+     "rpe_vise": 7,
+     "note": "Leg curl machine."
+    },
+    {
+     "nom": "Fente statique",
+     "series": 2,
+     "repetitions": 8,
+     "charge_kg": null,
+     "repos_secondes": 90,
+     "rpe_vise": 7,
+     "note": "8–10 reps par jambe. Poids du corps ou haltères légers."
+    },
+    {
+     "nom": "Mollets machine",
+     "series": 2,
+     "repetitions": 15,
+     "charge_kg": 27.5,
+     "repos_secondes": 75,
+     "rpe_vise": 7
+    },
+    {
+     "nom": "Dead bug",
+     "series": 2,
+     "repetitions": 8,
+     "charge_kg": null,
+     "repos_secondes": 60,
+     "rpe_vise": 6,
+     "note": "8 reps par côté."
+    },
+    {
+     "nom": "Mini-WOD AMRAP (option)",
+     "series": 1,
+     "repetitions": null,
+     "charge_kg": null,
+     "repos_secondes": 0,
+     "rpe_vise": 6.5,
+     "note": "AMRAP 10–12 min à RPE 6–7 : 10 air squats, 8 pompes, 10 swings légers, 200 m de rameur."
+    }
+   ]
+  },
+  {
+   "date": "2026-11-01",
+   "heure": "10:00",
+   "titre": "Footing + lignes droites",
+   "intention": "endurance",
+   "note": "30 min facile, puis 6 lignes droites de 20 s relâchées (pas des intervalles).",
+   "exercices": [
+    {
+     "nom": "Course à pied facile",
+     "series": 1,
+     "repetitions": null,
+     "charge_kg": null,
+     "repos_secondes": 0,
+     "rpe_vise": 4,
+     "note": "30 min, FC 125–140 bpm."
+    },
+    {
+     "nom": "Lignes droites",
+     "series": 6,
+     "repetitions": null,
+     "charge_kg": null,
+     "repos_secondes": 60,
+     "rpe_vise": 6,
+     "note": "20 s relâchées, retour en marchant ou trottinant."
+    }
+   ]
+  },
+  {
+   "date": "2026-11-02",
+   "heure": "17:00",
+   "titre": "Upper B",
+   "intention": "progression",
+   "note": "PROVISOIRE : tes gardes et ton travail du 02 au 08/11 ne sont pas encore dans le calendrier. Créneaux calés sur le schéma de la semaine 1 (travail lun–ven 7h30–16h15, gardes lun/mer/sam), à confirmer. Les charges dépendent de tes RIR de la semaine 1. Soir de garde. +2,5 kg sur le couché et le tirage seulement si la semaine 1 est passée à RIR 3 ou plus. Sinon tu restes aux charges de la semaine 1.",
+   "exercices": [
+    {
+     "nom": "Développé incliné haltères",
+     "series": 3,
+     "repetitions": 10,
+     "charge_kg": 22,
+     "repos_secondes": 120,
+     "rpe_vise": 8,
+     "echauffement": [
+      {
+       "charge_kg": 12,
+       "repetitions": 10
+      }
+     ],
+     "note": "Plage 10–12 reps. 22 kg par haltère seulement si 3×10 à 20 kg est passé avec RIR 3 ou plus, sinon 20 kg."
+    },
+    {
+     "nom": "Tirage vertical prise serrée",
+     "series": 3,
+     "repetitions": 9,
+     "charge_kg": 62.5,
+     "repos_secondes": 120,
+     "rpe_vise": 8,
+     "note": "Plage 9–10 reps."
+    },
+    {
+     "nom": "Développé couché barre",
+     "series": 3,
+     "repetitions": 8,
+     "charge_kg": 55,
+     "repos_secondes": 180,
+     "rpe_vise": 8,
+     "echauffement": [
+      {
+       "charge_kg": 20,
+       "repetitions": 10
+      },
+      {
+       "charge_kg": 40,
+       "repetitions": 5
+      },
+      {
+       "charge_kg": 47.5,
+       "repetitions": 3
+      }
+     ],
+     "note": "3 séries maintenant. Plage 8–10 reps."
+    },
+    {
+     "nom": "Oiseau haltères",
+     "series": 2,
+     "repetitions": 15,
+     "charge_kg": 5,
+     "repos_secondes": 75,
+     "rpe_vise": 8,
+     "note": "Kg par haltère."
+    },
+    {
+     "nom": "Extension triceps corde",
+     "series": 2,
+     "repetitions": 12,
+     "charge_kg": 17.5,
+     "repos_secondes": 75,
+     "rpe_vise": 8,
+     "note": "Plage 12–15 reps."
+    },
+    {
+     "nom": "Développé militaire barre",
+     "series": 2,
+     "repetitions": 8,
+     "charge_kg": 30,
+     "repos_secondes": 150,
+     "rpe_vise": 8,
+     "note": "Plage 8–10 reps. Seulement si la nuque (C7 gauche) ne réagit pas du tout. Sinon tu sautes l'exercice. Si la nuque a réagi en semaine 1, tu restes à 27,5 kg ou tu sautes l'exercice."
+    }
+   ]
+  },
+  {
+   "date": "2026-11-03",
+   "heure": "08:00",
+   "titre": "Natation / mobilité (option)",
+   "intention": "récupération",
+   "note": "PROVISOIRE : tes gardes et ton travail du 02 au 08/11 ne sont pas encore dans le calendrier. Créneaux calés sur le schéma de la semaine 1 (travail lun–ven 7h30–16h15, gardes lun/mer/sam), à confirmer. Les charges dépendent de tes RIR de la semaine 1. Lendemain de garde : rien de lourd. 20–30 min de nage facile en option, sinon repos.",
+   "exercices": [
+    {
+     "nom": "Natation facile",
+     "series": 1,
+     "repetitions": null,
+     "charge_kg": null,
+     "repos_secondes": 0,
+     "rpe_vise": 4,
+     "note": "20–30 min continu facile. Note la distance."
+    }
+   ]
+  },
+  {
+   "date": "2026-11-04",
+   "heure": "17:00",
+   "titre": "Lower B",
+   "intention": "progression",
+   "note": "PROVISOIRE : tes gardes et ton travail du 02 au 08/11 ne sont pas encore dans le calendrier. Créneaux calés sur le schéma de la semaine 1 (travail lun–ven 7h30–16h15, gardes lun/mer/sam), à confirmer. Les charges dépendent de tes RIR de la semaine 1. Soir de garde. Jambes prioritaires : +1 série sur le leg curl et les mollets.",
+   "exercices": [
+    {
+     "nom": "Presse à cuisses",
+     "series": 3,
+     "repetitions": 10,
+     "charge_kg": 80,
+     "repos_secondes": 150,
+     "rpe_vise": 8,
+     "echauffement": [
+      {
+       "charge_kg": 40,
+       "repetitions": 10
+      },
+      {
+       "charge_kg": 60,
+       "repetitions": 6
+      }
+     ],
+     "note": "+5 kg si 3×10 à 75 kg est passé avec RIR 2 ou plus."
+    },
+    {
+     "nom": "Ischios machine (flexion des jambes)",
+     "series": 3,
+     "repetitions": 12,
+     "charge_kg": 25,
+     "repos_secondes": 90,
+     "rpe_vise": 8,
+     "note": "Leg curl machine. Tu reviens au repère de septembre."
+    },
+    {
+     "nom": "Fente statique",
+     "series": 3,
+     "repetitions": 8,
+     "charge_kg": 8,
+     "repos_secondes": 90,
+     "rpe_vise": 8,
+     "note": "8–10 reps par jambe, 8 kg par haltère (repère : bulgares du 17/07)."
+    },
+    {
+     "nom": "Mollets machine",
+     "series": 3,
+     "repetitions": 15,
+     "charge_kg": 30,
+     "repos_secondes": 75,
+     "rpe_vise": 8
+    },
+    {
+     "nom": "Dead bug",
+     "series": 2,
+     "repetitions": 10,
+     "charge_kg": null,
+     "repos_secondes": 60,
+     "rpe_vise": 6,
+     "note": "10 reps par côté."
+    }
+   ]
+  },
+  {
+   "date": "2026-11-05",
+   "heure": "17:30",
+   "titre": "Course Z2",
+   "intention": "endurance",
+   "note": "PROVISOIRE : tes gardes et ton travail du 02 au 08/11 ne sont pas encore dans le calendrier. Créneaux calés sur le schéma de la semaine 1 (travail lun–ven 7h30–16h15, gardes lun/mer/sam), à confirmer. Les charges dépendent de tes RIR de la semaine 1. Pas de séance le matin (lendemain de garde). Le soir, 45–50 min facile, FC 125–140 bpm. Pas d'intervalles tant que le médecin n'a pas donné son feu vert (FC de repos très basse).",
+   "exercices": [
+    {
+     "nom": "Course à pied Z2",
+     "series": 1,
+     "repetitions": null,
+     "charge_kg": null,
+     "repos_secondes": 0,
+     "rpe_vise": 4,
+     "note": "45–50 min, FC 125–140 bpm. Note la distance et la FC moyenne."
+    }
+   ]
+  },
+  {
+   "date": "2026-11-06",
+   "heure": "17:00",
+   "titre": "Lower A",
+   "intention": "progression",
+   "note": "PROVISOIRE : tes gardes et ton travail du 02 au 08/11 ne sont pas encore dans le calendrier. Créneaux calés sur le schéma de la semaine 1 (travail lun–ven 7h30–16h15, gardes lun/mer/sam), à confirmer. Les charges dépendent de tes RIR de la semaine 1. Vendredi soir, tu es frais : grosse séance jambes (priorité). +2,5 kg si la semaine 1 était à RIR 3 ou plus.",
+   "exercices": [
+    {
+     "nom": "Squat barre",
+     "series": 3,
+     "repetitions": 8,
+     "charge_kg": 40,
+     "repos_secondes": 180,
+     "rpe_vise": 8,
+     "echauffement": [
+      {
+       "charge_kg": 20,
+       "repetitions": 8
+      },
+      {
+       "charge_kg": 30,
+       "repetitions": 5
+      },
+      {
+       "charge_kg": 35,
+       "repetitions": 3
+      }
+     ],
+     "note": "Back squat. Reste à 37,5 kg si la semaine 1 était à RIR 2 ou moins."
+    },
+    {
+     "nom": "Soulevé de terre roumain",
+     "series": 3,
+     "repetitions": 10,
+     "charge_kg": 40,
+     "repos_secondes": 150,
+     "rpe_vise": 8,
+     "echauffement": [
+      {
+       "charge_kg": 20,
+       "repetitions": 8
+      },
+      {
+       "charge_kg": 30,
+       "repetitions": 5
+      }
+     ],
+     "note": "Repère de septembre : 40 kg 2×10 à RIR 2."
+    },
+    {
+     "nom": "Fentes bulgares haltères",
+     "series": 2,
+     "repetitions": 8,
+     "charge_kg": 8,
+     "repos_secondes": 90,
+     "rpe_vise": 8,
+     "note": "Split squat bulgare, 8 reps par jambe, 8 kg par haltère."
+    },
+    {
+     "nom": "Ischios machine (flexion des jambes)",
+     "series": 2,
+     "repetitions": 12,
+     "charge_kg": 25,
+     "repos_secondes": 90,
+     "rpe_vise": 8,
+     "note": "Leg curl machine."
+    },
+    {
+     "nom": "Mollets machine",
+     "series": 2,
+     "repetitions": 15,
+     "charge_kg": 30,
+     "repos_secondes": 75,
+     "rpe_vise": 8
+    },
+    {
+     "nom": "Crunch poulie",
+     "series": 2,
+     "repetitions": 12,
+     "charge_kg": null,
+     "repos_secondes": 60,
+     "rpe_vise": 7,
+     "note": "Charge à choisir pour RIR 2."
+    }
+   ]
+  },
+  {
+   "date": "2026-11-07",
+   "heure": "17:00",
+   "titre": "Upper A",
+   "intention": "progression",
+   "note": "PROVISOIRE : tes gardes et ton travail du 02 au 08/11 ne sont pas encore dans le calendrier. Créneaux calés sur le schéma de la semaine 1 (travail lun–ven 7h30–16h15, gardes lun/mer/sam), à confirmer. Les charges dépendent de tes RIR de la semaine 1. Soir de garde. +2,5 kg sur le couché et le rowing si la semaine 1 était à RIR 3 ou plus.",
+   "exercices": [
+    {
+     "nom": "Développé couché barre",
+     "series": 3,
+     "repetitions": 6,
+     "charge_kg": 57.5,
+     "repos_secondes": 180,
+     "rpe_vise": 8,
+     "echauffement": [
+      {
+       "charge_kg": 20,
+       "repetitions": 10
+      },
+      {
+       "charge_kg": 40,
+       "repetitions": 5
+      },
+      {
+       "charge_kg": 50,
+       "repetitions": 3
+      }
+     ],
+     "note": "Plage 6–8 reps. Reste à 55 kg si 3×6 n'est pas passé avec RIR 2 ou plus."
+    },
+    {
+     "nom": "Rowing machine",
+     "series": 3,
+     "repetitions": 10,
+     "charge_kg": 62.5,
+     "repos_secondes": 120,
+     "rpe_vise": 8,
+     "note": "Plage 10–12 reps, même machine que la semaine 1."
+    },
+    {
+     "nom": "Développé incliné haltères",
+     "series": 2,
+     "repetitions": 10,
+     "charge_kg": 22,
+     "repos_secondes": 120,
+     "rpe_vise": 8,
+     "note": "Plage 10–12 reps. Kg par haltère."
+    },
+    {
+     "nom": "Tractions",
+     "series": 3,
+     "repetitions": 8,
+     "charge_kg": null,
+     "repos_secondes": 120,
+     "rpe_vise": 8,
+     "note": "Poids du corps, plage 8–10 reps, RIR 2."
+    },
+    {
+     "nom": "Élévations latérales",
+     "series": 3,
+     "repetitions": 15,
+     "charge_kg": 6,
+     "repos_secondes": 60,
+     "rpe_vise": 8,
+     "note": "Kg par haltère."
+    },
+    {
+     "nom": "Curl haltères",
+     "series": 2,
+     "repetitions": 12,
+     "charge_kg": 8,
+     "repos_secondes": 75,
+     "rpe_vise": 8,
+     "note": "Curl incliné sur banc. Plage 12–15 reps. 9 kg par haltère si 2×15 à 8 kg passe."
+    }
+   ]
+  },
+  {
+   "date": "2026-11-08",
+   "heure": "10:00",
+   "titre": "Course Z2 longue + lignes droites",
+   "intention": "endurance",
+   "note": "PROVISOIRE : tes gardes et ton travail du 02 au 08/11 ne sont pas encore dans le calendrier. Créneaux calés sur le schéma de la semaine 1 (travail lun–ven 7h30–16h15, gardes lun/mer/sam), à confirmer. Les charges dépendent de tes RIR de la semaine 1. Dimanche, tu es frais : la sortie la plus longue de la semaine, toujours en Z2.",
+   "exercices": [
+    {
+     "nom": "Course à pied Z2",
+     "series": 1,
+     "repetitions": null,
+     "charge_kg": null,
+     "repos_secondes": 0,
+     "rpe_vise": 4,
+     "note": "55–60 min, FC 125–140 bpm."
+    },
+    {
+     "nom": "Lignes droites",
+     "series": 6,
+     "repetitions": null,
+     "charge_kg": null,
+     "repos_secondes": 60,
+     "rpe_vise": 6,
+     "note": "20 s relâchées en fin de sortie, pas des intervalles."
+    }
+   ]
+  }
+ ]
+}

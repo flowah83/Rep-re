@@ -2,6 +2,7 @@
 
 import { useApp, type HistFilter } from "@/components/app-context";
 import { hardSetCount, tonnage } from "@/lib/calc";
+import { cardioSummary, formatMinutes } from "@/lib/history";
 import type { Session } from "@/lib/types";
 import { formatKg, mondayOf, parseISODate, stripAccents } from "@/lib/utils";
 
@@ -84,8 +85,15 @@ export function HistoryScreen() {
 }
 
 function volumeLine(session: Session) {
+  if (session.cardio) return cardioSummary(session.cardio);
+  const unknown = session.exercises.some((exercise) => exercise.detailUnknown);
   const count = hardSetCount(session.exercises);
-  return `${count} série${count > 1 ? "s" : ""} · ${formatKg(tonnage(session.exercises))} kg`;
+  if (count === 0 && session.durationMin != null) {
+    return `${formatMinutes(session.durationMin)}${unknown ? " · détail inconnu" : ""}`;
+  }
+  if (count === 0 && unknown) return "détail inconnu";
+  const line = `${count} série${count > 1 ? "s" : ""} · ${formatKg(tonnage(session.exercises))} kg`;
+  return unknown ? `${line} · détail inconnu` : line;
 }
 
 function bucket(title: string): HistFilter {

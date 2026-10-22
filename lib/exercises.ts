@@ -125,12 +125,12 @@ export const CATALOG: CatalogExercise[] = [
     "Le genou arrière descend vers le sol.",
     "Le poids noté est celui d’un seul haltère.",
   ]),
-  C("row", "Rowing barre", "hpull", "barre", 2.5, ["rowing", "rowing barre", "row"], [
+  C("row", "Rowing barre", "hpull", "barre", 2.5, ["rowing barre"], [
     "Le buste est penché, le dos neutre.",
     "On tire la barre vers le bas du ventre.",
     "Les omoplates se serrent en haut.",
   ]),
-  C("pulldown", "Tirage vertical", "vpull", "poulie", 5, ["tirage", "tirage vertical", "lat pulldown"], [
+  C("pulldown", "Tirage vertical", "vpull", "poulie", 5, ["tirage vertical", "lat pulldown"], [
     "On tire vers le haut de la poitrine.",
     "Les coudes descendent vers les côtes.",
     "On ne se penche pas en arrière pour tricher.",
@@ -140,7 +140,7 @@ export const CATALOG: CatalogExercise[] = [
     "On tire le sternum vers la barre.",
     "La charge ajoutée se note à part du poids du corps.",
   ]),
-  C("facepull", "Face pull", "hpull", "poulie", 2.5, ["face pull", "oiseau poulie"], [
+  C("facepull", "Face pull", "hpull", "poulie", 2.5, ["face pull"], [
     "La poulie est à hauteur de visage.",
     "On écarte les mains en fin de tirage.",
     "Les épaules restent basses.",
@@ -167,41 +167,195 @@ export const CATALOG: CatalogExercise[] = [
   ]),
 ];
 
-export function resolveExercise(name: string, customs: CustomExercise[] = []): {
+/** Synonymes explicites, déjà normalisés. Jamais une sous-chaîne. */
+const SYNONYMS: Record<string, string> = {
+  "back squat": "squat",
+  "romanian deadlift": "rdl",
+  "elevations laterales halteres": "lateral",
+  "mollets debout machine": "calf",
+  "bench press": "bench",
+};
+
+const ACCEPT_SCORE = 0.86;
+const DOUBTFUL_SCORE = 0.4;
+
+export type ExerciseMatch = {
   name: string;
   pattern: Pattern;
   cues: string[];
   stepKg: number;
   muscles: Muscle[];
-} {
-  const key = stripAccents(name);
-  const custom = customs.find((c) => stripAccents(c.name) === key);
+  /** Faux : le nom doit devenir un exercice personnel, il n’est pas dans le catalogue. */
+  matched: boolean;
+  catalogId: string | null;
+  via: "custom" | "exact" | "synonym" | "tokens" | "none";
+  score: number;
+  doubtful: boolean;
+  near: string | null;
+};
+
+export function normalizeExerciseKey(name: string): string {
+  return stripAccents(name)
+    .replace(/['’`]/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function stemToken(token: string): string {
+  if (token.length > 4 && token.endsWith("s") && !token.endsWith("ss")) return token.slice(0, -1);
+  return token;
+}
+
+function tokenize(name: string): string[] {
+  const stop = new Set(["a", "au", "aux", "de", "des", "du", "la", "le", "les", "et", "ou", "en", "sur", "avec"]);
+  return normalizeExerciseKey(name)
+    .split(" ")
+    .filter((token) => token && !stop.has(token))
+    .map(stemToken);
+}
+
+function dice(left: string[], right: string[]): number {
+  const a = new Set(left);
+  const b = new Set(right);
+  if (!a.size || !b.size) return 0;
+  let shared = 0;
+  for (const token of a) if (b.has(token)) shared += 1;
+  return (2 * shared) / (a.size + b.size);
+}
+
+function sharedCount(left: string[], right: string[]): number {
+  const b = new Set(right);
+  let shared = 0;
+  for (const token of new Set(left)) if (b.has(token)) shared += 1;
+  return shared;
+}
+
+function isEnduranceName(key: string): boolean {
+  return /\b(course|footing|natation|nage|velo|swimming|running|cycling)\b/.test(key);
+}
+
+export function inferPattern(name: string): Pattern {
+  const key = normalizeExerciseKey(name);
+  const rules: [RegExp, Pattern][] = [
+    [/leg curl|ischio|souleve|deadlift|hip thrust|roumain|good morning/, "hinge"],
+    [/split squat|fente|bulgare|lunge/, "lunge"],
+    [/squat|presse/, "squat"],
+    [/tirage vertical|traction|pull up|pullup/, "vpull"],
+    [/rowing|row\b|tirage/, "hpull"],
+    [/militaire|overhead/, "vpush"],
+    [/developpe|couche|ecarte|pompe|bench/, "hpush"],
+    [/curl/, "curl"],
+    [/triceps|extension|pushdown|dips/, "tricep"],
+    [/elevation|lateral|oiseau|pec deck|pec-deck/, "lateral"],
+    [/mollet/, "calf"],
+    [/gainage|planche|abdo|crunch|dead bug/, "core"],
+  ];
+  for (const [pattern, value] of rules) if (pattern.test(key)) return value;
+  return "hpush";
+}
+
+export function explainMatch(name: string, customs: CustomExercise[] = []): ExerciseMatch {
+  const key = normalizeExerciseKey(name);
+  const blank = (partial: Partial<ExerciseMatch>): ExerciseMatch => ({
+    name: name.trim() || "Exercice",
+    pattern: "hpush",
+    cues: [],
+    stepKg: 2.5,
+    muscles: PATTERN_MUSCLES.hpush,
+    matched: false,
+    catalogId: null,
+    via: "none",
+    score: 0,
+    doubtful: false,
+    near: null,
+    ...partial,
+  });
+
+  const custom = customs.find((item) => normalizeExerciseKey(item.name) === key);
   if (custom) {
-    return {
+    return blank({
       name: custom.name,
       pattern: custom.pattern,
       cues: custom.cues.length ? custom.cues : ["Bougez sur toute l’amplitude qui reste confortable."],
-      stepKg: 2.5,
       muscles: PATTERN_MUSCLES[custom.pattern],
-    };
+      matched: true,
+      via: "custom",
+      score: 1,
+    });
   }
-  const found =
-    CATALOG.find((e) => stripAccents(e.name) === key) ||
-    CATALOG.find((e) => e.aliases.some((a) => key.includes(a) || a.includes(key)));
-  if (found) {
-    return {
-      name: found.name,
-      pattern: found.pattern,
-      cues: found.cues,
-      stepKg: found.stepKg || 1,
-      muscles: PATTERN_MUSCLES[found.pattern],
-    };
+
+  const byName = CATALOG.find((exercise) => normalizeExerciseKey(exercise.name) === key);
+  const synonymId = SYNONYMS[key];
+  const bySynonym = synonymId ? CATALOG.find((exercise) => exercise.id === synonymId) : undefined;
+  const byAlias = CATALOG.find((exercise) => exercise.aliases.some((alias) => normalizeExerciseKey(alias) === key));
+  const exact = byName ?? bySynonym ?? byAlias;
+  if (exact) {
+    return blank({
+      name: exact.name,
+      pattern: exact.pattern,
+      cues: exact.cues,
+      stepKg: exact.stepKg || 1,
+      muscles: PATTERN_MUSCLES[exact.pattern],
+      matched: true,
+      catalogId: exact.id,
+      via: byName ? "exact" : "synonym",
+      score: 1,
+    });
   }
+
+  const query = tokenize(name);
+  let best: { exercise: CatalogExercise; score: number; shared: number } | null = null;
+  let second = 0;
+  for (const exercise of CATALOG) {
+    const tokens = tokenize(exercise.name);
+    const score = dice(query, tokens);
+    const shared = sharedCount(query, tokens);
+    if (!best || score > best.score) {
+      second = best?.score ?? 0;
+      best = { exercise, score, shared };
+    } else if (score > second) second = score;
+  }
+
+  const endurance = isEnduranceName(key);
+  const pattern = endurance ? "core" : inferPattern(name);
+  const unmatched = blank({
+    pattern,
+    cues: endurance
+      ? ["Notez la durée et la distance, si vous les avez."]
+      : ["Gardez une amplitude confortable.", "Notez la charge telle que vous la lisez."],
+    muscles: endurance ? [] : PATTERN_MUSCLES[pattern],
+    score: best?.score ?? 0,
+    doubtful: Boolean(best && best.score >= DOUBTFUL_SCORE),
+    near: best && best.score >= DOUBTFUL_SCORE ? best.exercise.name : null,
+  });
+
+  if (best && best.score >= ACCEPT_SCORE && best.shared >= 2 && best.score - second >= 0.08) {
+    return blank({
+      name: best.exercise.name,
+      pattern: best.exercise.pattern,
+      cues: best.exercise.cues,
+      stepKg: best.exercise.stepKg || 1,
+      muscles: PATTERN_MUSCLES[best.exercise.pattern],
+      matched: true,
+      catalogId: best.exercise.id,
+      via: "tokens",
+      score: best.score,
+    });
+  }
+  return unmatched;
+}
+
+export function resolveExercise(name: string, customs: CustomExercise[] = []): ExerciseMatch {
+  return explainMatch(name, customs);
+}
+
+export function customFromMatch(name: string, match: ExerciseMatch): CustomExercise {
+  const slug = normalizeExerciseKey(name).replace(/ /g, "-").slice(0, 56) || "exercice";
   return {
-    name,
-    pattern: "hpush",
-    cues: ["Gardez une amplitude confortable.", "Notez la charge telle que vous la lisez.", "Le geste détaillé arrivera plus tard."],
-    stepKg: 2.5,
-    muscles: PATTERN_MUSCLES.hpush,
+    id: `custom-${slug}`,
+    name: name.trim() || "Exercice",
+    pattern: match.pattern,
+    cues: match.cues,
   };
 }

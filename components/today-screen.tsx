@@ -53,7 +53,7 @@ export function TodayScreen() {
             <p>Importez le plan de Chef sport, ou créez une séance vous-même. Rien n’est inventé à votre place.</p>
           </div>
           <button type="button" className="btn" onClick={() => app.setSheet("import")}>
-            Importer un plan
+            Importer
           </button>
           <button
             type="button"

@@ -1,6 +1,7 @@
-import { resolveExercise } from "./exercises";
+import { decodeText, encodeText } from "./codec";
+import { customFromMatch, resolveExercise } from "./exercises";
 import type { CustomExercise, ExerciseLog, Session, SetLog } from "./types";
-import { uid } from "./utils";
+import { finiteOrNull, uid } from "./utils";
 
 export function mergePlans(current: Session[], incoming: Session[]): { sessions: Session[]; touched: Session[] } {
   const next = current.map((session) => ({ ...session }));
@@ -47,7 +48,7 @@ export type PlanFile = {
 export function parsePlan(
   raw: string,
   customs: CustomExercise[] = [],
-): { sessions: Session[] } | { error: string } {
+): { sessions: Session[]; customs: CustomExercise[] } | { error: string } {
   const text = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   if (!text) return { error: "Le texte est vide. Collez le plan de Chef sport." };
   let data: unknown;
@@ -62,6 +63,7 @@ export function parsePlan(
   }
   if (sessions.length === 0) return { error: "Le plan ne contient aucune séance." };
   const built: Session[] = [];
+  const created: CustomExercise[] = [];
   for (const [index, item] of sessions.entries()) {
     if (!item || typeof item !== "object") {
       return { error: `La séance ${index + 1} est illisible.` };
@@ -83,7 +85,7 @@ export function parsePlan(
       if (!Number.isFinite(setsN) || setsN < 1) {
         return { error: `« ${ex.nom} » n’a pas de nombre de séries.` };
       }
-      exercises.push(exerciseFromPlan(ex, customs));
+      exercises.push(exerciseFromPlan(ex, customs, created));
     }
     built.push({
       id: uid(),
@@ -97,7 +99,7 @@ export function parsePlan(
       exercises,
     });
   }
-  return { sessions: built };
+  return { sessions: built, customs: created };
 }
 
 function extractSessions(data: unknown): PlanSession[] | null {
@@ -108,19 +110,21 @@ function extractSessions(data: unknown): PlanSession[] | null {
   return null;
 }
 
-export function exerciseFromPlan(ex: PlanExercise, customs: CustomExercise[] = []): ExerciseLog {
-  const meta = resolveExercise(ex.nom, customs);
+export function exerciseFromPlan(ex: PlanExercise, customs: CustomExercise[] = [], created: CustomExercise[] = []): ExerciseLog {
+  const known = [...customs, ...created];
+  const meta = resolveExercise(ex.nom, known);
+  if (!meta.matched && !known.some((item) => item.name === meta.name)) created.push(customFromMatch(ex.nom, meta));
   const setsN = Math.max(1, Math.round(Number(ex.series ?? 1)));
-  const reps = ex.repetitions == null ? null : Number(ex.repetitions);
-  const load = ex.charge_kg == null ? null : Number(ex.charge_kg);
-  const rest = Number(ex.repos_secondes ?? defaultRest(meta.pattern));
-  const rpe = ex.rpe_vise == null ? null : Number(ex.rpe_vise);
+  const reps = finiteOrNull(ex.repetitions);
+  const load = finiteOrNull(ex.charge_kg);
+  const rest = finiteOrNull(ex.repos_secondes) ?? defaultRest(meta.pattern);
+  const rpe = finiteOrNull(ex.rpe_vise);
   const sets: SetLog[] = [];
   for (const warm of ex.echauffement ?? []) {
     sets.push({
       id: uid(),
-      loadKg: warm.charge_kg == null ? null : Number(warm.charge_kg),
-      reps: warm.repetitions == null ? null : Number(warm.repetitions),
+      loadKg: finiteOrNull(warm.charge_kg),
+      reps: finiteOrNull(warm.repetitions),
       rpe: null,
       warmup: true,
       done: false,
@@ -147,9 +151,9 @@ export function exerciseFromPlan(ex: PlanExercise, customs: CustomExercise[] = [
     planned: {
       sets: setsN,
       reps: Number.isFinite(reps as number) ? reps : null,
-      loadKg: Number.isFinite(load as number) ? load : null,
-      restSec: Number.isFinite(rest) ? rest : 120,
-      rpe: Number.isFinite(rpe as number) ? rpe : null,
+      loadKg: load,
+      restSec: rest,
+      rpe,
     },
     sets,
   };
@@ -161,18 +165,11 @@ export function defaultRest(pattern: string): number {
 }
 
 export function encodePlan(json: string): string {
-  const bytes = new TextEncoder().encode(json);
-  let bin = "";
-  for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return encodeText(json);
 }
 
 export function decodePlan(token: string): string {
-  const pad = token.length % 4 === 0 ? "" : "=".repeat(4 - (token.length % 4));
-  const b64 = token.replace(/-/g, "+").replace(/_/g, "/") + pad;
-  const bin = atob(b64);
-  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
+  return decodeText(token);
 }
 
 export function planFromLocation(href: string): string | null {

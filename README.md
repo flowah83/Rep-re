@@ -63,6 +63,38 @@ Une semaine :
 
 Une seule séance peut être envoyée sans la clé `seances`, du moment qu’elle a `date` et `exercices`.
 
+Dans Réglages, « Importer » accepte aussi un historique déjà fait. Le fichier réel du classeur a une liste `seances` : si `series` est un tableau de `{charge_kg, repetitions, rpe, rir, ...}`, ce sont des séances terminées. Si `series` est un nombre, c’est un plan à venir. `null` reste inconnu, il ne devient pas 0.
+
+```json
+{
+  "historique": [
+    {
+      "date": "2026-09-14",
+      "titre": "Poussée",
+      "note": "Séance tenue.",
+      "exercices": [
+        {
+          "nom": "Développé couché barre",
+          "series": [{ "charge_kg": 80, "repetitions": 6, "rpe": 8 }]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Un objet `cardio` (course, vélo, natation) s’affiche dans le carnet avec la durée et la distance, et ne compte pas dans les courbes, les records ni la carte des muscles. `unite: "kg/main"` veut dire que `charge_kg` est le poids d’une seule main : l’écran l’écrit ainsi, et les kilos déplacés comptent les deux. Une série vide avec `detail_series_inconnu: true` garde l’exercice et affiche « détail inconnu », sans inventer de séries.
+
+Le même JSON, en base64url, s’ouvre avec `#historique=`. Pour un long historique, on le compresse en gzip (UTF-8) puis on préfixe le base64url :
+
+`https://flowah83.github.io/Rep-re/#historique=gz.<données>`
+
+`#plan=` accepte le même préfixe `gz.` quand le plan est long. Un lien `#plan=` peut contenir à la fois `seances` (séries en nombre) et `historique`. Réglages demande confirmation avant d’écrire : le nombre de séances, la période, les exercices reconnus et ceux créés. Importer deux fois le même fichier n’ajoute pas de doublon (même date, même titre, mêmes exercices).
+
+Un petit historique :
+
+`https://flowah83.github.io/Rep-re/#historique=eyJoaXN0b3JpcXVlIjpbeyJkYXRlIjoiMjAyNi0wOS0xNCIsInRpdHJlIjoiUG91c3PDqWUiLCJleGVyY2ljZXMiOlt7Im5vbSI6IkRDIiwic2VyaWVzIjpbeyJjaGFyZ2Vfa2ciOjgwLCJyZXBldGl0aW9ucyI6NiwicnBlIjo4fV19XX1dfQ`
+
 Le même JSON, encodé en base64url (UTF-8, sans `+`, `/` ni `=`), s’ouvre tout seul dans le lien :
 
 `https://votre-site/#plan=ewogICJzZW1haW5lIjogIjIwMjYtMTAtMTkiLAogICJzZWFuY2VzIjogWwogICAgewogICAgICAiZGF0ZSI6ICIyMDI2LTEwLTIyIiwKICAgICAgImhldXJlIjogIjE4OjE1IiwKICAgICAgInRpdHJlIjogIlBvdXNzw6llIiwKICAgICAgImludGVudGlvbiI6ICJoeXBlcnRyb3BoaWUiLAogICAgICAibm90ZSI6ICJPbiBnYXJkZSBsZSBjb3VjaMOpIMOgIDgwIGtnLiBTaSBsZXMgcXVhdHJlIHPDqXJpZXMgcGFzc2VudCDDoCA2LCBvbiBtb250ZXJhIMOgIDgyLDUga2cuIiwKICAgICAgImV4ZXJjaWNlcyI6IFsKICAgICAgICB7CiAgICAgICAgICAibm9tIjogIkTDqXZlbG9wcMOpIGNvdWNow6kgYmFycmUiLAogICAgICAgICAgInNlcmllcyI6IDQsCiAgICAgICAgICAicmVwZXRpdGlvbnMiOiA2LAogICAgICAgICAgImNoYXJnZV9rZyI6IDgwLAogICAgICAgICAgInJlcG9zX3NlY29uZGVzIjogMTgwLAogICAgICAgICAgInJwZV92aXNlIjogOCwKICAgICAgICAgICJlY2hhdWZmZW1lbnQiOiBbeyAiY2hhcmdlX2tnIjogNjAsICJyZXBldGl0aW9ucyI6IDggfV0KICAgICAgICB9LAogICAgICAgIHsKICAgICAgICAgICJub20iOiAiw4lsw6l2YXRpb25zIGxhdMOpcmFsZXMiLAogICAgICAgICAgInNlcmllcyI6IDMsCiAgICAgICAgICAicmVwZXRpdGlvbnMiOiAxNSwKICAgICAgICAgICJjaGFyZ2Vfa2ciOiAxMCwKICAgICAgICAgICJyZXBvc19zZWNvbmRlcyI6IDc1LAogICAgICAgICAgInJwZV92aXNlIjogOAogICAgICAgIH0KICAgICAgXQogICAgfQogIF0KfQ`

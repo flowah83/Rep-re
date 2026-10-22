@@ -78,6 +78,13 @@ export function weekdayLetter(iso: string): string {
   return ["D", "L", "M", "M", "J", "V", "S"][parseISODate(iso).getDay()];
 }
 
+/** null, vide ou illisible restent inconnus. Ne jamais transformer null en 0. */
+export function finiteOrNull(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const numeric = typeof value === "number" ? value : typeof value === "string" ? Number(value.replace(",", ".").trim()) : Number.NaN;
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
 export function stripAccents(s: string): string {
   return s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
 }
