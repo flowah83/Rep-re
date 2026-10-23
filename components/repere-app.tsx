@@ -63,7 +63,7 @@ function Shell() {
           </button>
         </nav>
       </div>
-      {app.overlay?.kind === "session" ? <SessionScreen id={app.overlay.id} /> : null}
+      {app.overlay?.kind === "session" ? <SessionScreen key={app.overlay.id} id={app.overlay.id} /> : null}
       {app.overlay?.kind === "gesture" ? <GestureScreen sessionId={app.overlay.sessionId} exerciseId={app.overlay.exerciseId} /> : null}
       {app.overlay?.kind === "bilan" ? <BilanScreen id={app.overlay.id} /> : null}
       <Sheets />

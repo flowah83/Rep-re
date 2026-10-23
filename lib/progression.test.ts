@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { applySuggestion, suggestForExercise, suggestionsForSession } from "./progression";
+import {
+  adjustmentSummary,
+  applySuggestion,
+  buildAdjustments,
+  formatLoadDelta,
+  loadProgression,
+  reapplyAdjustment,
+  revertAdjustment,
+  saveProgression,
+  setDelta,
+  startWithProgression,
+  suggestForExercise,
+  suggestionsForSession,
+} from "./progression";
 import type { ExerciseLog, Session, SetLog } from "./types";
 
 function set(partial: Partial<SetLog> & { loadKg: number | null; reps: number | null }): SetLog {
@@ -180,5 +193,94 @@ describe("double progression", () => {
     expect(updated.sets[0].loadKg).toBe(60);
     expect(updated.sets[1].loadKg).toBe(82.5);
     expect(updated.sets[1].done).toBe(false);
+  });
+});
+
+describe("ajustement groupé", () => {
+  function plannedDay(): Session {
+    return {
+      id: "today",
+      date: "2026-10-22",
+      title: "Poussée",
+      status: "planned",
+      source: "manual",
+      exercises: [
+        exercise({
+          id: "a",
+          sets: [
+            set({ id: "w", loadKg: 60, reps: 8, warmup: true, done: false }),
+            set({ id: "n", loadKg: 80, reps: null, done: false }),
+            set({ id: "done", loadKg: 80, reps: 6, done: true }),
+          ],
+        }),
+        exercise({
+          id: "b",
+          name: "Écarté poulie",
+          stepKg: 2.5,
+          planned: { sets: 3, reps: 12, loadKg: 15, restSec: 90, rpe: 8 },
+          sets: [set({ id: "f", loadKg: 15, reps: null, done: false })],
+        }),
+      ],
+    };
+  }
+
+  function history(): Session[] {
+    return [
+      doneSession("2026-10-01", exercise({ sets: [set({ loadKg: 80, reps: 6, rpe: 8 })] })),
+      doneSession("2026-10-01", exercise({
+        name: "Écarté poulie",
+        stepKg: 2.5,
+        planned: { sets: 3, reps: 12, loadKg: 15, restSec: 90, rpe: 8 },
+        sets: [set({ loadKg: 15, reps: 12, rpe: 8 })],
+      }), { id: "fly" }),
+    ];
+  }
+
+  it("applique les charges au démarrage et ne les réapplique pas", () => {
+    const started = startWithProgression(plannedDay(), history(), null);
+    expect(started.record?.choice).toBe("pending");
+    expect(adjustmentSummary(started.record?.items.length ?? 0)).toBe("2 exercices ajustés");
+    expect(adjustmentSummary(1)).toBe("1 exercice ajusté");
+    expect(started.session.exercises[0].planned.loadKg).toBe(82.5);
+    expect(started.session.exercises[0].sets[0].loadKg).toBe(60);
+    expect(started.session.exercises[0].sets[1].loadKg).toBe(82.5);
+    expect(started.session.exercises[0].sets[2].loadKg).toBe(80);
+    expect(started.session.exercises[1].planned.loadKg).toBe(17.5);
+    expect(formatLoadDelta(2.5)).toBe("↑ +2,5 kg");
+    expect(formatLoadDelta(-2.5)).toBe("↓ −2,5 kg");
+    const again = startWithProgression({ ...started.session, status: "planned" }, history(), started.record);
+    expect(again.session.exercises[0].planned.loadKg).toBe(82.5);
+    expect(again.session.exercises[1].planned.loadKg).toBe(17.5);
+  });
+
+  it("affiche l’écart sur la série et un tap revient au plan", () => {
+    const started = startWithProgression(plannedDay(), history(), null);
+    const fly = started.record?.items.find((item) => item.exerciseId === "b");
+    const row = started.session.exercises[1].sets[0];
+    expect(setDelta(fly, row)?.text).toBe("↑ +2,5 kg");
+    const reverted = revertAdjustment(started.session, fly!);
+    expect(reverted.exercises[1].planned.loadKg).toBe(15);
+    expect(reverted.exercises[1].sets[0].loadKg).toBe(15);
+    expect(reverted.exercises[0].planned.loadKg).toBe(82.5);
+    const back = reapplyAdjustment(reverted, fly!);
+    expect(back.exercises[1].planned.loadKg).toBe(17.5);
+    expect(back.exercises[1].sets[0].loadKg).toBe(17.5);
+  });
+
+  it("ignore tout le lot et se souvient du choix", () => {
+    const started = startWithProgression(plannedDay(), history(), null);
+    const ignored = (started.record?.items ?? []).reduce((current, item) => revertAdjustment(current, item), started.session);
+    expect(ignored.exercises.map((item) => item.planned.loadKg)).toEqual([80, 15]);
+    const memory = new Map<string, string>();
+    const store = {
+      getItem: (key: string) => memory.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        memory.set(key, value);
+      },
+    };
+    saveProgression("today", { choice: "ignored", items: [] }, store);
+    expect(loadProgression("today", store)?.choice).toBe("ignored");
+    expect(loadProgression("autre", store)).toBeNull();
+    expect(buildAdjustments(plannedDay(), history())).toHaveLength(2);
   });
 });

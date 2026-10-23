@@ -12,6 +12,7 @@ import {
 } from "@/lib/db";
 import { importSummary, parseImport, previewImport, textFromLocation, withoutDuplicates, type ImportPreview } from "@/lib/history";
 import { mergePlans } from "@/lib/plan";
+import { loadProgression, saveProgression, startWithProgression } from "@/lib/progression";
 import type { BackupFile, CustomExercise, Session, Settings } from "@/lib/types";
 import { publicBase } from "@/lib/base-path";
 import { localDate } from "@/lib/utils";
@@ -382,7 +383,12 @@ export function AppProvider({
       },
       pendingPlan,
       beginSession: async (session) => {
-        const next = session.status === "planned" ? { ...session, status: "active" as const, startedAt: session.startedAt ?? new Date().toISOString() } : session;
+        const prepared = startWithProgression(session, sessionsRef.current, loadProgression(session.id));
+        if (prepared.record && !loadProgression(session.id)) saveProgression(session.id, prepared.record);
+        const next =
+          prepared.session.status === "planned"
+            ? { ...prepared.session, status: "active" as const, startedAt: prepared.session.startedAt ?? new Date().toISOString() }
+            : prepared.session;
         await saveSession(next);
         setOverlay({ kind: "session", id: next.id });
       },

@@ -845,18 +845,65 @@ h1.title {
 .app:has(.coach-fab) .overlay-in {
   padding-right: 78px;
 }
-.progressions { margin-top: 8px; }
-.progression {
-  margin-top: 8px;
-  padding: 12px;
-  border-radius: 16px;
-  background: var(--bg-elev-2);
+.progression-card {
+  margin-top: 12px;
+  padding: 14px 14px 10px;
+  border-radius: 18px;
+  background: var(--bg-elev);
   border: 1px solid var(--line);
+  box-shadow: var(--shadow);
 }
-.progression b { display: block; font-size: 14px; letter-spacing: -0.02em; }
-.progression .num { margin: 4px 0 0; font-size: 17px; font-weight: 620; letter-spacing: -0.03em; }
-.progression .choice { margin-top: 8px; justify-content: flex-start; }
-.progression .btn { margin-top: 0; height: 42px; width: auto; flex: none; padding: 0 16px; font-size: 15px; }
+.progression-card h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+  font-weight: 640;
+}
+.progression-card .count { margin: 4px 0 0; color: var(--ink-soft); font-size: 14px; }
+.progression-card .choice { margin-top: 10px; }
+.progression-card .btn { margin-top: 0; height: 44px; font-size: 15px; }
+.progression-card .btn.ghost { margin-top: 0; }
+.progression-card .detail-toggle {
+  display: block;
+  width: 100%;
+  margin: 8px 0 0;
+  padding: 2px 0 0;
+  border: 0;
+  background: none;
+  color: var(--copper);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+.progression-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  max-height: 220px;
+  overflow: auto;
+}
+.progression-item, .progression-list li {
+  padding: 8px 0 2px;
+  border-top: 1px solid var(--line);
+}
+.progression-list b { display: block; font-size: 14px; letter-spacing: -0.02em; }
+.progression-list .shift { margin: 2px 0 0; font-size: 14px; font-weight: 620; letter-spacing: -0.02em; }
+.progression-list .fine { margin: 2px 0 0; }
+.progression-list .linkish { padding: 2px 0 0; font-size: 13px; }
+.loadcell { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; }
+.delta {
+  margin: 1px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--copper);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  white-space: nowrap;
+}
 .coach-sheet {
   position: fixed;
   inset: 0;

@@ -1,7 +1,6 @@
 "use client";
 
 import { useApp } from "@/components/app-context";
-import { ProgressionBlock } from "@/components/progression-block";
 import type { Session } from "@/lib/types";
 import { addDays, formatKg, formatRestLabel, mondayOf, parseISODate, weekdayLetter } from "@/lib/utils";
 
@@ -97,7 +96,6 @@ function SessionCard({ session, primary }: { session: Session; primary: boolean 
         environ {Math.max(30, minutes)} min · {session.exercises.length} exercice{session.exercises.length > 1 ? "s" : ""}
       </p>
       {session.coachNote ? <p className="quote">{session.coachNote}</p> : null}
-      <ProgressionBlock session={session} />
       {session.exercises.map((exercise) => (
         <div className="ex" key={exercise.id}>
           <div>

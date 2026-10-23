@@ -2,7 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/app-context";
-import { ProgressionBlock } from "@/components/progression-block";
+import { ProgressionSummary } from "@/components/progression-block";
+import {
+  loadProgression,
+  reapplyAdjustment,
+  revertAdjustment,
+  saveProgression,
+  setDelta,
+  type ProgressionRecord,
+} from "@/lib/progression";
 import { lastPerformance, completeSet, cycleRpe, patchSet } from "@/lib/session";
 import type { ExerciseLog, Session, SetLog } from "@/lib/types";
 import { formatClock, formatKg, uid } from "@/lib/utils";
@@ -11,6 +19,29 @@ export function SessionScreen({ id }: { id: string }) {
   const app = useApp();
   const session = app.sessions.find((item) => item.id === id);
   const [exerciseId, setExerciseId] = useState<string | null>(null);
+  const [record, setRecord] = useState<ProgressionRecord | null>(() => loadProgression(id));
+  const persist = (next: ProgressionRecord) => {
+    saveProgression(id, next);
+    setRecord(next);
+  };
+  const revertExercise = (exerciseIdToRevert: string) => {
+    const item = record?.items.find((entry) => entry.exerciseId === exerciseIdToRevert && entry.active);
+    if (!item || !record) return;
+    void app.updateSession(id, (current) => revertAdjustment(current, item));
+    persist({
+      ...record,
+      items: record.items.map((entry) => (entry.exerciseId === exerciseIdToRevert ? { ...entry, active: false } : entry)),
+    });
+  };
+  const adjustExercise = (exerciseIdToAdjust: string) => {
+    const item = record?.items.find((entry) => entry.exerciseId === exerciseIdToAdjust && !entry.active);
+    if (!item || !record) return;
+    void app.updateSession(id, (current) => reapplyAdjustment(current, item));
+    persist({
+      ...record,
+      items: record.items.map((entry) => (entry.exerciseId === exerciseIdToAdjust ? { ...entry, active: true } : entry)),
+    });
+  };
   if (!session) return null;
   const exercise =
     session.exercises.find((item) => item.id === exerciseId) ??
@@ -54,6 +85,18 @@ export function SessionScreen({ id }: { id: string }) {
             Terminer
           </button>
         </div>
+        <ProgressionSummary
+          record={record}
+          onAccept={() => record && persist({ ...record, choice: "accepted" })}
+          onIgnore={() => {
+            if (!record) return;
+            const active = record.items.filter((item) => item.active);
+            void app.updateSession(id, (current) => active.reduce((next, item) => revertAdjustment(next, item), current));
+            persist({ ...record, choice: "ignored", items: record.items.map((item) => ({ ...item, active: false })) });
+          }}
+          onRevert={revertExercise}
+          onAdjust={adjustExercise}
+        />
         <div className="exswitch">
           {session.exercises.map((item) => (
             <button type="button" key={item.id} className={item.id === exercise.id ? "on" : ""} onClick={() => setExerciseId(item.id)}>
@@ -71,7 +114,6 @@ export function SessionScreen({ id }: { id: string }) {
           <p className="last num">{previous ? `La dernière fois · ${previous}` : "Pas encore d’historique pour ce geste."}</p>
         </section>
         <div className="sets">
-          <ProgressionBlock session={session} exerciseId={exercise.id} />
           <div className="sethead">
             <span>Série</span>
             <span>kg</span>
@@ -86,6 +128,8 @@ export function SessionScreen({ id }: { id: string }) {
               index={index}
               exercise={exercise}
               active={set.id === exercise.sets.find((item) => !item.done)?.id}
+              delta={setDelta(record?.items.find((item) => item.exerciseId === exercise.id), set)}
+              onRevert={() => revertExercise(exercise.id)}
               onPatch={(patch) => change((current) => patchSet(current, exercise.id, set.id, patch))}
               onToggle={() => change((current) => completeSet(current, exercise.id, set.id))}
             />
@@ -143,6 +187,8 @@ function SetRow({
   index,
   exercise,
   active,
+  delta,
+  onRevert,
   onPatch,
   onToggle,
 }: {
@@ -150,32 +196,46 @@ function SetRow({
   index: number;
   exercise: ExerciseLog;
   active: boolean;
+  delta: { place: "load" | "reps"; text: string } | null;
+  onRevert: () => void;
   onPatch: (patch: Partial<SetLog>) => void;
   onToggle: () => void;
 }) {
   const workIndex = exercise.sets.slice(0, index + 1).filter((item) => !item.warmup).length;
   const label = set.warmup ? "éch." : String(workIndex);
+  const tag =
+    delta == null ? null : (
+      <button type="button" className="delta" data-testid="progression-delta" onClick={onRevert}>
+        {delta.text}
+      </button>
+    );
   return (
     <div className={`set${set.warmup ? " warm" : ""}${set.done ? " done" : ""}${active ? " next" : ""}`}>
       <span className="idx num">{label}</span>
-      {active ? (
-        <Stepper
-          value={set.loadKg}
-          display={set.loadKg == null ? "—" : formatKg(set.loadKg)}
-          onStep={(delta) => onPatch({ loadKg: bump(set.loadKg, delta, exercise.planned.loadKg ?? 0, exercise.stepKg || 1) })}
-        />
-      ) : (
-        <span className={`val num${active ? " target" : ""}`}>{set.loadKg == null ? "—" : formatKg(set.loadKg)}</span>
-      )}
-      {active ? (
-        <Stepper
-          value={set.reps}
-          display={set.reps == null ? "—" : String(set.reps)}
-          onStep={(delta) => onPatch({ reps: bump(set.reps, delta, exercise.planned.reps ?? 0, 1) })}
-        />
-      ) : (
-        <span className="val num">{set.reps == null ? "—" : set.reps}</span>
-      )}
+      <span className="loadcell">
+        {active ? (
+          <Stepper
+            value={set.loadKg}
+            display={set.loadKg == null ? "—" : formatKg(set.loadKg)}
+            onStep={(step) => onPatch({ loadKg: bump(set.loadKg, step, exercise.planned.loadKg ?? 0, exercise.stepKg || 1) })}
+          />
+        ) : (
+          <span className="val num">{set.loadKg == null ? "—" : formatKg(set.loadKg)}</span>
+        )}
+        {delta?.place === "load" ? tag : null}
+      </span>
+      <span className="loadcell">
+        {active ? (
+          <Stepper
+            value={set.reps}
+            display={set.reps == null ? "—" : String(set.reps)}
+            onStep={(step) => onPatch({ reps: bump(set.reps, step, exercise.planned.reps ?? 0, 1) })}
+          />
+        ) : (
+          <span className="val num">{set.reps == null ? "—" : set.reps}</span>
+        )}
+        {delta?.place === "reps" ? tag : null}
+      </span>
       {set.warmup ? (
         <span className="val num">—</span>
       ) : active ? (

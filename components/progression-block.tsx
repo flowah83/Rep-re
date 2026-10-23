@@ -1,81 +1,69 @@
 "use client";
 
 import { useState } from "react";
-import { useApp } from "@/components/app-context";
-import { applySuggestion, suggestionsForSession, type Suggestion } from "@/lib/progression";
-import type { Session } from "@/lib/types";
+import { adjustmentSummary, type Adjustment, type ProgressionRecord } from "@/lib/progression";
 import { formatKg } from "@/lib/utils";
 
-const SKIP_KEY = "repere-progression-skip";
-
-export function ProgressionBlock({ session, exerciseId }: { session: Session; exerciseId?: string }) {
-  const app = useApp();
-  const [skip, setSkip] = useState<string[]>(() => readSkip());
-  if (session.status === "done" || session.cardio) return null;
-  const items = suggestionsForSession(session, app.sessions).filter((item) => {
-    if (exerciseId && item.exerciseId !== exerciseId) return false;
-    return !skip.includes(keyOf(session.id, item.exerciseId));
-  });
-  if (!items.length) return null;
-
-  const hide = (item: Suggestion) => {
-    const next = [...skip, keyOf(session.id, item.exerciseId)];
-    setSkip(next);
-    writeSkip(next);
-  };
-
+export function ProgressionSummary({
+  record,
+  onAccept,
+  onIgnore,
+  onRevert,
+  onAdjust,
+}: {
+  record: ProgressionRecord | null;
+  onAccept: () => void;
+  onIgnore: () => void;
+  onRevert: (exerciseId: string) => void;
+  onAdjust: (exerciseId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  if (!record || record.choice !== "pending" || record.items.length === 0) return null;
+  const count = record.items.filter((item) => item.active).length;
   return (
-    <div className="progressions" data-testid="progression">
-      {items.map((item) => (
-        <div className="progression" key={item.exerciseId} data-testid="progression-suggestion">
-          <b>{item.name}</b>
-          <p className="num">{suggestionLine(item)}</p>
-          <p className="fine">{item.reason}</p>
-          <div className="choice">
-            <button
-              type="button"
-              className="btn small"
-              data-testid="progression-accept"
-              onClick={() => {
-                void app.updateSession(session.id, (current) => applySuggestion(current, item)).then(() => hide(item));
-              }}
-            >
-              Accepter
-            </button>
-            <button type="button" className="btn ghost small" data-testid="progression-ignore" onClick={() => hide(item)}>
-              Ignorer
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
+    <section className="progression-card" data-testid="progression">
+      <h2>Charges ajustées selon vos dernières performances</h2>
+      <p className="count">{count > 0 ? adjustmentSummary(count) : "Toutes les charges sont revenues au plan."}</p>
+      <div className="choice">
+        <button type="button" className="btn" data-testid="progression-accept" onClick={onAccept}>
+          Tout accepter
+        </button>
+        <button type="button" className="btn ghost" data-testid="progression-ignore" onClick={onIgnore}>
+          Ignorer
+        </button>
+      </div>
+      <button type="button" className="detail-toggle" data-testid="progression-detail" onClick={() => setOpen((value) => !value)}>
+        {open ? "Masquer le détail" : "Voir le détail"}
+      </button>
+      {open ? (
+        <ul className="progression-list">
+          {record.items.map((item) => (
+            <li key={item.exerciseId} data-testid="progression-suggestion">
+              <b>{item.name}</b>
+              <p className="shift num">{shiftLine(item)}</p>
+              <p className="fine">{item.reason}</p>
+              <button
+                type="button"
+                className="linkish"
+                data-testid={item.active ? "progression-revert" : "progression-adjust"}
+                onClick={() => (item.active ? onRevert(item.exerciseId) : onAdjust(item.exerciseId))}
+              >
+                {item.active ? "Revenir" : "Ajuster"}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
   );
 }
 
-function suggestionLine(item: Suggestion): string {
-  if (item.loadKg == null) return `${item.reps ?? "—"} répétitions`;
+function shiftLine(item: Adjustment): string {
   const unit = item.unit === "kg/main" ? " kg/main" : item.unit === "kg/jambe" ? " kg/jambe" : " kg";
-  return `${formatKg(item.loadKg)}${unit} × ${item.reps ?? "—"}`;
-}
-
-function keyOf(sessionId: string, exerciseId: string) {
-  return `${sessionId}:${exerciseId}`;
-}
-
-function readSkip(): string[] {
-  try {
-    const raw = sessionStorage.getItem(SKIP_KEY);
-    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-  } catch {
-    return [];
+  if (item.fromLoadKg == null && item.toLoadKg == null) {
+    return `${item.fromReps ?? "—"} → ${item.toReps ?? "—"} répétitions`;
   }
-}
-
-function writeSkip(keys: string[]) {
-  try {
-    sessionStorage.setItem(SKIP_KEY, JSON.stringify(keys.slice(-80)));
-  } catch {
-    /* stockage privé */
-  }
+  const from = item.fromLoadKg == null ? "—" : `${formatKg(item.fromLoadKg)}${unit}`;
+  const to = item.toLoadKg == null ? "—" : `${formatKg(item.toLoadKg)}${unit}`;
+  return `${from} → ${to}`;
 }

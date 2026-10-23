@@ -84,6 +84,185 @@ export function applySuggestion(session: Session, suggestion: Suggestion): Sessi
   };
 }
 
+export type Adjustment = {
+  exerciseId: string;
+  name: string;
+  fromLoadKg: number | null;
+  toLoadKg: number | null;
+  fromReps: number | null;
+  toReps: number | null;
+  unit: string | null;
+  reason: string;
+  active: boolean;
+};
+
+export type ProgressionRecord = {
+  choice: "pending" | "accepted" | "ignored";
+  items: Adjustment[];
+};
+
+/** Suggestions qui changent vraiment le plan, prêtes à être appliquées d’un bloc. */
+export function buildAdjustments(session: Session, history: Session[]): Adjustment[] {
+  return suggestionsForSession(session, history)
+    .filter((item) => item.changesPlan)
+    .map((item) => {
+      const exercise = session.exercises.find((current) => current.id === item.exerciseId);
+      return {
+        exerciseId: item.exerciseId,
+        name: item.name,
+        fromLoadKg: exercise?.planned.loadKg ?? null,
+        toLoadKg: item.loadKg,
+        fromReps: exercise?.planned.reps ?? null,
+        toReps: item.reps,
+        unit: item.unit,
+        reason: item.reason,
+        active: true,
+      };
+    });
+}
+
+export function applyAdjustments(session: Session, items: Adjustment[]): Session {
+  return items.filter((item) => item.active).reduce((current, item) => applySuggestion(current, suggestionFrom(item, true)), session);
+}
+
+export function revertAdjustment(session: Session, item: Adjustment): Session {
+  return {
+    ...session,
+    exercises: session.exercises.map((exercise) => {
+      if (exercise.id !== item.exerciseId) return exercise;
+      return {
+        ...exercise,
+        planned: { ...exercise.planned, loadKg: item.fromLoadKg, reps: item.fromReps },
+        sets: exercise.sets.map((set) => {
+          if (set.done || set.warmup) return set;
+          if (!sameLoad(set.loadKg, item.toLoadKg)) return set;
+          return { ...set, loadKg: item.fromLoadKg };
+        }),
+      };
+    }),
+  };
+}
+
+export function reapplyAdjustment(session: Session, item: Adjustment): Session {
+  return applySuggestion(session, suggestionFrom({ ...item, active: true }, true));
+}
+
+/**
+ * Au démarrage d’une séance planifiée, les charges ajustées deviennent le plan.
+ * Un choix déjà mémorisé n’est pas rejoué.
+ */
+export function startWithProgression(
+  session: Session,
+  history: Session[],
+  existing: ProgressionRecord | null,
+): { session: Session; record: ProgressionRecord | null } {
+  if (session.status !== "planned" || existing) return { session, record: existing };
+  const items = buildAdjustments(session, history);
+  if (!items.length) return { session, record: null };
+  return { session: applyAdjustments(session, items), record: { choice: "pending", items } };
+}
+
+export function adjustmentSummary(count: number): string {
+  if (count === 1) return "1 exercice ajusté";
+  return `${count} exercices ajustés`;
+}
+
+export function activeAdjustmentCount(record: ProgressionRecord | null): number {
+  if (!record || record.choice !== "pending") return 0;
+  return record.items.filter((item) => item.active).length;
+}
+
+export function formatLoadDelta(deltaKg: number): string | null {
+  if (!Number.isFinite(deltaKg) || Math.abs(deltaKg) < 0.01) return null;
+  const arrow = deltaKg > 0 ? "↑" : "↓";
+  const sign = deltaKg > 0 ? "+" : "−";
+  return `${arrow} ${sign}${formatKg(Math.abs(deltaKg))} kg`;
+}
+
+export function setDelta(
+  item: Adjustment | undefined,
+  set: SetLog,
+): { place: "load" | "reps"; text: string } | null {
+  if (!item?.active || set.warmup) return null;
+  const loadText =
+    item.fromLoadKg != null && item.toLoadKg != null && sameLoad(set.loadKg, item.toLoadKg)
+      ? formatLoadDelta(item.toLoadKg - item.fromLoadKg)
+      : null;
+  if (loadText) return { place: "load", text: loadText };
+  if (item.fromLoadKg == null && item.toLoadKg == null && item.fromReps != null && item.toReps != null && item.fromReps !== item.toReps) {
+    const delta = item.toReps - item.fromReps;
+    const arrow = delta > 0 ? "↑" : "↓";
+    const sign = delta > 0 ? "+" : "−";
+    return { place: "reps", text: `${arrow} ${sign}${Math.abs(delta)}` };
+  }
+  return null;
+}
+
+const PROGRESSION_KEY = "repere-progression-batch";
+
+type KeyValueStore = { getItem(key: string): string | null; setItem(key: string, value: string): void };
+
+export function loadProgression(sessionId: string, store: KeyValueStore | null = browserStore()): ProgressionRecord | null {
+  if (!store) return null;
+  try {
+    const raw = store.getItem(PROGRESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return null;
+    const record = (parsed as Record<string, unknown>)[sessionId];
+    if (!isRecord(record)) return null;
+    return record;
+  } catch {
+    return null;
+  }
+}
+
+export function saveProgression(sessionId: string, record: ProgressionRecord, store: KeyValueStore | null = browserStore()) {
+  if (!store) return;
+  try {
+    const raw = store.getItem(PROGRESSION_KEY);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : {};
+    const all = parsed && typeof parsed === "object" ? { ...(parsed as Record<string, unknown>) } : {};
+    all[sessionId] = record;
+    const keys = Object.keys(all);
+    for (const key of keys.slice(0, Math.max(0, keys.length - 40))) delete all[key];
+    store.setItem(PROGRESSION_KEY, JSON.stringify(all));
+  } catch {
+    /* stockage privé */
+  }
+}
+
+function suggestionFrom(item: Adjustment, changesPlan: boolean): Suggestion {
+  return {
+    exerciseId: item.exerciseId,
+    name: item.name,
+    loadKg: item.toLoadKg,
+    reps: item.toReps,
+    unit: item.unit,
+    reason: item.reason,
+    changesPlan,
+  };
+}
+
+function sameLoad(left: number | null, right: number | null): boolean {
+  if (left == null || right == null) return left == null && right == null;
+  return Math.abs(left - right) < 0.051;
+}
+
+function browserStore(): KeyValueStore | null {
+  try {
+    return typeof sessionStorage === "undefined" ? null : sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function isRecord(value: unknown): value is ProgressionRecord {
+  if (!value || typeof value !== "object") return false;
+  const record = value as ProgressionRecord;
+  return (record.choice === "pending" || record.choice === "accepted" || record.choice === "ignored") && Array.isArray(record.items);
+}
+
 function bodyweightSuggestion(exercise: ExerciseLog, working: SetLog[], targetReps: number | null): Suggestion {
   const minReps = Math.min(...working.map((set) => set.reps ?? 0));
   const target = targetReps ?? minReps;
