@@ -1,14 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   adjustmentSummary,
   applySuggestion,
   buildAdjustments,
   formatLoadDelta,
+  keepsCoachPlan,
   loadProgression,
   reapplyAdjustment,
   revertAdjustment,
   saveProgression,
   setDelta,
+  silenceProgression,
   startWithProgression,
   suggestForExercise,
   suggestionsForSession,
@@ -37,6 +39,7 @@ function exercise(partial: Partial<ExerciseLog> = {}): ExerciseLog {
     cues: [],
     muscles: ["pectoraux"],
     unit: partial.unit,
+    note: partial.note,
     planned: partial.planned ?? { sets: 4, reps: 6, loadKg: 80, restSec: 180, rpe: 8 },
     sets: partial.sets ?? [],
   };
@@ -282,5 +285,100 @@ describe("ajustement groupé", () => {
     expect(loadProgression("today", store)?.choice).toBe("ignored");
     expect(loadProgression("autre", store)).toBeNull();
     expect(buildAdjustments(plannedDay(), history())).toHaveLength(2);
+  });
+});
+
+describe("plan de reprise", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function coachDay(partial: Partial<Session> = {}, ex: Partial<ExerciseLog> = {}): Session {
+    return {
+      id: "sun",
+      date: "2026-10-25",
+      title: "Upper B",
+      intention: partial.intention ?? "reprise",
+      coachNote: partial.coachNote,
+      status: "planned",
+      source: partial.source ?? "coach",
+      exercises: [
+        exercise({
+          id: "bench",
+          name: "Développé couché barre",
+          planned: { sets: 3, reps: 8, loadKg: 52.5, restSec: 180, rpe: 8 },
+          sets: [set({ id: "n", loadKg: 52.5, reps: null, done: false })],
+          ...ex,
+        }),
+      ],
+    };
+  }
+
+  function heavyHistory(): Session[] {
+    return [
+      doneSession("2026-10-18", exercise({
+        name: "Développé couché barre",
+        sets: [set({ loadKg: 60, reps: 8, rpe: 9 })],
+      })),
+    ];
+  }
+
+  it("cite la charge du plan à côté d’un « Gardez »", () => {
+    const suggestion = suggestForExercise(coachDay().exercises[0], heavyHistory(), "sun");
+    expect(suggestion?.loadKg).toBe(60);
+    expect(suggestion?.changesPlan).toBe(true);
+    expect(suggestion?.reason).toMatch(/Gardez 60 kg/);
+    expect(suggestion?.reason).toMatch(/Le plan est à 52,5 kg/);
+  });
+
+  it("garde le plan de Chef sport quand la séance est une reprise", () => {
+    const session = coachDay({ coachNote: "Retour léger, récupération, on peut reprendre doucement." });
+    expect(keepsCoachPlan(session)).toBe(true);
+    expect(keepsCoachPlan(coachDay({ intention: "Reprise" }))).toBe(true);
+    expect(keepsCoachPlan(coachDay({ intention: "hypertrophie", coachNote: "Semaine en déload." }))).toBe(true);
+    expect(keepsCoachPlan(coachDay({ intention: "hypertrophie" }, { note: "Contrôler la descente." }))).toBe(true);
+    expect(keepsCoachPlan(coachDay({ intention: "hypertrophie", coachNote: "Banc légèrement incliné." }))).toBe(false);
+    expect(keepsCoachPlan(coachDay({ source: "manual", intention: "reprise" }))).toBe(false);
+    const started = startWithProgression(session, heavyHistory(), null);
+    expect(started.session.exercises[0].planned.loadKg).toBe(52.5);
+    expect(started.session.exercises[0].sets[0].loadKg).toBe(52.5);
+    expect(started.record?.mode).toBe("hold");
+    expect(started.record?.items[0].active).toBe(false);
+    expect(started.record?.items[0].toLoadKg).toBe(60);
+    const again = startWithProgression(started.session, heavyHistory(), started.record);
+    expect(again.session.exercises[0].planned.loadKg).toBe(52.5);
+  });
+
+  it("applique les hausses une semaine normale, et retient Ignorer après fermeture", () => {
+    const normal = coachDay({ intention: "hypertrophie", coachNote: "Semaine habituelle." });
+    const history = [
+      doneSession("2026-10-18", exercise({
+        name: "Développé couché barre",
+        sets: [set({ loadKg: 52.5, reps: 8, rpe: 8 })],
+      })),
+    ];
+    const started = startWithProgression(normal, history, null);
+    expect(started.record?.mode).toBe("applied");
+    expect(started.session.exercises[0].planned.loadKg).toBe(55);
+    expect(silenceProgression(started.record!).choice).toBe("kept");
+    expect(silenceProgression({ choice: "pending", mode: "hold", items: [] }).choice).toBe("ignored");
+
+    const local = new Map<string, string>();
+    const sessionStore = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => local.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        local.set(key, value);
+      },
+    });
+    vi.stubGlobal("sessionStorage", {
+      getItem: (key: string) => sessionStore.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        sessionStore.set(key, value);
+      },
+    });
+    saveProgression("sun", { choice: "ignored", mode: "hold", items: [] });
+    expect(loadProgression("sun")?.choice).toBe("ignored");
+    expect(sessionStore.size).toBe(0);
   });
 });

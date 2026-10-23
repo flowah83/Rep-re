@@ -862,8 +862,9 @@ h1.title {
 }
 .progression-card .count { margin: 4px 0 0; color: var(--ink-soft); font-size: 14px; }
 .progression-card .choice { margin-top: 10px; }
-.progression-card .btn { margin-top: 0; height: 44px; font-size: 15px; }
-.progression-card .btn.ghost { margin-top: 0; }
+.progression-card .btn { margin-top: 0; height: 44px; font-size: 14px; padding: 0 8px; line-height: 1.15; }
+.progression-card .choice .btn.ghost { margin-top: 0; }
+.progression-card > .btn.ghost { margin-top: 12px; }
 .progression-card .detail-toggle {
   display: block;
   width: 100%;

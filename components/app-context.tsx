@@ -12,7 +12,7 @@ import {
 } from "@/lib/db";
 import { importSummary, parseImport, previewImport, textFromLocation, withoutDuplicates, type ImportPreview } from "@/lib/history";
 import { mergePlans } from "@/lib/plan";
-import { loadProgression, saveProgression, startWithProgression } from "@/lib/progression";
+import { loadProgression, markProgressionAsk, saveProgression, startWithProgression } from "@/lib/progression";
 import type { BackupFile, CustomExercise, Session, Settings } from "@/lib/types";
 import { publicBase } from "@/lib/base-path";
 import { localDate } from "@/lib/utils";
@@ -383,8 +383,12 @@ export function AppProvider({
       },
       pendingPlan,
       beginSession: async (session) => {
-        const prepared = startWithProgression(session, sessionsRef.current, loadProgression(session.id));
-        if (prepared.record && !loadProgression(session.id)) saveProgression(session.id, prepared.record);
+        const existing = loadProgression(session.id);
+        const prepared = startWithProgression(session, sessionsRef.current, existing);
+        if (prepared.record && !existing) {
+          saveProgression(session.id, prepared.record);
+          if (prepared.record.choice === "pending") markProgressionAsk(session.id);
+        }
         const next =
           prepared.session.status === "planned"
             ? { ...prepared.session, status: "active" as const, startedAt: prepared.session.startedAt ?? new Date().toISOString() }

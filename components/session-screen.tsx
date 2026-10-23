@@ -4,11 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/app-context";
 import { ProgressionSummary } from "@/components/progression-block";
 import {
+  clearProgressionAsk,
   loadProgression,
+  progressionAskOpen,
   reapplyAdjustment,
   revertAdjustment,
   saveProgression,
   setDelta,
+  silenceProgression,
   type ProgressionRecord,
 } from "@/lib/progression";
 import { lastPerformance, completeSet, cycleRpe, patchSet } from "@/lib/session";
@@ -20,9 +23,28 @@ export function SessionScreen({ id }: { id: string }) {
   const session = app.sessions.find((item) => item.id === id);
   const [exerciseId, setExerciseId] = useState<string | null>(null);
   const [record, setRecord] = useState<ProgressionRecord | null>(() => loadProgression(id));
+  const [asking, setAsking] = useState(() => progressionAskOpen(id));
   const persist = (next: ProgressionRecord) => {
     saveProgression(id, next);
     setRecord(next);
+    if (next.choice !== "pending") {
+      clearProgressionAsk(id);
+      setAsking(false);
+    }
+  };
+  useEffect(() => {
+    if (progressionAskOpen(id)) return;
+    const current = loadProgression(id);
+    if (!current || current.choice !== "pending") return;
+    const next = silenceProgression(current);
+    saveProgression(id, next);
+    setRecord(next);
+    setAsking(false);
+  }, [id]);
+  const leaveQuestion = () => {
+    const current = loadProgression(id);
+    if (current?.choice === "pending") persist(silenceProgression(current));
+    else clearProgressionAsk(id);
   };
   const revertExercise = (exerciseIdToRevert: string) => {
     const item = record?.items.find((entry) => entry.exerciseId === exerciseIdToRevert && entry.active);
@@ -57,7 +79,15 @@ export function SessionScreen({ id }: { id: string }) {
   return (
     <div className="overlay">
       <div className="overlay-in session-screen" data-screen="session">
-        <button type="button" className="navline" data-testid="close-session" onClick={app.closeOverlay}>
+        <button
+          type="button"
+          className="navline"
+          data-testid="close-session"
+          onClick={() => {
+            leaveQuestion();
+            app.closeOverlay();
+          }}
+        >
           Aujourd’hui
         </button>
         <div className="sesshead">
@@ -72,6 +102,7 @@ export function SessionScreen({ id }: { id: string }) {
             className="linkend"
             data-testid="finish-session"
             onClick={() => {
+              leaveQuestion();
               void app
                 .updateSession(session.id, (current) => ({
                   ...current,
@@ -87,13 +118,15 @@ export function SessionScreen({ id }: { id: string }) {
         </div>
         <ProgressionSummary
           record={record}
-          onAccept={() => record && persist({ ...record, choice: "accepted" })}
-          onIgnore={() => {
+          asking={asking}
+          onRevertPlan={() => {
             if (!record) return;
             const active = record.items.filter((item) => item.active);
             void app.updateSession(id, (current) => active.reduce((next, item) => revertAdjustment(next, item), current));
-            persist({ ...record, choice: "ignored", items: record.items.map((item) => ({ ...item, active: false })) });
+            persist({ ...record, choice: "reverted", items: record.items.map((item) => ({ ...item, active: false })) });
           }}
+          onKeep={() => record && persist({ ...record, choice: "kept" })}
+          onIgnore={() => record && persist({ ...record, choice: "ignored" })}
           onRevert={revertExercise}
           onAdjust={adjustExercise}
         />

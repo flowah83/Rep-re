@@ -1,7 +1,7 @@
 import { isHardSet } from "./calc";
 import { normalizeExerciseKey } from "./exercises";
 import type { ExerciseLog, Session, SetLog } from "./types";
-import { formatKg } from "./utils";
+import { formatKg, stripAccents } from "./utils";
 
 export type Suggestion = {
   exerciseId: string;
@@ -67,7 +67,7 @@ export function suggestForExercise(exercise: ExerciseLog, history: Session[], sk
     reason = `La dernière fois, les répétitions n’y étaient pas toutes. Gardez ${formatLoad(load, unit)} et visez ${target}.`;
   }
 
-  return pack(exercise, nextLoad, target, unit, reason);
+  return pack(exercise, nextLoad, target, unit, mentionPlan(exercise, unit, reason));
 }
 
 export function applySuggestion(session: Session, suggestion: Suggestion): Session {
@@ -96,10 +96,26 @@ export type Adjustment = {
   active: boolean;
 };
 
+export type ProgressionChoice = "pending" | "kept" | "reverted" | "ignored" | "accepted";
+export type ProgressionMode = "applied" | "hold";
+
 export type ProgressionRecord = {
-  choice: "pending" | "accepted" | "ignored";
+  choice: ProgressionChoice;
+  /** `hold` : le plan de Chef sport reste en place. `applied` : les hausses sont déjà écrites. */
+  mode?: ProgressionMode;
   items: Adjustment[];
 };
+
+const RECOVERY_WORD = /\b(reprise|reprises|deload|leger|legere|legers|legeres|recuperation|reprendre)\b/;
+
+/** Plan de Chef sport à charge écrite, qu’il ne faut pas dépasser tout seul. */
+export function keepsCoachPlan(session: Session): boolean {
+  if (session.source !== "coach") return false;
+  if (!session.exercises.some((exercise) => exercise.planned.loadKg != null)) return false;
+  if (session.exercises.some((exercise) => Boolean(exercise.note?.trim()))) return true;
+  const text = [session.intention, session.coachNote, session.noteForMe, session.noteForCoach].filter(Boolean).join(" ");
+  return RECOVERY_WORD.test(stripAccents(text));
+}
 
 /** Suggestions qui changent vraiment le plan, prêtes à être appliquées d’un bloc. */
 export function buildAdjustments(session: Session, history: Session[]): Adjustment[] {
@@ -159,7 +175,18 @@ export function startWithProgression(
   if (session.status !== "planned" || existing) return { session, record: existing };
   const items = buildAdjustments(session, history);
   if (!items.length) return { session, record: null };
-  return { session: applyAdjustments(session, items), record: { choice: "pending", items } };
+  if (keepsCoachPlan(session)) {
+    const increases = items.filter(isIncrease).map((item) => ({ ...item, active: false }));
+    if (!increases.length) return { session, record: null };
+    return { session, record: { choice: "pending", mode: "hold", items: increases } };
+  }
+  return { session: applyAdjustments(session, items), record: { choice: "pending", mode: "applied", items } };
+}
+
+function isIncrease(item: Adjustment): boolean {
+  if (item.fromLoadKg != null && item.toLoadKg != null) return item.toLoadKg > item.fromLoadKg + 0.01;
+  if (item.fromLoadKg == null && item.toLoadKg == null && item.fromReps != null && item.toReps != null) return item.toReps > item.fromReps;
+  return false;
 }
 
 export function adjustmentSummary(count: number): string {
@@ -249,9 +276,41 @@ function sameLoad(left: number | null, right: number | null): boolean {
   return Math.abs(left - right) < 0.051;
 }
 
+const ASK_KEY = "repere-progression-ask";
+
+/** La question n’est posée que pendant l’ouverture qui vient de démarrer la séance. */
+export function markProgressionAsk(sessionId: string) {
+  try {
+    sessionStorage.setItem(ASK_KEY, sessionId);
+  } catch {
+    /* stockage privé */
+  }
+}
+
+export function progressionAskOpen(sessionId: string): boolean {
+  try {
+    return sessionStorage.getItem(ASK_KEY) === sessionId;
+  } catch {
+    return false;
+  }
+}
+
+export function clearProgressionAsk(sessionId: string) {
+  try {
+    if (sessionStorage.getItem(ASK_KEY) === sessionId) sessionStorage.removeItem(ASK_KEY);
+  } catch {
+    /* stockage privé */
+  }
+}
+
+export function silenceProgression(record: ProgressionRecord): ProgressionRecord {
+  if (record.choice !== "pending") return record;
+  return { ...record, choice: record.mode === "hold" ? "ignored" : "kept" };
+}
+
 function browserStore(): KeyValueStore | null {
   try {
-    return typeof sessionStorage === "undefined" ? null : sessionStorage;
+    return typeof localStorage === "undefined" ? null : localStorage;
   } catch {
     return null;
   }
@@ -260,7 +319,14 @@ function browserStore(): KeyValueStore | null {
 function isRecord(value: unknown): value is ProgressionRecord {
   if (!value || typeof value !== "object") return false;
   const record = value as ProgressionRecord;
-  return (record.choice === "pending" || record.choice === "accepted" || record.choice === "ignored") && Array.isArray(record.items);
+  const choice = record.choice;
+  const known = choice === "pending" || choice === "kept" || choice === "reverted" || choice === "ignored" || choice === "accepted";
+  return known && Array.isArray(record.items);
+}
+
+function mentionPlan(exercise: ExerciseLog, unit: string | null, reason: string): string {
+  if (exercise.planned.loadKg == null) return reason;
+  return `${reason} Le plan est à ${formatLoad(exercise.planned.loadKg, exercise.unit ?? unit)}.`;
 }
 
 function bodyweightSuggestion(exercise: ExerciseLog, working: SetLog[], targetReps: number | null): Suggestion {
@@ -281,7 +347,7 @@ function bodyweightSuggestion(exercise: ExerciseLog, working: SetLog[], targetRe
   } else {
     reason = `Poids du corps. Visez ${reps} répétitions.`;
   }
-  return pack(exercise, null, reps, exercise.unit ?? null, reason);
+  return pack(exercise, null, reps, exercise.unit ?? null, mentionPlan(exercise, exercise.unit ?? null, reason));
 }
 
 function pack(exercise: ExerciseLog, loadKg: number | null, reps: number | null, unit: string | null, reason: string): Suggestion {
