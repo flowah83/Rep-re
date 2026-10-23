@@ -2,11 +2,12 @@
 
 import { useApp, type RangeKey } from "@/components/app-context";
 import { BodyMap, E1Chart, heatFill } from "@/components/chart";
-import { bestLoads, e1rmSeries, muscleTotals, samplesForExercise, type E1Point } from "@/lib/calc";
+import { bestLoads, e1rmSeries, isHardSet, muscleTotals, samplesForExercise, type E1Point } from "@/lib/calc";
+import { unitPhrase } from "@/lib/display";
 import { MUSCLE_LABEL } from "@/lib/exercises";
 import { bestE1rmLabel } from "@/lib/session";
-import type { Muscle } from "@/lib/types";
-import { addDays, formatKg, parseISODate } from "@/lib/utils";
+import type { Muscle, Session } from "@/lib/types";
+import { addDays, formatKg, formatLong, parseISODate } from "@/lib/utils";
 
 const RANGES: { id: RangeKey; label: string }[] = [
   { id: 28, label: "4 sem" },
@@ -36,6 +37,8 @@ export function ProgressScreen() {
   const totals = muscleTotals(app.sessions, addDays(app.today, -6), app.today);
   const fill = (muscle: Muscle) => heatFill(totals[muscle]);
   const records = bestLoads(app.sessions).slice(0, 3);
+  const sentence = recordSentence(app.sessions, app.today);
+  const lastGym = lastStrengthDate(app.sessions);
 
   return (
     <div className="screen" data-screen="progress">
@@ -91,6 +94,7 @@ export function ProgressScreen() {
               )}
             </div>
           </div>
+          {sentence ? <p className="callout">{sentence}</p> : null}
           <E1Chart points={plotted} from={from} to={app.today} />
         </>
       )}
@@ -114,21 +118,30 @@ export function ProgressScreen() {
           <span>16+</span>
         </div>
       </div>
-      <p className="callout">{callout(totals)}</p>
+      <p className="callout">{callout(totals, lastGym)}</p>
       <div className="section-label">
-        Records <span>charge la plus lourde</span>
+        Records <span>les trois plus lourdes</span>
       </div>
       {records.length === 0 ? (
         <p className="fine">Les records s’affichent après une série de travail notée.</p>
       ) : (
         <div className="prchips">
           {records.map((record) => (
-            <div key={record.name}>
-              <b className="num">{formatKg(record.loadKg)} kg</b>
+            <button
+              type="button"
+              key={record.name}
+              onClick={() => {
+                app.setProgressName(record.name);
+                app.setTab("progress");
+              }}
+            >
+              <b className="num">
+                {formatKg(record.loadKg)} {unitPhrase(record.unit)}
+              </b>
               <span>
                 {record.name} · {shortDate(record.date)}
               </span>
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -157,9 +170,11 @@ function daysBetween(a: string, b: string) {
   return Math.round((parseISODate(b).getTime() - parseISODate(a).getTime()) / 86400000);
 }
 
-function callout(totals: Record<Muscle, number>) {
+function callout(totals: Record<Muscle, number>, lastGym: string | null) {
   const values = Object.values(totals);
-  if (values.every((count) => count === 0)) return "Aucune série dure sur les sept derniers jours.";
+  if (values.every((count) => count === 0)) {
+    return lastGym ? `Dernier travail de salle : ${formatLong(lastGym)}.` : "Pas encore de travail de salle noté.";
+  }
   const low = (Object.keys(totals) as Muscle[]).filter((muscle) => totals[muscle] > 0 && totals[muscle] < 8);
   const quiet = (Object.keys(totals) as Muscle[]).filter((muscle) => totals[muscle] === 0);
   const lowText = low.length
@@ -167,6 +182,38 @@ function callout(totals: Record<Muscle, number>) {
     : "Les muscles sollicités sont dans la zone tranquille.";
   if (!quiet.length || quiet.length > 4) return lowText;
   return `${lowText} Sans série : ${quiet.map((muscle) => MUSCLE_LABEL[muscle].toLowerCase()).join(", ")}.`;
+}
+
+function lastStrengthDate(sessions: Session[]): string | null {
+  const dates = sessions
+    .filter((session) => session.status !== "planned" && !session.cardio && session.exercises.some((exercise) => exercise.sets.some((set) => isHardSet(set))))
+    .map((session) => session.date)
+    .sort();
+  return dates.length ? dates[dates.length - 1] : null;
+}
+
+function recordSentence(sessions: Session[], today: string): string | null {
+  for (const session of sessions.filter((item) => item.date === today && item.status === "done")) {
+    for (const exercise of session.exercises) {
+      for (const set of exercise.sets) {
+        if (!isHardSet(set) || set.loadKg == null || set.reps == null || set.loadKg <= 0) continue;
+        const priorLoads: number[] = [];
+        for (const other of sessions) {
+          if (other.date >= session.date) continue;
+          for (const item of other.exercises) {
+            if (item.name !== exercise.name) continue;
+            for (const prior of item.sets) {
+              if (isHardSet(prior) && prior.loadKg != null) priorLoads.push(prior.loadKg);
+            }
+          }
+        }
+        if (priorLoads.length && Math.max(...priorLoads) < set.loadKg - 0.01) {
+          return `${formatKg(set.loadKg)} ${unitPhrase(set.unit ?? exercise.unit)} × ${set.reps} à ${exercise.name.toLowerCase()}, au-dessus de vos séries notées.`;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 function shortDate(iso: string) {

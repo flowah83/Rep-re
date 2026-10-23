@@ -16,7 +16,7 @@ export function E1Chart({
 }) {
   const width = 360;
   const height = 168;
-  const pad = { l: 36, r: 10, t: 12, b: 22 };
+  const pad = { l: 36, r: 12, t: 12, b: 32 };
   if (points.length === 0) {
     return <p className="chartnote">Pas encore de série entre 1 et 10 répétitions pour tracer la courbe.</p>;
   }
@@ -78,12 +78,34 @@ export function E1Chart({
               strokeWidth="2"
             />
           ))}
+        {[from, midDate(from, to), to].map((iso, index) => (
+          <text
+            key={iso + index}
+            x={index === 0 ? pad.l : index === 2 ? width - pad.r : (pad.l + width - pad.r) / 2}
+            y={height - 8}
+            textAnchor={index === 0 ? "start" : index === 2 ? "end" : "middle"}
+            fill="var(--ink-soft)"
+            fontSize="11"
+          >
+            {axisDate(iso)}
+          </text>
+        ))}
       </svg>
       <p className="chartnote">
         Trait pointillé : plus de deux semaines sans ce mouvement. La courbe ne devine pas la hausse.
       </p>
     </div>
   );
+}
+
+function midDate(from: string, to: string) {
+  const t0 = parseISODate(from).getTime();
+  const t1 = parseISODate(to).getTime();
+  return new Date(t0 + (t1 - t0) / 2).toISOString().slice(0, 10);
+}
+
+function axisDate(iso: string) {
+  return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" }).format(parseISODate(iso)).replace(".", "");
 }
 
 export function heatFill(count: number): string {

@@ -13,11 +13,15 @@ export function BilanScreen({ id }: { id: string }) {
   const app = useApp();
   const [, refreshNotices] = useState(0);
   const session = app.sessions.find((item) => item.id === id);
+  const fresh = app.overlay?.kind === "bilan" && app.overlay.fresh === true;
   if (!session) return null;
   const prior = app.sessions.filter((item) => item.id !== session.id && item.status === "done" && item.date <= session.date);
-  const rows = session.exercises.map((exercise) => ({ exercise, ...compareExercise(exercise, prior) }));
+  const rows = session.exercises
+    .map((exercise) => ({ exercise, ...compareExercise(exercise, prior) }))
+    .filter((row) => row.kind !== "vide");
   const notable = rows.filter((row) => row.kind !== "tenu");
   const held = rows.filter((row) => row.kind === "tenu");
+  const showPlan = Boolean(session.startedAt) && session.source === "coach" && rows.length > 0;
   const shown = notable.length ? notable : held.slice(0, 1);
   const extraHeld = notable.length ? held.length : Math.max(0, held.length - 1);
   const text = appendCoachNotices(summaryText(session, prior), pendingCoachNoticeLines());
@@ -51,14 +55,20 @@ export function BilanScreen({ id }: { id: string }) {
   return (
     <div className="overlay">
       <div className="overlay-in pad-screen bilan" data-screen="bilan">
-        <div className="check" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-            <path d="M5 11.5 9 15.5 17 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-        <h1>C’est noté.</h1>
+        <button type="button" className="navline" data-testid="close-bilan" onClick={app.closeOverlay}>
+          ‹ Retour
+        </button>
+        {fresh ? (
+          <div className="check" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <path d="M5 11.5 9 15.5 17 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        ) : null}
+        <h1>{fresh ? "C’est noté." : session.title}</h1>
         <p className="sub">
-          {formatLong(session.date)} · {session.title}
+          {formatLong(session.date)}
+          {fresh ? ` · ${session.title}` : ""}
         </p>
         <div className="stats">
           <div className="stat">
@@ -67,7 +77,7 @@ export function BilanScreen({ id }: { id: string }) {
           </div>
           <div className="stat">
             <b className="num">{hardSetCount(session.exercises)}</b>
-            <span>séries dures</span>
+            <span>{hardSetCount(session.exercises) <= 1 ? "série dure" : "séries dures"}</span>
           </div>
           <div className="stat">
             <b className="num">{formatInt(tonnage(session.exercises))}</b>
@@ -90,8 +100,8 @@ export function BilanScreen({ id }: { id: string }) {
                 </div>
                 <p>
                   {exercise.detailUnknown
-                    ? "détail inconnu"
-                    : exercise.sets.filter((set) => set.done && !set.warmup).map((set) => formatPerformedSet(set, exercise.unit)).join(", ") || "—"}
+                    ? "séries non détaillées"
+                    : exercise.sets.filter((set) => set.done && !set.warmup).map((set) => formatPerformedSet(set, exercise.unit)).join(", ") || "séries non détaillées"}
                 </p>
               </div>
             ))}
@@ -100,9 +110,9 @@ export function BilanScreen({ id }: { id: string }) {
             ) : null}
           </div>
         ) : null}
-        {session.cardio ? null : (
+        {session.cardio || !showPlan ? null : (
         <div className="compare">
-          <h3>Par rapport au plan</h3>
+          <h3>{session.closed === "partial" ? "Ce qui est noté" : "Par rapport au plan"}</h3>
           {shown.map((row) => (
             <div className="cmp" key={row.exercise.id}>
               <div className="r1">
@@ -148,6 +158,9 @@ export function BilanScreen({ id }: { id: string }) {
         <button type="button" className="btn ghost" data-testid="keep-local" onClick={app.closeOverlay}>
           Garder seulement ici
         </button>
+        <button type="button" className="btn ghost" onClick={() => app.openSession(session.id)}>
+          Corriger une série
+        </button>
       </div>
     </div>
   );
@@ -160,7 +173,7 @@ function Badge({ kind }: { kind: CompareKind }) {
     "au-dessus": ["mid", "Au-dessus"],
     "charge-inedite": ["pr", "Charge inédite"],
     "en-dessous": ["mid", "En dessous"],
-    vide: ["mid", "Pas noté"],
+    vide: ["mid", "Vide"],
   };
   const [tone, label] = map[kind];
   return <span className={`badge ${tone}`}>{label}</span>;

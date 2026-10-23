@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { coachErrorText } from "@/lib/display";
 import { useApp } from "@/components/app-context";
 import {
   applyAppTool,
@@ -56,6 +57,23 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight });
   }, [turns, error, busy]);
 
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const apply = () => {
+      const gap = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      document.documentElement.style.setProperty("--keyboard", `${gap}px`);
+    };
+    apply();
+    viewport.addEventListener("resize", apply);
+    viewport.addEventListener("scroll", apply);
+    return () => {
+      viewport.removeEventListener("resize", apply);
+      viewport.removeEventListener("scroll", apply);
+      document.documentElement.style.removeProperty("--keyboard");
+    };
+  }, []);
+
   const remember = (next: StoredTurn[]) => {
     const trimmed = next.slice(-40);
     turnsRef.current = trimmed;
@@ -110,7 +128,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
       }
       remember(next);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Le coach n’a pas pu répondre.");
+      setError(coachErrorText(caught instanceof Error ? caught.message : "Le coach n’a pas pu répondre."));
     } finally {
       setBusy(false);
     }
@@ -206,7 +224,21 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
             </div>
           ))}
           {busy ? <p className="coach-wait">Le coach réfléchit…</p> : null}
-          {error ? <p className="err">{error}</p> : null}
+          {error ? (
+            <p className="err">
+              {error}{" "}
+              <button
+                type="button"
+                className="linkish"
+                onClick={() => {
+                  onClose();
+                  app.setSheet("settings");
+                }}
+              >
+                Ouvrir les réglages
+              </button>
+            </p>
+          ) : null}
         </div>
         <form
           className="coach-compose"

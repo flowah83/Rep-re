@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef } from "react";
 import { AppProvider, useApp, useBoot } from "@/components/app-context";
 import { BilanScreen } from "@/components/bilan-screen";
 import { GestureScreen } from "@/components/gesture-screen";
@@ -35,6 +35,20 @@ export function RepereApp() {
 
 function Shell() {
   const app = useApp();
+  useOverlayHistory(Boolean(app.overlay), app.closeOverlay);
+  const noted = useRef(false);
+  useEffect(() => {
+    if (noted.current || !app.settings.onboarded || app.overlay) return;
+    noted.current = true;
+    try {
+      const key = "repere-seen-release";
+      const seen = localStorage.getItem(key);
+      if (!seen && app.sessions.length > 0) app.flash("Repère a été mis à jour.");
+      localStorage.setItem(key, "2");
+    } catch {
+      /* stockage privé */
+    }
+  }, [app]);
   if (!app.settings.onboarded) return <Onboarding />;
   return (
     <div className="app" data-testid="app-ready">
@@ -72,48 +86,45 @@ function Shell() {
   );
 }
 
-const STEPS = [
-  {
-    title: "Vos séances restent ici.",
-    body: "Repère note les charges sur ce téléphone. Pas de compte, pas de serveur.",
-  },
-  {
-    title: "Chef sport écrit le plan.",
-    body: "Vous collez le plan, ou vous ouvrez le lien qu’il vous envoie. L’application ne choisit pas les charges à votre place.",
-  },
-  {
-    title: "Rien ne part tout seul.",
-    body: "À la fin, vous relisez le bilan. Vous l’envoyez à Chef sport seulement si vous le décidez.",
-  },
-];
-
 function Onboarding() {
   const app = useApp();
-  const [step, setStep] = useState(0);
-  const current = STEPS[step];
-  const last = step === STEPS.length - 1;
   return (
     <div className="onboard" data-testid="app-ready">
       <div className="markr" aria-hidden="true">R</div>
       {app.importPreview ? <ImportSummary preview={app.importPreview} /> : <div className="spacer" />}
-      <h1>{current.title}</h1>
-      <p>{current.body}</p>
-      <div className="dots" aria-hidden="true">
-        {STEPS.map((_, index) => (
-          <i key={index} className={index === step ? "on" : ""} />
-        ))}
-      </div>
-      <Button
-        data-testid={last ? "onboarding-start" : "onboarding-next"}
-        onClick={() => {
-          if (last) void app.finishOnboarding();
-          else setStep(step + 1);
-        }}
-      >
-        {last ? "Commencer" : "Continuer"}
+      <h1>Vos séances restent sur ce téléphone.</h1>
+      <p>Collez le plan de Chef sport, ou créez une séance. Rien ne part tout seul.</p>
+      <Button data-testid="onboarding-start" onClick={() => void app.finishOnboarding()}>
+        Déposer le plan
       </Button>
     </div>
   );
+}
+
+function useOverlayHistory(open: boolean, close: () => void) {
+  const pushed = useRef(false);
+  const fromPop = useRef(false);
+  useEffect(() => {
+    if (open && !pushed.current) {
+      history.pushState({ repereOverlay: 1 }, "");
+      pushed.current = true;
+    }
+    if (!open && pushed.current) {
+      pushed.current = false;
+      if (!fromPop.current) history.back();
+      fromPop.current = false;
+    }
+  }, [open]);
+  useEffect(() => {
+    const onPop = () => {
+      if (!pushed.current) return;
+      fromPop.current = true;
+      pushed.current = false;
+      close();
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [close]);
 }
 
 function TodayIcon() {

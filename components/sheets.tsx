@@ -32,13 +32,15 @@ export function Sheets() {
 function SettingsSheet() {
   const app = useApp();
   const hasDemo = app.sessions.some((session) => session.source === "demo");
+  const [askDemo, setAskDemo] = useState(false);
   return (
     <>
       <DialogTitle asChild><h2>Réglages</h2></DialogTitle>
       <DialogDescription asChild>
         <p className="lead">Tout reste sur ce téléphone. Il n’y a pas de compte.</p>
       </DialogDescription>
-      <div className="fieldlabel">Apparence</div>
+      <h3 className="grouplabel">Apparence</h3>
+      <div className="fieldlabel">Thème</div>
       <div className="segment">
         {(["system", "light", "dark"] as const).map((theme) => (
           <button
@@ -62,8 +64,8 @@ function SettingsSheet() {
         </Button>
       </div>
       <p className="fine">Barre actuelle : {formatKg(app.settings.barKg)} kg. Sert seulement au calcul des disques.</p>
-      <CoachSettings />
-      <Button onClick={() => app.setSheet("import")}>Importer</Button>
+      <h3 className="grouplabel">Données</h3>
+      <Button onClick={() => app.setSheet("import")}>Importer un plan</Button>
       <Button variant="ghost" onClick={() => { app.setEditId(null); app.setSheet("edit"); }}>
         Créer une séance
       </Button>
@@ -136,9 +138,24 @@ function SettingsSheet() {
       >
         Alerte de fin de repos
       </Button>
-      <Button variant="ghost" data-testid="demo-toggle" onClick={() => void app.loadDemo()}>
-        Charger un exemple fictif
-      </Button>
+      <h3 className="grouplabel">Coach</h3>
+      <CoachSettings />
+      <h3 className="grouplabel">Exemple</h3>
+      {askDemo ? (
+        <>
+          <p className="fine">L’exemple est fictif. Il se range à côté de vos séances, et vous pouvez l’effacer.</p>
+          <Button data-testid="demo-toggle" onClick={() => void app.loadDemo().then(() => setAskDemo(false))}>
+            Charger l’exemple
+          </Button>
+          <Button variant="ghost" onClick={() => setAskDemo(false)}>
+            Annuler
+          </Button>
+        </>
+      ) : (
+        <Button variant="ghost" data-testid="demo-ask" onClick={() => setAskDemo(true)}>
+          Charger un exemple fictif
+        </Button>
+      )}
       {hasDemo ? (
         <Button variant="ghost" data-testid="clear-demo" onClick={() => void app.clearDemo()}>
           Effacer l’exemple fictif
@@ -165,7 +182,7 @@ function CoachSettings() {
   }, []);
   return (
     <>
-      <div className="fieldlabel">Coach</div>
+      <div className="fieldlabel">Adresse et code</div>
       <p className="fine">
         Collez le code secret, une seule fois sur ce téléphone. L’adresse est déjà remplie. Sans le code, le coach reste éteint. Les
         suggestions de charge marchent quand même.
@@ -331,6 +348,7 @@ function EditSheet() {
       : [{ key: uid(), name: "", sets: 3, reps: 8, load: 20, rest: 120 }],
   );
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const save = async () => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -432,16 +450,28 @@ function EditSheet() {
       {error ? <p className="err">{error}</p> : null}
       <Button onClick={() => void save()}>Enregistrer</Button>
       {existing?.status === "planned" ? (
-        <Button
-          variant="ghost"
-          onClick={() => {
-            void app.removeSession(existing.id);
-            app.setSheet(null);
-            app.flash("Séance retirée.");
-          }}
-        >
-          Supprimer cette séance
-        </Button>
+        confirmDelete ? (
+          <>
+            <p className="fine">Cette séance prévue sera retirée de ce téléphone.</p>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                void app.removeSession(existing.id);
+                app.setSheet(null);
+                app.flash("Séance retirée.");
+              }}
+            >
+              Oui, supprimer
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirmDelete(false)}>
+              Annuler
+            </Button>
+          </>
+        ) : (
+          <Button variant="ghost" onClick={() => setConfirmDelete(true)}>
+            Supprimer cette séance
+          </Button>
+        )
       ) : null}
     </>
   );

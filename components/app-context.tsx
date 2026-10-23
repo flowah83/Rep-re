@@ -12,19 +12,21 @@ import {
 } from "@/lib/db";
 import { importSummary, parseImport, previewImport, textFromLocation, withoutDuplicates, type ImportPreview } from "@/lib/history";
 import { mergePlans } from "@/lib/plan";
-import { loadProgression, markProgressionAsk, saveProgression, startWithProgression } from "@/lib/progression";
+import type { HistFilter } from "@/lib/display";
+import { loadProgression, saveProgression, silenceProgression, startWithProgression } from "@/lib/progression";
+import { rememberPlan } from "@/lib/snapshot";
 import type { BackupFile, CustomExercise, Session, Settings } from "@/lib/types";
 import { publicBase } from "@/lib/base-path";
 import { localDate } from "@/lib/utils";
 
 export type Tab = "today" | "progress" | "history";
 export type RangeKey = 28 | 84 | 365;
-export type HistFilter = "all" | "push" | "back" | "legs" | "other";
+export type { HistFilter } from "@/lib/display";
 export type Overlay =
   | null
   | { kind: "session"; id: string }
   | { kind: "gesture"; sessionId: string; exerciseId: string }
-  | { kind: "bilan"; id: string };
+  | { kind: "bilan"; id: string; fresh?: boolean };
 export type SheetName = null | "settings" | "import" | "edit" | "plates" | "library";
 
 type Api = {
@@ -39,7 +41,7 @@ type Api = {
   overlay: Overlay;
   openSession: (id: string) => void;
   openGesture: (sessionId: string, exerciseId: string) => void;
-  openBilan: (id: string) => void;
+  openBilan: (id: string, fresh?: boolean) => void;
   closeOverlay: () => void;
   sheet: SheetName;
   setSheet: (sheet: SheetName) => void;
@@ -215,7 +217,7 @@ export function AppProvider({
       overlay,
       openSession: (id) => setOverlay({ kind: "session", id }),
       openGesture: (sessionId, exerciseId) => setOverlay({ kind: "gesture", sessionId, exerciseId }),
-      openBilan: (id) => setOverlay({ kind: "bilan", id }),
+      openBilan: (id, fresh = false) => setOverlay({ kind: "bilan", id, fresh }),
       closeOverlay: () => setOverlay(null),
       sheet,
       setSheet,
@@ -325,6 +327,11 @@ export function AppProvider({
           /* stockage privé */
         }
         setTab(preview.kind === "history" ? "history" : "today");
+        try {
+          localStorage.setItem("repere-imported-on", localDate());
+        } catch {
+          /* stockage privé */
+        }
         flash(addedCount === 0 ? "Rien de nouveau à ajouter." : importSummary(preview)[0]);
       },
       dismissImport: () => {
@@ -383,12 +390,10 @@ export function AppProvider({
       },
       pendingPlan,
       beginSession: async (session) => {
+        if (session.status === "planned") rememberPlan(session);
         const existing = loadProgression(session.id);
         const prepared = startWithProgression(session, sessionsRef.current, existing);
-        if (prepared.record && !existing) {
-          saveProgression(session.id, prepared.record);
-          if (prepared.record.choice === "pending") markProgressionAsk(session.id);
-        }
+        if (prepared.record && !existing) saveProgression(session.id, silenceProgression(prepared.record));
         const next =
           prepared.session.status === "planned"
             ? { ...prepared.session, status: "active" as const, startedAt: prepared.session.startedAt ?? new Date().toISOString() }
