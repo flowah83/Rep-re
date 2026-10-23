@@ -1,4 +1,13 @@
-import { buildAiCall, coachFailure, providerName, readAiMessage, type AiEnv } from "./ai";
+import {
+  buildAiCall,
+  coachFailure,
+  modelChain,
+  modelName,
+  providerName,
+  readAiMessage,
+  shouldTryNextModel,
+  type AiEnv,
+} from "./ai";
 import {
   basicHeader,
   buildIcs,
@@ -52,15 +61,22 @@ export async function handleRequest(request: Request, env: Env, fetchImpl: Fetch
 
 async function coach(request: Request, env: Env, fetchImpl: FetchLike): Promise<Response> {
   const body = await readJson(request);
-  const call = buildAiCall(env, body.context ?? {}, body.messages);
-  if ("error" in call) return json({ error: call.error }, call.status);
-  const response = await fetchImpl(call.url, { method: "POST", headers: call.headers, body: call.body });
-  if (!response.ok) {
-    const failure = coachFailure(response.status);
-    return json({ error: failure.error }, failure.status);
+  const provider = providerName(env.AI_PROVIDER);
+  const models = provider === "gemini" ? modelChain(env) : [modelName(env)];
+  let lastStatus = 502;
+  for (let index = 0; index < models.length; index++) {
+    const call = buildAiCall({ ...env, AI_MODEL: models[index] }, body.context ?? {}, body.messages);
+    if ("error" in call) return json({ error: call.error }, call.status);
+    const response = await fetchImpl(call.url, { method: "POST", headers: call.headers, body: call.body });
+    if (response.ok) {
+      const data = (await response.json()) as unknown;
+      return json({ message: readAiMessage(provider, data) }, 200);
+    }
+    lastStatus = response.status;
+    if (!shouldTryNextModel(lastStatus) || index === models.length - 1) break;
   }
-  const data = (await response.json()) as unknown;
-  return json({ message: readAiMessage(providerName(env.AI_PROVIDER), data) }, 200);
+  const failure = coachFailure(lastStatus, provider === "gemini" && shouldTryNextModel(lastStatus));
+  return json({ error: failure.error }, failure.status);
 }
 
 async function calendar(request: Request, env: Env, fetchImpl: FetchLike): Promise<Response> {

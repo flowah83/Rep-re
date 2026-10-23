@@ -1,12 +1,14 @@
 import { TOOLS, buildSystemPrompt, sanitizeMessages } from "../../lib/coach";
 
 export const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
+export const DEFAULT_GEMINI_CHAIN = ["gemini-3.8-flash", "gemini-3-flash-preview", "gemini-flash-lite-latest"];
 export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 export const RATE_LIMIT_MESSAGE = "Le coach souffle un peu, réessayez dans une minute.";
 
 export type AiEnv = {
   AI_PROVIDER?: string;
   AI_MODEL?: string;
+  AI_MODEL_FALLBACKS?: string;
   GEMINI_API_KEY?: string;
   OPENAI_API_KEY?: string;
 };
@@ -26,6 +28,33 @@ export function modelName(env: AiEnv): string {
   const chosen = env.AI_MODEL?.trim();
   if (chosen) return chosen;
   return providerName(env.AI_PROVIDER) === "openai" ? DEFAULT_OPENAI_MODEL : DEFAULT_GEMINI_MODEL;
+}
+
+/** Modèles Gemini à essayer, dans l’ordre. `AI_MODEL_FALLBACKS` remplace la chaîne par défaut. */
+export function modelChain(env: AiEnv): string[] {
+  const configured = splitModels(env.AI_MODEL_FALLBACKS);
+  if (configured.length) return configured;
+  const primary = env.AI_MODEL?.trim();
+  if (!primary || primary === DEFAULT_GEMINI_CHAIN[0]) return [...DEFAULT_GEMINI_CHAIN];
+  return dedupe([primary, ...DEFAULT_GEMINI_CHAIN]);
+}
+
+export function shouldTryNextModel(status: number): boolean {
+  return status === 500 || status === 503;
+}
+
+function splitModels(value: string | undefined): string[] {
+  if (!value) return [];
+  return dedupe(
+    value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
+}
+
+function dedupe(models: string[]): string[] {
+  return [...new Set(models)];
 }
 
 export function buildAiCall(env: AiEnv, context: unknown, messages: unknown): AiCall | { error: string; status: number } {
@@ -61,8 +90,8 @@ export function buildAiCall(env: AiEnv, context: unknown, messages: unknown): Ai
   };
 }
 
-export function coachFailure(status: number): { error: string; status: number } {
-  if (status === 429) return { error: RATE_LIMIT_MESSAGE, status: 429 };
+export function coachFailure(status: number, exhausted = false): { error: string; status: number } {
+  if (status === 429 || exhausted) return { error: RATE_LIMIT_MESSAGE, status: 429 };
   return { error: "Le coach n’a pas pu répondre. Réessayez dans un moment.", status: 502 };
 }
 

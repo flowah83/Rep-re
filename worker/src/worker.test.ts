@@ -98,6 +98,49 @@ describe("worker", () => {
     expect(body.message.tool_calls[0].thoughtSignature).toBe("sig-1");
   });
 
+  it("essaie le modèle suivant quand Gemini répond 503 ou 500", async () => {
+    const statuses = [503, 200];
+    let calls = 0;
+    const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async () => {
+      const status = statuses[calls++] ?? 200;
+      if (status !== 200) return new Response("high demand", { status });
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "On reprend." }] } }] }), { status: 200 });
+    });
+    const response = await handleRequest(
+      post("/coach", { messages: [{ role: "user", content: "Bonjour" }] }),
+      { ...env, AI_MODEL_FALLBACKS: "gemini-3.8-flash, gemini-3-flash-preview, gemini-flash-lite-latest" },
+      fetchImpl,
+    );
+    expect(response.status).toBe(200);
+    expect(fetchImpl.mock.calls.map((call) => call[0])).toEqual([
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent",
+    ]);
+    const body = (await response.json()) as { message: { content: string } };
+    expect(body.message.content).toBe("On reprend.");
+  });
+
+  it("prévient quand tous les modèles Gemini sont indisponibles", async () => {
+    const statuses = [500, 503, 500];
+    let calls = 0;
+    const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async () =>
+      new Response("unavailable", { status: statuses[calls++] ?? 503 }),
+    );
+    const response = await handleRequest(
+      post("/coach", { messages: [{ role: "user", content: "Bonjour" }] }),
+      { ...env, AI_MODEL: undefined },
+      fetchImpl,
+    );
+    expect(fetchImpl.mock.calls.map((call) => call[0])).toEqual([
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+    ]);
+    expect(response.status).toBe(429);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toBe("Le coach souffle un peu, réessayez dans une minute.");
+  });
+
   it("répond gentiment quand le palier gratuit est saturé", async () => {
     const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async () =>
       new Response(JSON.stringify({ error: { code: 429, status: "RESOURCE_EXHAUSTED" } }), { status: 429 }),
