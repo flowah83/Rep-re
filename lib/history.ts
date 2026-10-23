@@ -338,7 +338,10 @@ export function importSummary(preview: ImportPreview): string[] {
   const created = preview.created.length;
   const bits: string[] = [];
   if (recognized) bits.push(recognized === 1 ? "1 exercice reconnu" : `${recognized} exercices reconnus`);
-  if (created) bits.push(created === 1 ? `1 exercice créé (${preview.created[0].name})` : `${created} exercices créés`);
+  if (created) {
+    const names = preview.created.map((item) => item.name).join(", ");
+    bits.push(created === 1 ? `1 exercice créé (${names})` : `${created} exercices créés (${names})`);
+  }
   if (bits.length) lines.push(`${bits.join(", ")}.`);
   if (preview.kind === "plan") lines.push("Ces séances restent à faire.");
   else lines.push("Les séances passées seront marquées comme terminées.");

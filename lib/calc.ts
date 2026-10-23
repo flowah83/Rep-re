@@ -142,6 +142,7 @@ export type BestLoad = {
   loadKg: number;
   reps: number;
   date: string;
+  unit?: string | null;
 };
 
 export function bestLoads(sessions: Session[]): BestLoad[] {
@@ -153,10 +154,10 @@ export function bestLoads(sessions: Session[]): BestLoad[] {
         if (!isHardSet(set) || set.loadKg == null || set.reps == null || set.loadKg <= 0) continue;
         const prev = map.get(ex.name);
         if (!prev || set.loadKg > prev.loadKg || (set.loadKg === prev.loadKg && session.date > prev.date)) {
-          map.set(ex.name, { name: ex.name, loadKg: set.loadKg, reps: set.reps, date: session.date });
+          map.set(ex.name, { name: ex.name, loadKg: set.loadKg, reps: set.reps, date: session.date, unit: set.unit ?? ex.unit ?? null });
         }
       }
     }
   }
-  return [...map.values()].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.loadKg - a.loadKg));
+  return [...map.values()].sort((a, b) => b.loadKg - a.loadKg || (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }

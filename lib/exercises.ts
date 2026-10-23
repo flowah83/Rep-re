@@ -17,7 +17,7 @@ export const PATTERN_LABEL: Record<Pattern, string> = {
   vpush: "Poussée verticale",
   vpull: "Tirage vertical",
   squat: "Squat",
-  hinge: "Charnière de hanche",
+  hinge: "Hanche et dos",
   lunge: "Fente",
   curl: "Curl",
   tricep: "Extension des triceps",

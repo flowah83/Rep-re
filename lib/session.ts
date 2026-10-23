@@ -144,6 +144,12 @@ export function compareExercise(
   };
 }
 
+function workLine(count: number): string {
+  if (count <= 0) return "Aucune série de travail.";
+  if (count === 1) return "1 série de travail.";
+  return `${count} séries de travail.`;
+}
+
 export function summaryText(session: Session, prior: Session[]): string {
   const minutes = session.startedAt
     ? Math.max(1, Math.round(((session.endedAt ? Date.parse(session.endedAt) : Date.now()) - Date.parse(session.startedAt)) / 60000))
@@ -152,11 +158,11 @@ export function summaryText(session: Session, prior: Session[]): string {
     `${formatLong(session.date)} — ${session.title}, faite.`,
     session.cardio
       ? cardioLine(session)
-      : `${minutes ? `${minutes} min. ` : ""}${hardSetCount(session.exercises)} séries de travail. ${formatKg(tonnage(session.exercises))} kg déplacés.`,
+      : `${minutes ? `${minutes} min. ` : ""}${workLine(hardSetCount(session.exercises))} ${formatKg(tonnage(session.exercises))} kg déplacés.`,
   ];
   for (const ex of session.exercises) {
     if (ex.detailUnknown) {
-      lines.push(`${ex.name} : détail inconnu.`);
+      lines.push(`${ex.name} : le détail des séries n’a pas été noté.`);
       continue;
     }
     const done = ex.sets.filter((set) => set.done && !set.warmup);
@@ -251,8 +257,8 @@ function formatLoad(load: number | null, unit: string | null): string {
     if (unit && /pdc/i.test(unit)) return "PDC";
     return "—";
   }
-  if (unit === "kg/main") return `${formatKg(load)} kg/main`;
-  if (unit === "kg/jambe") return `${formatKg(load)} kg/jambe`;
+  if (unit === "kg/main") return `${formatKg(load)} kg par haltère`;
+  if (unit === "kg/jambe") return `${formatKg(load)} kg par jambe`;
   if (unit && /pdc/i.test(unit)) return `${formatKg(load)} kg`;
   return `${formatKg(load)} kg`;
 }

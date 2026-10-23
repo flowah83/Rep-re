@@ -99,6 +99,8 @@ export type Session = {
   cardio?: CardioLog;
   /** Durée connue sans détail de séries, par exemple les élastiques. */
   durationMin?: number | null;
+  /** Séance close pour de bon, ou rangée avec seulement ce qui était noté. */
+  closed?: "full" | "partial";
 };
 
 export type CustomExercise = {

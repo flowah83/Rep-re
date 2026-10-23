@@ -1,5 +1,5 @@
 const BASE = /*__BASE__*/ "";
-const CACHE = `repere-v1${BASE}`;
+const CACHE = `repere-v2${BASE}`;
 const INDEX = `${BASE}/index.html`;
 const PRECACHE = /*__PRECACHE__*/ [];
 
@@ -32,11 +32,23 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(INDEX, copy));
+          const forIndex = response.clone();
+          const forRequest = response.clone();
+          caches.open(CACHE).then((cache) => {
+            cache.put(INDEX, forIndex);
+            cache.put(request, forRequest);
+          });
           return response;
         })
-        .catch(() => caches.match(INDEX)),
+        .catch(async () => {
+          const cache = await caches.open(CACHE);
+          const hit =
+            (await cache.match(request)) ||
+            (await cache.match(INDEX)) ||
+            (await cache.match(`${BASE}/`)) ||
+            (await cache.match(BASE || "/"));
+          return hit || new Response("Hors ligne", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+        }),
     );
     return;
   }
