@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr" class="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Prototype réaliste · Repère</title>
+    <link rel="stylesheet" href="./prototype.css" />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("proto-theme");
+          var dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.classList.toggle("dark", dark);
+          document.documentElement.classList.toggle("light", !dark);
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <main class="phone">
+      <header class="head">
+        <div>
+          <p class="eyebrow">Repère · essai réaliste</p>
+          <h1 id="title">Squat barre</h1>
+        </div>
+        <button type="button" class="iconbtn" id="theme" aria-label="Mode sombre">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <path d="M12.8 11.6A5.2 5.2 0 0 1 6.4 5.2 5.2 5.2 0 1 0 12.8 11.6Z" stroke="currentColor" stroke-width="1.6" />
+          </svg>
+        </button>
+      </header>
+      <section class="stage" aria-labelledby="title">
+        <canvas id="c"></canvas>
+        <div class="stage-ui">
+          <span class="loop">En boucle</span>
+          <span class="phase" id="phase">Chargement</span>
+        </div>
+      </section>
+      <div class="switch" role="tablist" aria-label="Exercice">
+        <button type="button" role="tab" id="tab-squat" data-ex="squat" aria-selected="true">Squat</button>
+        <button type="button" role="tab" id="tab-bench" data-ex="bench" aria-selected="false">Développé</button>
+        <button type="button" role="tab" id="tab-pullup" data-ex="pullup" aria-selected="false">Tractions</button>
+      </div>
+      <div class="legend" id="legend"></div>
+      <ul class="cues" id="cues"></ul>
+      <p class="hint" id="hint">Glissez pour tourner. La boucle dure environ 6,5 secondes, sans son.</p>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "repere-mannequin-v2",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "three": "0.170.0",
+    "meshoptimizer": "0.22.0"
+  }
+}
