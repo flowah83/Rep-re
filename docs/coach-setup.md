@@ -46,7 +46,7 @@ Inventez une longue suite de lettres et de chiffres, par exemple 30 caractères,
 4. Ajoutez un second secret, `CLOUDFLARE_ACCOUNT_ID`, avec l’identifiant copié à l’étape 1.
 5. Si l’un des deux secrets manque, le site Repère se publie quand même. Seul le coach est ignoré.
 6. Le fichier `.github/workflows/deploy-worker.yml` publie le service à chaque envoi sur `main`, dès que les deux secrets existent.
-7. Dans l’onglet Actions, le travail « Deploy coach worker » doit être vert. L’adresse ressemble à `https://repere-coach.votre-sous-domaine.workers.dev`. Vous la voyez aussi dans Cloudflare → Workers et Pages → `repere-coach`.
+7. Dans l’onglet Actions, le travail « Deploy coach worker » doit être vert. L’adresse est déjà dans Repère : `https://repere-coach.repere-flo.workers.dev`. Vous la voyez aussi dans Cloudflare → Workers et Pages → `repere-coach`.
 
 ## 6. Donner les trois codes au service
 
@@ -64,13 +64,14 @@ Le modèle est déjà `gemini-3.8-flash`. Pour en changer un jour, ajoutez une v
 
 1. Ouvrez Repère.
 2. Réglages.
-3. Dans Coach, collez l’adresse du service (étape 5), sans barre à la fin.
-4. Collez le code secret (étape 4).
-5. Touchez **Enregistrer le coach**.
+3. Dans Coach, l’adresse est déjà remplie. Laissez-la.
+4. Collez seulement le code secret (étape 4).
+5. Touchez **Tester la connexion**. Le résultat doit être « Connexion OK. ».
+6. Touchez **Enregistrer le coach**.
 
 Ensuite, le bouton rond ouvre la conversation. Rien n’est modifié dans l’application ni dans le calendrier tant que vous n’avez pas touché **Appliquer**. **Annuler** ne change rien.
 
-S’il manque l’adresse ou le code, le coach affiche qu’il n’est pas encore activé. L’application ne plante pas.
+S’il manque le code, le coach affiche qu’il n’est pas encore activé. L’application ne plante pas. Si le test dit « Serveur injoignable », il affiche l’adresse réellement utilisée.
 
 ## Plus tard, si vous voulez OpenAI
 

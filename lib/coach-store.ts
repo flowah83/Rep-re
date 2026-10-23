@@ -3,7 +3,30 @@ const TOKEN_KEY = "repere-coach-token";
 const CHAT_KEY = "repere-coach-messages";
 const NOTICE_KEY = "repere-coach-notices";
 
+export const DEFAULT_COACH_URL = "https://repere-coach.repere-flo.workers.dev";
+
 export type CoachConfig = { url: string; token: string };
+
+export type CoachProbe = { ok: boolean; message: string; url: string };
+
+export function normalizeCoachUrl(raw: string | null | undefined): string {
+  const compact = (raw ?? "").replace(/\s+/g, "");
+  if (!compact) return DEFAULT_COACH_URL;
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(compact) ? compact : `https://${compact}`;
+  let url: URL;
+  try {
+    url = new URL(withScheme);
+  } catch {
+    return DEFAULT_COACH_URL;
+  }
+  if ((url.protocol !== "http:" && url.protocol !== "https:") || !url.hostname) return DEFAULT_COACH_URL;
+  const path = url.pathname.replace(/\/+$/, "");
+  return `${url.protocol}//${url.host}${path}${url.search}${url.hash}`;
+}
+
+export function normalizeCoachToken(raw: string | null | undefined): string {
+  return (raw ?? "").trim();
+}
 
 export type StoredTurn = {
   id: string;
@@ -19,25 +42,76 @@ type Notice = { id: string; line: string; sent: boolean };
 export function loadCoachConfig(): CoachConfig {
   try {
     return {
-      url: localStorage.getItem(URL_KEY)?.trim() ?? "",
-      token: localStorage.getItem(TOKEN_KEY)?.trim() ?? "",
+      url: normalizeCoachUrl(localStorage.getItem(URL_KEY)),
+      token: normalizeCoachToken(localStorage.getItem(TOKEN_KEY)),
     };
   } catch {
-    return { url: "", token: "" };
+    return { url: DEFAULT_COACH_URL, token: "" };
   }
 }
 
 export function saveCoachConfig(config: CoachConfig) {
   try {
-    localStorage.setItem(URL_KEY, config.url.trim());
-    localStorage.setItem(TOKEN_KEY, config.token.trim());
+    localStorage.setItem(URL_KEY, normalizeCoachUrl(config.url));
+    localStorage.setItem(TOKEN_KEY, normalizeCoachToken(config.token));
   } catch {
     /* stockage privé */
   }
 }
 
 export function coachIsReady(config = loadCoachConfig()): boolean {
-  return Boolean(config.url && config.token);
+  return Boolean(normalizeCoachToken(config.token));
+}
+
+export async function testCoachConnection(
+  config: { url: string; token: string },
+  fetchImpl: typeof fetch = fetch,
+): Promise<CoachProbe> {
+  const url = normalizeCoachUrl(config.url);
+  const token = normalizeCoachToken(config.token);
+  if (!token) return { ok: false, url, message: "Indiquez le code secret, puis réessayez." };
+  try {
+    const response = await fetchImpl(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: "{}",
+    });
+    if (response.status === 401) return { ok: false, url, message: "Code refusé (401)." };
+    if (response.ok || response.status === 404) return { ok: true, url, message: "Connexion OK." };
+    return { ok: false, url, message: `Le service a répondu ${response.status}.` };
+  } catch {
+    return { ok: false, url, message: `Serveur injoignable. Adresse utilisée : ${url}` };
+  }
+}
+
+export async function requestCoach(
+  path: string,
+  body: unknown,
+  fetchImpl: typeof fetch = fetch,
+): Promise<Record<string, unknown>> {
+  const config = loadCoachConfig();
+  const url = normalizeCoachUrl(config.url);
+  const token = normalizeCoachToken(config.token);
+  if (!token) throw new Error("Le coach n’est pas encore activé.");
+  const target = `${url}${path.startsWith("/") ? path : `/${path}`}`;
+  let response: Response;
+  try {
+    response = await fetchImpl(target, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error(`Le coach n’est pas joignable. Adresse utilisée : ${url}`);
+  }
+  let data: Record<string, unknown> = {};
+  try {
+    data = (await response.json()) as Record<string, unknown>;
+  } catch {
+    throw new Error("La réponse du coach est illisible.");
+  }
+  if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "Le coach n’a pas pu répondre.");
+  return data;
 }
 
 export function loadCoachChat(): StoredTurn[] {

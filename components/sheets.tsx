@@ -5,7 +5,7 @@ import { useApp } from "@/components/app-context";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
-import { loadCoachConfig, saveCoachConfig } from "@/lib/coach-store";
+import { DEFAULT_COACH_URL, loadCoachConfig, normalizeCoachToken, normalizeCoachUrl, saveCoachConfig, testCoachConnection } from "@/lib/coach-store";
 import { toCsv } from "@/lib/db";
 import { CATALOG, PATTERN_LABEL } from "@/lib/exercises";
 import { importSummary, type ImportPreview } from "@/lib/history";
@@ -154,8 +154,10 @@ function SettingsSheet() {
 
 function CoachSettings() {
   const app = useApp();
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(DEFAULT_COACH_URL);
   const [token, setToken] = useState("");
+  const [probe, setProbe] = useState<{ ok: boolean; message: string } | null>(null);
+  const [probing, setProbing] = useState(false);
   useEffect(() => {
     const current = loadCoachConfig();
     setUrl(current.url);
@@ -165,7 +167,7 @@ function CoachSettings() {
     <>
       <div className="fieldlabel">Coach</div>
       <p className="fine">
-        L’adresse du service et le code secret, une seule fois sur ce téléphone. Sans ces deux informations, le coach reste éteint. Les
+        Collez le code secret, une seule fois sur ce téléphone. L’adresse est déjà remplie. Sans le code, le coach reste éteint. Les
         suggestions de charge marchent quand même.
       </p>
       <input
@@ -176,6 +178,7 @@ function CoachSettings() {
         autoCapitalize="off"
         autoCorrect="off"
         spellCheck={false}
+        autoComplete="off"
         onChange={(event) => setUrl(event.target.value)}
       />
       <input
@@ -186,16 +189,40 @@ function CoachSettings() {
         placeholder="Code secret"
         autoCapitalize="off"
         autoCorrect="off"
+        spellCheck={false}
+        autoComplete="off"
         onChange={(event) => setToken(event.target.value)}
       />
       <Button
         onClick={() => {
-          saveCoachConfig({ url, token });
-          app.flash(url.trim() && token.trim() ? "Coach enregistré sur ce téléphone." : "Coach effacé de ce téléphone.");
+          const cleaned = { url: normalizeCoachUrl(url), token: normalizeCoachToken(token) };
+          saveCoachConfig(cleaned);
+          setUrl(cleaned.url);
+          setToken(cleaned.token);
+          app.flash(cleaned.token ? "Coach enregistré sur ce téléphone." : "Coach effacé de ce téléphone.");
         }}
       >
         Enregistrer le coach
       </Button>
+      <Button
+        variant="ghost"
+        data-testid="coach-test"
+        disabled={probing}
+        onClick={() => {
+          setProbing(true);
+          setProbe(null);
+          void testCoachConnection({ url, token })
+            .then((result) => setProbe(result))
+            .finally(() => setProbing(false));
+        }}
+      >
+        Tester la connexion
+      </Button>
+      {probe ? (
+        <p className={probe.ok ? "fine" : "err"} data-testid="coach-test-result">
+          {probe.message}
+        </p>
+      ) : null}
     </>
   );
 }

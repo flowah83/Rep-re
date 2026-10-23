@@ -15,8 +15,8 @@ import {
 import {
   coachIsReady,
   loadCoachChat,
-  loadCoachConfig,
   recordCoachNotice,
+  requestCoach,
   saveCoachChat,
   type StoredTurn,
 } from "@/lib/coach-store";
@@ -79,7 +79,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
     if (depth > 3) return;
     setBusy(true);
     try {
-      const data = await postJson("/coach", {
+      const data = await requestCoach("/coach", {
         context: buildCoachContext(sessions, app.today),
         messages: toApi(history),
       });
@@ -136,7 +136,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
               continue;
             }
             try {
-              await postJson("/calendar", prepared.body);
+              await requestCoach("/calendar", prepared.body);
               const args = parseToolArgs(call.arguments);
               const notice = chefSportNotice(call.name, args);
               if (notice) recordCoachNotice(notice);
@@ -192,8 +192,8 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
             <div className="coach-note" data-testid="coach-inactive">
               <h2>Le coach n’est pas encore activé.</h2>
               <p>
-                Dans Réglages, indiquez l’adresse du service et le code secret. Tant que ce n’est pas fait, vous continuez à noter vos
-                séances normalement. Les suggestions de charge, avant une séance, marchent sans le coach.
+                Dans Réglages, indiquez le code secret. L’adresse est déjà remplie. Tant que le code n’est pas enregistré, vous continuez à
+                noter vos séances normalement. Les suggestions de charge, avant une séance, marchent sans le coach.
               </p>
             </div>
           ) : null}
@@ -274,7 +274,7 @@ async function readCalendar(call: ToolCall): Promise<StoredTurn> {
   const prepared = calendarBodyForTool(call);
   if (!prepared.ok) return toolTurn(call.id, prepared.error);
   try {
-    const data = await postJson("/calendar", prepared.body);
+    const data = await requestCoach("/calendar", prepared.body);
     const events = Array.isArray(data.events) ? data.events : [];
     return toolTurn(call.id, JSON.stringify({ evenements: events }).slice(0, 8000));
   } catch (caught) {
@@ -303,29 +303,6 @@ function toApi(turns: StoredTurn[]) {
     }
     return { role: turn.role, content: turn.content };
   });
-}
-
-async function postJson(path: string, body: unknown): Promise<Record<string, unknown>> {
-  const config = loadCoachConfig();
-  if (!config.url || !config.token) throw new Error("Le coach n’est pas encore activé.");
-  let response: Response;
-  try {
-    response = await fetch(`${config.url.replace(/\/$/, "")}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.token}` },
-      body: JSON.stringify(body),
-    });
-  } catch {
-    throw new Error("Le coach n’est pas joignable.");
-  }
-  let data: Record<string, unknown> = {};
-  try {
-    data = (await response.json()) as Record<string, unknown>;
-  } catch {
-    throw new Error("La réponse du coach est illisible.");
-  }
-  if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "Le coach n’a pas pu répondre.");
-  return data;
 }
 
 function Bubble() {

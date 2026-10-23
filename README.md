@@ -107,4 +107,4 @@ Les maquettes validées restent dans `mockups/`. L’audit est dans `docs/audit.
 
 ## Coach
 
-Le bouton Coach est sur chaque écran. Sans adresse ni code secret dans Réglages, il explique seulement qu’il n’est pas activé. Les suggestions de charge ne passent pas par ce service : elles relisent les séries déjà notées sur le téléphone. L’installation du service est dans `docs/coach-setup.md`.
+Le bouton Coach est sur chaque écran. L’adresse du service est déjà remplie. Sans le code secret dans Réglages, il explique seulement qu’il n’est pas activé. Les suggestions de charge ne passent pas par ce service : elles relisent les séries déjà notées sur le téléphone. L’installation du service est dans `docs/coach-setup.md`.
