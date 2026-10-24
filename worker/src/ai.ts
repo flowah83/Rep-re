@@ -43,6 +43,11 @@ export function shouldTryNextModel(status: number): boolean {
   return status === 500 || status === 503;
 }
 
+/** Un flux peut essayer le modèle suivant : saturation, panne, ou silence. */
+export function retryableStreamStatus(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500;
+}
+
 function splitModels(value: string | undefined): string[] {
   if (!value) return [];
   return dedupe(
@@ -119,6 +124,25 @@ export function foldGeminiChunk(state: StreamFold, data: unknown): StreamFold {
 export function streamUrl(call: AiCall): string {
   if (call.provider !== "gemini") return call.url;
   return call.url.replace(":generateContent", ":streamGenerateContent?alt=sse");
+}
+
+/** Relit un corps Gemini qui n’est pas du SSE (JSON unique ou tableau de morceaux). */
+export function messageFromGeminiBody(raw: string): { role: "assistant"; content: string; tool_calls: StreamFold["calls"] } | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  try {
+    const data = JSON.parse(trimmed) as unknown;
+    if (Array.isArray(data)) {
+      let state: StreamFold = { text: "", calls: [] };
+      for (const item of data) state = foldGeminiChunk(state, item);
+      if (!state.text && state.calls.length === 0) return null;
+      return { role: "assistant", content: state.text, tool_calls: state.calls };
+    }
+    if (!data || typeof data !== "object" || "error" in data) return null;
+    return readAiMessage("gemini", data);
+  } catch {
+    return null;
+  }
 }
 
 export function readAiMessage(provider: "gemini" | "openai", data: unknown): { role: "assistant"; content: string; tool_calls: { id: string; name: string; arguments: string; thoughtSignature?: string }[] } {

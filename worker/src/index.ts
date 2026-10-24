@@ -2,12 +2,15 @@ import {
   buildAiCall,
   coachFailure,
   foldGeminiChunk,
+  messageFromGeminiBody,
   modelChain,
   modelName,
   providerName,
   readAiMessage,
+  retryableStreamStatus,
   shouldTryNextModel,
   streamUrl,
+  type AiCall,
   type AiEnv,
   type StreamFold,
 } from "./ai";
@@ -33,6 +36,8 @@ export type Env = AiEnv & {
   CALDAV_USER?: string;
   CALENDAR_NAME?: string;
   ALLOWED_ORIGIN?: string;
+  /** Délai d’un essai de flux, en millisecondes. 20 secondes si absent. */
+  STREAM_DEADLINE_MS?: string;
 };
 
 const cache = { calendarUrl: "" };
@@ -63,53 +68,204 @@ export async function handleRequest(request: Request, env: Env, fetchImpl: Fetch
   }
 }
 
+const DEFAULT_STREAM_DEADLINE_MS = 20_000;
+
+function streamDeadline(env: Env): number {
+  const value = Number(env.STREAM_DEADLINE_MS);
+  if (Number.isFinite(value) && value >= 20 && value <= 60_000) return value;
+  return DEFAULT_STREAM_DEADLINE_MS;
+}
+
 async function coachStream(request: Request, env: Env, fetchImpl: FetchLike): Promise<Response> {
   const body = await readJson(request);
-  const provider = providerName(env.AI_PROVIDER);
-  const call = buildAiCall({ ...env, AI_MODEL: provider === "gemini" ? modelChain(env)[0] : modelName(env) }, body.context ?? {}, body.messages);
-  if ("error" in call) return json({ error: call.error }, call.status);
-  if (provider !== "gemini") {
-    const once = await coach(new Request(request.url, { method: "POST", headers: request.headers, body: JSON.stringify(body) }), env, fetchImpl);
-    const data = (await once.json()) as { message?: { content?: string }; error?: string };
-    if (!once.ok) return json(data, once.status);
-    const text = data.message?.content ?? "";
-    return sse(encodeSse({ text }) + encodeSse({ message: data.message }));
-  }
-  const response = await fetchImpl(streamUrl(call), { method: "POST", headers: call.headers, body: call.body });
-  if (!response.ok || !response.body) {
-    const failure = coachFailure(response.status, shouldTryNextModel(response.status));
-    return json({ error: failure.error }, failure.status);
-  }
   const encoder = new TextEncoder();
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
+  const upstream = new AbortController();
+  const deadline = streamDeadline(env);
   const stream = new ReadableStream({
     async start(controller) {
-      let pending = "";
-      let folded: StreamFold = { text: "", calls: [] };
-      const push = (payload: unknown) => controller.enqueue(encoder.encode(encodeSse(payload)));
-      try {
-        while (true) {
-          const step = await reader.read();
-          if (step.value) pending += decoder.decode(step.value, { stream: !step.done });
-          let cut = pending.indexOf("\n");
-          while (cut >= 0) {
-            const line = pending.slice(0, cut).trim();
-            pending = pending.slice(cut + 1);
-            folded = consumeGeminiLine(folded, line, push);
-            cut = pending.indexOf("\n");
-          }
-          if (step.done) break;
+      const push = (payload: unknown) => {
+        try {
+          controller.enqueue(encoder.encode(encodeSse(payload)));
+        } catch {
+          /* le client est déjà parti */
         }
-        if (pending.trim()) folded = consumeGeminiLine(folded, pending.trim(), push);
-        push({ message: { role: "assistant", content: folded.text, tool_calls: folded.calls } });
+      };
+      push({ ready: true });
+      const beat = setInterval(() => push({ ready: true }), 5000);
+      try {
+        const message = await answerForStream(env, body, fetchImpl, push, upstream.signal, deadline);
+        if (upstream.signal.aborted) return;
+        push({ message });
         controller.close();
-      } catch {
-        controller.error(new Error("flux interrompu"));
+      } catch (caught) {
+        if (upstream.signal.aborted) return;
+        const message = caught instanceof Error ? caught.message : "Le coach n’a pas pu répondre.";
+        push({ error: message });
+        try {
+          controller.close();
+        } catch {
+          /* déjà clos */
+        }
+      } finally {
+        clearInterval(beat);
       }
     },
+    cancel() {
+      upstream.abort();
+    },
   });
-  return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream; charset=utf-8" } });
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
+async function answerForStream(
+  env: Env,
+  body: Record<string, unknown>,
+  fetchImpl: FetchLike,
+  push: (payload: unknown) => void,
+  parent: AbortSignal,
+  deadline: number,
+) {
+  const provider = providerName(env.AI_PROVIDER);
+  if (provider !== "gemini") return plainMessage(env, body, fetchImpl, push, parent, deadline);
+  const models = modelChain(env);
+  let lastStatus = 504;
+  for (const model of models) {
+    if (parent.aborted) throw new Error("annulé");
+    const call = buildAiCall({ ...env, AI_MODEL: model }, body.context ?? {}, body.messages);
+    if ("error" in call) throw new Error(call.error);
+    const streamed = await tryGeminiStream(call, fetchImpl, push, parent, deadline);
+    if (streamed.ok) return streamed.message;
+    lastStatus = streamed.status;
+    if (!retryableStreamStatus(lastStatus)) break;
+  }
+  return plainMessage(env, body, fetchImpl, push, parent, deadline, lastStatus);
+}
+
+async function tryGeminiStream(
+  call: AiCall,
+  fetchImpl: FetchLike,
+  push: (payload: unknown) => void,
+  parent: AbortSignal,
+  deadline: number,
+): Promise<{ ok: true; message: { role: "assistant"; content: string; tool_calls: StreamFold["calls"] } } | { ok: false; status: number }> {
+  const attempt = new AbortController();
+  const onParent = () => attempt.abort();
+  if (parent.aborted) attempt.abort();
+  else parent.addEventListener("abort", onParent);
+  let timer: ReturnType<typeof setTimeout> | undefined = setTimeout(() => attempt.abort(), deadline);
+  try {
+    const response = await fetchImpl(streamUrl(call), { method: "POST", headers: call.headers, body: call.body, signal: attempt.signal });
+    clearTimeout(timer);
+    timer = undefined;
+    if (!response.ok || !response.body) return { ok: false, status: response.status || 502 };
+    const type = response.headers.get("content-type") ?? "";
+    if (!type.includes("text/event-stream")) {
+      const message = messageFromGeminiBody(await response.text());
+      if (!message) return { ok: false, status: 502 };
+      if (message.content) push({ text: message.content });
+      return { ok: true, message };
+    }
+    const folded = await readGeminiSse(response.body, push, deadline);
+    if (folded.timedOut) {
+      attempt.abort();
+      if (!folded.state.text && folded.state.calls.length === 0) return { ok: false, status: 504 };
+    }
+    return { ok: true, message: { role: "assistant", content: folded.state.text, tool_calls: folded.state.calls } };
+  } catch (caught) {
+    if (parent.aborted) throw caught;
+    return { ok: false, status: 504 };
+  } finally {
+    clearTimeout(timer);
+    parent.removeEventListener("abort", onParent);
+  }
+}
+
+async function readGeminiSse(body: ReadableStream<Uint8Array>, push: (payload: unknown) => void, deadline: number) {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let pending = "";
+  let state: StreamFold = { text: "", calls: [] };
+  while (true) {
+    const reading = reader.read();
+    const step = await raceRead(reading, deadline);
+    if (step === "timeout") {
+      reading.catch(() => undefined);
+      await reader.cancel().catch(() => undefined);
+      return { timedOut: true, state };
+    }
+    if (step.done) break;
+    if (step.value) pending += decoder.decode(step.value, { stream: true });
+    let cut = pending.indexOf("\n");
+    while (cut >= 0) {
+      const line = pending.slice(0, cut).trim();
+      pending = pending.slice(cut + 1);
+      state = consumeGeminiLine(state, line, push);
+      cut = pending.indexOf("\n");
+    }
+  }
+  if (pending.trim()) state = consumeGeminiLine(state, pending.trim(), push);
+  return { timedOut: false, state };
+}
+
+async function raceRead(reading: Promise<ReadableStreamReadResult<Uint8Array>>, ms: number) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<"timeout">((resolve) => {
+    timer = setTimeout(() => resolve("timeout"), ms);
+  });
+  try {
+    return await Promise.race([reading, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function plainMessage(
+  env: Env,
+  body: Record<string, unknown>,
+  fetchImpl: FetchLike,
+  push: (payload: unknown) => void,
+  parent: AbortSignal,
+  deadline: number,
+  lastStatus = 502,
+) {
+  let once: Response;
+  try {
+    once = await withDeadline(deadline, parent, (signal) =>
+      coach(
+        new Request("https://coach.local/coach", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+        env,
+        (url, init) => fetchImpl(url, { ...init, signal }),
+      ),
+    );
+  } catch (caught) {
+    if (parent.aborted) throw caught;
+    throw new Error("Le coach n’a pas pu répondre. Réessayez dans un moment.");
+  }
+  const data = (await once.json().catch(() => ({}))) as { message?: { role?: string; content?: string; tool_calls?: StreamFold["calls"] }; error?: string };
+  if (!once.ok) throw new Error(data.error || coachFailure(once.status || lastStatus, once.status === 429 || lastStatus === 429).error);
+  if (data.message?.content) push({ text: data.message.content });
+  return data.message ?? { role: "assistant", content: "" };
+}
+
+async function withDeadline<T>(ms: number, parent: AbortSignal, run: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const attempt = new AbortController();
+  const onParent = () => attempt.abort();
+  if (parent.aborted) attempt.abort();
+  else parent.addEventListener("abort", onParent);
+  const timer = setTimeout(() => attempt.abort(), ms);
+  try {
+    return await run(attempt.signal);
+  } finally {
+    clearTimeout(timer);
+    parent.removeEventListener("abort", onParent);
+  }
 }
 
 function consumeGeminiLine(state: StreamFold, line: string, push: (payload: unknown) => void): StreamFold {
@@ -127,10 +283,6 @@ function consumeGeminiLine(state: StreamFold, line: string, push: (payload: unkn
 
 function encodeSse(payload: unknown): string {
   return `data: ${JSON.stringify(payload)}\n\n`;
-}
-
-function sse(body: string): Response {
-  return new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream; charset=utf-8" } });
 }
 
 async function coach(request: Request, env: Env, fetchImpl: FetchLike): Promise<Response> {

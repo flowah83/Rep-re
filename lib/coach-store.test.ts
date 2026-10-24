@@ -5,6 +5,7 @@ import {
   loadCoachConfig,
   normalizeCoachUrl,
   requestCoach,
+  requestCoachStream,
   saveCoachConfig,
   testCoachConnection,
 } from "./coach-store";
@@ -92,5 +93,78 @@ describe("requestCoach", () => {
       `${DEFAULT_COACH_URL}/coach`,
       expect.objectContaining({ method: "POST", headers: expect.objectContaining({ Authorization: "Bearer secret" }) }),
     );
+  });
+});
+
+describe("requestCoachStream", () => {
+  function ready() {
+    stubStorage();
+    saveCoachConfig({ url: DEFAULT_COACH_URL, token: "secret" });
+  }
+
+  it("retombe sur /coach si le flux répond 404", async () => {
+    ready();
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/coach/stream")) return new Response("missing", { status: 404 });
+      return new Response(JSON.stringify({ message: { role: "assistant", content: "Par /coach." } }), { status: 200 });
+    });
+    const result = await requestCoachStream({ messages: [] }, () => undefined, undefined, { fetchImpl });
+    expect(result).toMatchObject({ message: { content: "Par /coach." } });
+  });
+
+  it("retombe sur /coach si aucun octet n’arrive", async () => {
+    ready();
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith("/coach/stream")) {
+        return await new Promise<Response>((_, reject) => {
+          const fail = () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+          if (init?.signal?.aborted) fail();
+          else init?.signal?.addEventListener("abort", fail, { once: true });
+        });
+      }
+      return new Response(JSON.stringify({ message: { role: "assistant", content: "Secours." } }), { status: 200 });
+    });
+    const result = await requestCoachStream({ messages: [] }, () => undefined, undefined, { fetchImpl, firstByteMs: 40 });
+    expect(result).toMatchObject({ message: { content: "Secours." } });
+  });
+
+  it("retombe sur /coach si le flux se tait", async () => {
+    ready();
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/coach/stream")) {
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('data: {"ready":true}\n\n'));
+          },
+        });
+        return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+      }
+      return new Response(JSON.stringify({ message: { role: "assistant", content: "Secours." } }), { status: 200 });
+    });
+    const result = await requestCoachStream({ messages: [] }, () => undefined, undefined, { fetchImpl, inactivityMs: 40 });
+    expect(result).toMatchObject({ message: { content: "Secours." } });
+  });
+
+  it("laisse passer le texte puis le message", async () => {
+    ready();
+    const seen: string[] = [];
+    const fetchImpl = vi.fn(async () =>
+      new Response(
+        'data: {"ready":true}\n\ndata: {"text":"Bon"}\n\ndata: {"text":"Bonjour"}\n\ndata: {"message":{"role":"assistant","content":"Bonjour"}}\n\n',
+        { status: 200, headers: { "Content-Type": "text/event-stream" } },
+      ),
+    );
+    const result = await requestCoachStream({ messages: [] }, (text) => seen.push(text), undefined, { fetchImpl });
+    expect(seen).toEqual(["Bon", "Bonjour"]);
+    expect(result).toMatchObject({ message: { content: "Bonjour" } });
+  });
+
+  it("ne rappelle pas /coach quand la personne arrête", async () => {
+    ready();
+    const fetchImpl = vi.fn();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(requestCoachStream({ messages: [] }, () => undefined, controller.signal, { fetchImpl })).rejects.toThrow();
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

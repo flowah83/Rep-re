@@ -102,7 +102,8 @@ export async function requestCoach(
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(body),
     });
-  } catch {
+  } catch (caught) {
+    if (caught instanceof Error && caught.name === "AbortError") throw caught;
     throw new Error(`Le coach n’est pas joignable. Adresse utilisée : ${url}`);
   }
   let data: Record<string, unknown> = {};
@@ -141,29 +142,54 @@ export function rememberCoachLine(line: string) {
   }
 }
 
+const STREAM_FIRST_BYTE_MS = 12_000;
+const STREAM_INACTIVITY_MS = 12_000;
+const COACH_FALLBACK_MS = 20_000;
+
 export async function requestCoachStream(
   body: unknown,
   onText: (text: string) => void,
   signal?: AbortSignal,
+  options?: { fetchImpl?: typeof fetch; firstByteMs?: number; inactivityMs?: number },
 ): Promise<Record<string, unknown>> {
+  const fetchImpl = options?.fetchImpl ?? fetch;
+  const firstByteMs = options?.firstByteMs ?? STREAM_FIRST_BYTE_MS;
+  const inactivityMs = options?.inactivityMs ?? STREAM_INACTIVITY_MS;
+  if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
   const config = loadCoachConfig();
   const url = normalizeCoachUrl(config.url);
   const token = normalizeCoachToken(config.token);
   if (!token) throw new Error("Le coach n’est pas encore activé.");
+  const fallback = async () => {
+    try {
+      return await requestCoach("/coach", body, withTimeout(fetchImpl, COACH_FALLBACK_MS, signal));
+    } catch (caught) {
+      if (signal?.aborted) throw caught;
+      if (caught instanceof Error && caught.name === "AbortError") throw new Error("Le coach n’a pas pu répondre.");
+      throw caught;
+    }
+  };
   const target = `${url}/coach/stream`;
+  const killer = new AbortController();
+  const onUserAbort = () => killer.abort();
+  signal?.addEventListener("abort", onUserAbort);
   let response: Response;
+  const timer = setTimeout(() => killer.abort(), firstByteMs);
   try {
-    response = await fetch(target, {
+    response = await fetchImpl(target, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(body),
-      signal,
+      signal: killer.signal,
     });
   } catch (caught) {
     if (signal?.aborted) throw caught;
-    return requestCoach("/coach", body);
+    return fallback();
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", onUserAbort);
   }
-  if (response.status === 404 || response.status === 502 || response.status === 503) return requestCoach("/coach", body);
+  if (response.status === 404 || response.status === 502 || response.status === 503) return fallback();
   const type = response.headers.get("content-type") ?? "";
   if (!response.ok || !type.includes("text/event-stream") || !response.body) {
     let data: Record<string, unknown> = {};
@@ -171,7 +197,7 @@ export async function requestCoachStream(
       data = (await response.json()) as Record<string, unknown>;
     } catch {
       if (!response.ok) throw new Error("Le coach n’a pas pu répondre.");
-      return requestCoach("/coach", body);
+      return fallback();
     }
     if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "Le coach n’a pas pu répondre.");
     return data;
@@ -180,28 +206,88 @@ export async function requestCoachStream(
   const decoder = new TextDecoder();
   let buffer = "";
   let message: Record<string, unknown> | null = null;
-  while (true) {
-    const step = await reader.read();
-    if (step.done) break;
-    buffer += decoder.decode(step.value, { stream: true });
-    const parts = buffer.split("\n\n");
-    buffer = parts.pop() ?? "";
-    for (const part of parts) {
-      const line = part.split("\n").find((item) => item.startsWith("data:"));
-      if (!line) continue;
-      let data: Record<string, unknown> = {};
-      try {
-        data = JSON.parse(line.slice(5).trim()) as Record<string, unknown>;
-      } catch {
-        continue;
+  let accumulated = "";
+  let stop = false;
+  const userAbort = aborted(signal);
+  try {
+    while (!stop) {
+      const reading = reader.read();
+      let idle: ReturnType<typeof setTimeout> | undefined;
+      const step = await Promise.race([
+        reading,
+        new Promise<"timeout">((resolve) => {
+          idle = setTimeout(() => resolve("timeout"), inactivityMs);
+        }),
+        userAbort,
+      ]);
+      clearTimeout(idle);
+      if (step === "aborted" || signal?.aborted) {
+        reading.catch(() => undefined);
+        await reader.cancel().catch(() => undefined);
+        throw new DOMException("Aborted", "AbortError");
       }
-      if (typeof data.error === "string") throw new Error(data.error);
-      if (typeof data.text === "string") onText(data.text);
-      if (data.message && typeof data.message === "object") message = data.message as Record<string, unknown>;
+      if (step === "timeout") {
+        reading.catch(() => undefined);
+        await reader.cancel().catch(() => undefined);
+        break;
+      }
+      if (step.done) break;
+      buffer += decoder.decode(step.value, { stream: true });
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() ?? "";
+      for (const part of parts) {
+        const line = part.split("\n").find((item) => item.startsWith("data:"));
+        if (!line) continue;
+        let data: Record<string, unknown> = {};
+        try {
+          data = JSON.parse(line.slice(5).trim()) as Record<string, unknown>;
+        } catch {
+          continue;
+        }
+        if (typeof data.error === "string") {
+          if (!accumulated) throw new Error(data.error);
+          stop = true;
+          break;
+        }
+        if (typeof data.text === "string") {
+          accumulated = data.text;
+          onText(data.text);
+        }
+        if (data.message && typeof data.message === "object") message = data.message as Record<string, unknown>;
+      }
     }
+  } catch (caught) {
+    if (signal?.aborted) throw caught;
+    if (caught instanceof Error && /souffle|429/.test(caught.message)) throw caught;
+    if (!accumulated) return fallback();
   }
-  if (!message) throw new Error("Le coach n’a pas pu répondre.");
-  return { message };
+  if (message) return { message };
+  if (accumulated) return { message: { role: "assistant", content: accumulated } };
+  return fallback();
+}
+
+function aborted(signal?: AbortSignal): Promise<"aborted"> {
+  return new Promise((resolve) => {
+    if (!signal) return;
+    if (signal.aborted) {
+      resolve("aborted");
+      return;
+    }
+    signal.addEventListener("abort", () => resolve("aborted"), { once: true });
+  });
+}
+
+function withTimeout(fetchImpl: typeof fetch, ms: number, signal?: AbortSignal): typeof fetch {
+  return (input, init) => {
+    const killer = new AbortController();
+    const timer = setTimeout(() => killer.abort(), ms);
+    const onAbort = () => killer.abort();
+    signal?.addEventListener("abort", onAbort);
+    return fetchImpl(input, { ...init, signal: killer.signal }).finally(() => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+    });
+  };
 }
 
 export function loadCoachChat(): StoredTurn[] {

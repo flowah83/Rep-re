@@ -245,10 +245,111 @@ describe("worker", () => {
       fetchImpl,
     );
     expect(response.status).toBe(200);
-    expect(String(fetchImpl.mock.calls[0][0])).toContain("streamGenerateContent");
+    expect(String(fetchImpl.mock.calls[0][0])).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse",
+    );
     const text = await response.text();
+    expect(text).toContain('"ready":true');
     expect(text).toContain("Bonjour");
     expect(text).toContain('"message"');
+  });
+
+  it("envoie un premier événement tout de suite, puis la génération classique si le flux se tait", async () => {
+    const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async (url, init) => {
+      const href = String(url);
+      if (href.includes("streamGenerateContent")) {
+        return new Promise((_, reject) => {
+          const fail = () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+          if (init?.signal?.aborted) fail();
+          else init?.signal?.addEventListener("abort", fail, { once: true });
+        });
+      }
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "Sans flux." }] } }] }), { status: 200 });
+    });
+    const response = await handleRequest(
+      post("/coach/stream", { messages: [{ role: "user", content: "Salut" }], context: {} }, "phone-token", "https://flowah83.github.io"),
+      { ...env, AI_MODEL_FALLBACKS: "gemini-a, gemini-b", STREAM_DEADLINE_MS: "40" },
+      fetchImpl,
+    );
+    expect(response.headers.get("content-type")).toContain("text/event-stream");
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("pas de flux");
+    const first = await reader.read();
+    expect(new TextDecoder().decode(first.value)).toContain('"ready":true');
+    let rest = "";
+    while (true) {
+      const step = await reader.read();
+      if (step.done) break;
+      rest += new TextDecoder().decode(step.value);
+    }
+    expect(rest).toContain("Sans flux.");
+    const urls = fetchImpl.mock.calls.map((call) => String(call[0]));
+    expect(urls.filter((item) => item.includes("streamGenerateContent"))).toEqual([
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-a:streamGenerateContent?alt=sse",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-b:streamGenerateContent?alt=sse",
+    ]);
+    expect(urls.filter((item) => item.includes(":generateContent") && !item.includes("streamGenerateContent"))).toEqual([
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-a:generateContent",
+    ]);
+  });
+
+  it("essaie le modèle suivant quand le flux répond 429", async () => {
+    let streams = 0;
+    const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async (url) => {
+      if (!String(url).includes("streamGenerateContent")) throw new Error("pas de repli");
+      streams += 1;
+      if (streams === 1) return new Response("quota", { status: 429 });
+      return new Response('data: {"candidates":[{"content":{"parts":[{"text":"Deuxième."}]}}]}\n\n', {
+        status: 200,
+        headers: { "Content-Type": "text/event-stream" },
+      });
+    });
+    const response = await handleRequest(
+      post("/coach/stream", { messages: [{ role: "user", content: "Salut" }] }, "phone-token", "https://flowah83.github.io"),
+      { ...env, AI_MODEL_FALLBACKS: "gemini-a, gemini-b" },
+      fetchImpl,
+    );
+    const text = await response.text();
+    expect(text).toContain("Deuxième.");
+    expect(fetchImpl.mock.calls.map((call) => String(call[0]))).toEqual([
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-a:streamGenerateContent?alt=sse",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-b:streamGenerateContent?alt=sse",
+    ]);
+  });
+
+  it("recolle un texte Gemini coupé entre deux morceaux", async () => {
+    const encoder = new TextEncoder();
+    const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('data: {"candidates":[{"content":{"parts":[{"text":"Bo'));
+          controller.enqueue(encoder.encode('n"}]}}]}\n\n'));
+          controller.close();
+        },
+      });
+      return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+    });
+    const response = await handleRequest(
+      post("/coach/stream", { messages: [{ role: "user", content: "Salut" }] }, "phone-token", "https://flowah83.github.io"),
+      { ...env, AI_MODEL_FALLBACKS: "gemini-a" },
+      fetchImpl,
+    );
+    const text = await response.text();
+    expect(text).toContain("Bon");
+    expect(text).toContain('"message"');
+  });
+
+  it("ferme le flux avec une erreur claire si tout échoue", async () => {
+    const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async () => new Response("quota", { status: 429 }));
+    const response = await handleRequest(
+      post("/coach/stream", { messages: [{ role: "user", content: "Salut" }] }, "phone-token", "https://flowah83.github.io"),
+      { ...env, AI_MODEL_FALLBACKS: "gemini-a" },
+      fetchImpl,
+    );
+    expect(response.status).toBe(200);
+    const text = await response.text();
+    expect(text).toContain("souffle");
+    expect(text).toContain('"error"');
   });
 
   it("construit un événement et relit l’heure de Paris", () => {
