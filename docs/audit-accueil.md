@@ -1,247 +1,168 @@
 # Accueil
 
-Écran de synthèse pour Repère. Une lecture, pas un second carnet et pas une seconde séance.
+Tableau de bord. Pas un second « Aujourd’hui ».
 
-Florian le décrit ainsi : « un truc qui résume un peu tout, synthétique, très visuel, intelligent ». La proposition tient en une règle. **Accueil dit ce que ce jour change pour la charge, et une seule action.** Aujourd’hui reste l’endroit où l’on s’entraîne. Progrès garde les courbes. Carnet garde l’historique. La bulle du coach reste la bulle.
+La première proposition mettait la séance du jour en grand, avec la charge et « Commencer ». Florian n’y voyait pas de différence avec Aujourd’hui. Il a raison. **Accueil ne démarre aucune séance, et ne répète pas la carte de la séance.** Aujourd’hui reste le seul endroit où l’on voit la charge et où l’on commence. Accueil résume le bloc : anneaux, courbes, barres. Une ligne discrète renvoie vers la séance, au plus : « Prochaine séance : Dos vendredi → ».
 
-Les maquettes (390 × 844, @2x, clair et sombre, jetons réels de `app/globals.css`) sont livrées à part de ce dépôt. La liste est en fin de document. Rien ici ne modifie l’application.
+Les maquettes (390 × 844, @2x, clair et sombre) sont livrées à part. Rien ici ne modifie l’application.
 
-## 1. Rôle de l’écran
+## 1. Rôle
 
-Accueil répond à une question : qu’est-ce que je fais de mon corps aujourd’hui ?
+Une seconde, sans lire un paragraphe. Où en est la semaine, est-ce que la charge monte, est-ce qu’un groupe décroche, est-ce qu’une semaine légère arrive.
 
-Le jour d’entraînement, la réponse est un chiffre et un bouton. Le jour de repos, c’est le mot « Repos » et la séance qui vient. Le soir d’un record, c’est le record. La semaine d’allègement, c’est la charge allégée, expliquée en une phrase.
-
-L’écran ne saisit pas de série, n’édite pas un plan, ne trace pas de courbe. Il choisit un état, montre le fait qui compte, et renvoie vers l’écran qui sait déjà faire le reste.
+Le graphique est le contenu. Le chiffre à côté est sa légende, comme dans Santé : grand, tabulaire, unité petite. Pas un titre de séance.
 
 ## 2. Ce que l’app sait déjà
 
-Tout le nécessaire est déjà en mémoire, sauf l’agenda.
-
-| Fait utile à Accueil | Où c’est calculé aujourd’hui | Déjà fiable |
+| Tuile | Source | Déjà là |
 | --- | --- | --- |
-| Séance du jour, prévue, en cours ou notée | `sessions` IndexedDB, `TodayScreen`, `rank` (en cours, puis prévue) | Oui |
-| Prochaine séance au-delà d’aujourd’hui | `nextSession` dans `today-screen.tsx` | Oui |
-| Carnet : passé d’abord, « À venir » replié | `splitCarnet` | Oui, et ce n’est pas à refaire ici |
-| Record en kg × reps, séances terminées seulement, pas le cardio | `countsForProgress`, `bestLoads`, `heaviestSet` | Oui, avec une réserve au § 4 |
-| Courbes et 1RM estimé (Epley, 1 à 10 reps) | `e1rmSeries`, écran Progrès | Oui, et elles restent là-bas |
-| Hausse : 80 kg tenus → « Commencer à 82,5 kg » / « Garder 80 kg » | `startOffer`, `programPreview` | Oui. Suite affichée : 82,5 × 6, puis × 7, puis × 8 |
-| Allègement après deux échecs | `trainingBlock` → `stall`, `deloadLoad` | Oui. 80 kg, pas de 2,5 → **72,5 kg**. Phrase : `STALL_SENTENCE` |
-| Allègement après un bloc réussi | `trainingBlock` → `cadence` | La règle part à **3** séances (`DELOAD_EVERY = 3`). La phrase dit encore « Quatre séances réussies ». Accueil ne doit pas répéter « quatre ». |
-| Plan de Chef sport prioritaire | `keepsCoachPlan` : `source === "coach"` et (note d’exercice ou mot reprise / deload / léger / récupération) | Oui. `startOffer` renvoie `hold`. Le bouton reste « Commencer », sans appliquer la hausse. |
-| Note du coach sur la séance | `coachNote` | Oui |
-| Agenda iCloud | Worker `POST /calendar`, CalDAV, événements du jour | Le Worker sait lister. Aucun écran ne les montre. |
-| Coach | `CoachLayer`, jeton et fil en local | La bulle existe. Elle n’est pas un onglet. |
+| Séances tenues / prévues | `sessions`, statut `done` / `planned`, date | Oui |
+| Séance manquée | `planned` et date avant aujourd’hui | Oui. `splitCarnet` la range avec le passé |
+| Volume | `tonnage()` : séries dures, charge × répétitions. `kg/main` compte les deux mains. `null` n’est pas zéro | Oui |
+| Estimation | `epley`, 1 à 10 répétitions, puis `e1rmSeries`. Une séance légère ne fait pas baisser la courbe | Oui. 80 × 6 → 96 kg. 82,5 × 6 → 99 kg. 100 × 5 → 116,7 kg |
+| Séries par muscle | `muscleTotals` : nombre de séries dures, pas des kilos | Oui. Écran Progrès, sept derniers jours |
+| Record de charge | `bestLoads` : kg × reps, séance `done`, pas le cardio. La charge la plus lourde gagne | Oui. Ce n’est pas l’estimation |
+| Palier d’après | `programPreview` | Oui. Après 80 × 6 tenu : 82,5 × 6, puis × 7, puis × 8 |
+| Allègement | `trainingBlock`, `deloadLoad` | Oui. 80 kg, pas de 2,5 → 72,5 kg |
+| Plan tenu | `keepsCoachPlan` | Oui. Le plan de Chef sport gagne |
+| Coach | la bulle, `CoachLayer` | Oui |
 
-Les chiffres des maquettes sortent de ces fonctions, pas d’un scénario inventé.
+Ce qui n’existe pas, et qu’on n’invente pas : poids de corps suivi, sommeil, récupération, VFC. Le cardio a parfois une fréquence, ce n’est pas une récupération. Pas de soulevé de terre classique dans l’historique (un roumain à 80 kg n’est pas une troisième courbe). Pas de troisième anneau « pour faire comme la montre ».
 
-- Samedi 24 octobre, Upper B, 18:15. Dernière série tenue : couché 80 kg × 6. Offre : **82,5 kg**. C’est le test « ajoute des répétitions après la hausse ».
-- Le soir du même jour, la série 82,5 × 6 est strictement plus lourde que 80 × 6. C’est un record au sens de `bestLoads` (la charge prime).
-- Dimanche 25 octobre, rien de prévu. La prochaine séance est lundi, Upper A. Hier porte le record.
-- Samedi 7 novembre, deux séances à 80 kg sans l’objectif de 6 reps. Offre : **72,5 kg**, puis retour à 80 × 6, puis 80 × 7. C’est le test « allège après deux séances sans l’objectif ».
+Les tonnes des maquettes (17,9 t cette semaine, moyenne 20,4 t) sont l’ordre de grandeur de `tonnage()` sur ses charges, poussée autour de 6 t et jambes autour de 12 t. L’écran appellera la fonction. Il ne stockera pas ces nombres.
 
-Squat autour de 100 kg, développé incliné 28 kg, élévations 10 kg : ce sont les autres mouvements du bloc. Ils n’apparaissent pas dans le hero. Ils restent dans la séance.
+La courbe des maquettes est celle du travail qu’il reconnaît, autour de 80 kg : l’estimation passe d’environ 93 à 96 kg en quatre semaines, soit +3 %. Si l’historique contient des séries plus lourdes à 5 répétitions, `e1rmSeries` garde cette estimation plus haute et le pourcentage peut être plat. On n’invente pas une pente pour remplir le graphique.
 
-## 3. Blocs
+## 3. Ce qui entre
 
-### Ce qui entre
+Dans l’ordre d’une semaine ordinaire.
 
-1. **Le hero.** Un seul. Le chiffre du jour, ou le mot « Repos », ou le record. C’est le bloc qui justifie l’onglet.
-2. **La semaine**, la même bande que Aujourd’hui (point sauge = notée, point cuivre = prévue, jour sélectionné en plein). Elle situe sans devenir un calendrier. Ici elle ne change pas de semaine : pas de chevrons. Toucher un jour ouvre Aujourd’hui sur cette date.
-3. **Une action**, les libellés exacts de `startOffer`. « Commencer à 82,5 kg » et, en lien texte, « Garder 80 kg ». Jamais deux boutons égaux, jamais une confirmation ensuite, jamais une question par exercice.
-4. **Les trois prochaines séances**, en pastilles, quand `programPreview` a quelque chose à dire. La première est la charge du bouton. Les deux autres montrent la suite (répétitions, puis charge). La longue phrase de règle ne s’affiche que lorsque le chiffre serait incompréhensible sans elle : allègement, reprise, plan tenu.
-5. **Une ligne de contexte**, au plus. Record de la veille, séance manquée, ou événement d’agenda qui n’est pas déjà la séance.
+1. **La semaine**, lundi à dimanche. Point sauge : notée. Point cuivre : prévue. Jour passé encore `planned` : cercle creux, couleur pierre, pas de rouge. Le jour même a le filet encre déjà utilisé sur Aujourd’hui. Toucher un jour ouvre Aujourd’hui sur cette date. Pas de chevrons de semaine.
+2. **Deux anneaux concentriques**, dans l’esprit des anneaux d’Activité. L’extérieur, cuivre, est les séances tenues sur les séances prévues (2/4). L’intérieur, sauge, est le volume de la semaine sur la moyenne des quatre semaines. Le trait a un bout rond, le fond de l’anneau est le cuivre ou la sauge très dilués dans la carte, pas un gris générique. Avant dimanche, on n’écrit pas « −12 % » : la semaine n’est pas finie, et deux séances dont les jambes peuvent déjà approcher la moyenne. La légende dit « moy. », pas un reproche.
+3. **Couché, en courbe.** Huit points, trait lissé, dégradé sous la courbe, deux filets très légers, le dernier point plus marqué. 96 kg, +3 % en 4 semaines. Toucher ouvre Progrès sur ce mouvement.
+4. **Squat, sans fausse pente.** 116,7 kg, « une séance notée », un niveau et un point. Pas de pourcentage. Trois points minimum avant une courbe et un pourcentage.
+5. **Séries de la semaine**, barres capsules, une seule couleur (cuivre : c’est un seul indicateur). Le nombre est écrit. Quadriceps 10, pectoraux 8, épaules 6, ischios 3, dans l’ordre du plus chargé. Pas de silhouette : elle est déjà dans Progrès, et en petit elle ne se lit pas.
+6. **Huit semaines**, grille 7 × 8, cases arrondies. Quatre intensités de cuivre, le vide en `--heat-0`, le manqué en creux pierre, le prévu en creux cuivre, aujourd’hui avec un filet encre. Le chiffre « 6 sem. » est la série de semaines tenues. Une semaine est tenue si aucune séance prévue passée n’est restée `planned`. La semaine en cours compte encore, tant qu’il n’y a pas de manqué.
+7. **Une phrase du coach**, une seule, calculée, pas rédigée à la main à chaque fois. Elle ouvre la bulle. Exemple de semaine : « Le palier d’après au couché est 82,5 × 6. »
+8. **La ligne du bas.** « Prochaine séance : Dos vendredi → ». Elle ouvre Aujourd’hui. Elle ne lance pas la séance.
 
-L’engrenage des réglages reste en haut à droite, icône seule, `aria-label="Réglages"`. Le mot « Réglages » à côté du titre a déjà débordé à 160 %. On ne le réintroduit pas.
+## 4. Ce qui reste dehors
 
-### Ce qui reste dehors
+- La carte de séance, la liste d’exercices, le RPE, l’heure, « Commencer », « Garder ». C’est Aujourd’hui. Les remettre ici, c’est la maquette que Florian a refusée.
+- Le 1RM estimé en grand à la place du record de charge. Les deux nombres ne disent pas la même chose. 82,5 × 6 est le record de charge. 99 kg est l’estimation. On ne les substitue pas l’un à l’autre.
+- Une liste de deux ou trois records. Le record récent a sa tuile. La liste vit dans Progrès.
+- Le palier d’après en carte séparée. C’est la phrase.
+- Douze semaines dans la grille. Huit restent lisibles. Douze rapetissent les cases.
+- Le calendrier iCloud. Il ne résume pas l’entraînement.
+- Poids, sommeil, récupération. Pas de donnée.
+- Soulevé de terre. Pas de série.
+- Un delta rouge, une pastille sur l’onglet, un toast.
 
-- **La liste des exercices.** C’est Aujourd’hui et l’aperçu « Voir la séance ». La remettre sur Accueil fait deux écrans d’accueil. La variante B des maquettes le montre : elle est juste, et elle est déjà construite.
-- **Les courbes, la carte des muscles, le 1RM estimé.** Progrès. Un sparkline sur Accueil serait un second graphique à tenir à jour, et Epley ne décrit pas la séance du jour.
-- **Le carnet et le bloc « À venir ».** Une ligne « lundi, Upper A » suffit. La liste est à un onglet.
-- **Modifier la séance, le détail des réglages, la sauvegarde.** L’engrenage ouvre les feuilles déjà là. Le rappel de sauvegarde ancienne reste sur Aujourd’hui, pas sur la synthèse.
-- **La conversation du coach.** La bulle. Une citation italique seulement si le plan est tenu et que `coachNote` ajoute un fait que le chiffre ne dit pas.
-- **L’agenda de la journée.** Une ligne, plus tard, et seulement si l’événement n’est pas la séance elle-même (même titre, même heure). « Agenda libre » n’apporte rien : on ne l’écrit pas.
-- **Les félicitations, les toasts, les pastilles rouges, les confirmations répétées.** Le chiffre sauge est l’accusé de réception d’un record. Rien d’autre.
+## 5. Deux présentations
 
-## 4. Comportement selon le moment
+**A · Tuiles.** Proposée. Anneaux en haut, deux graphiques côte à côte, barres, grille. C’est un coup d’œil, proche de Forme. Les mêmes jetons : cuivre pour les séances, le couché et les séries ; sauge pour le volume, le squat et le point de record.
 
-Un seul résolveur, pur, sur les séances déjà chargées. Il choisit un état. L’écran ne mélange pas deux héros.
+**B · Sections.** La même semaine racontée de haut en bas. Le volume est un histogramme de capsules (sauge), jour par jour, les jours prévus en creux. Une seule courbe, large, pour le couché. Le squat tient sur une ligne, faute de série. Pas d’anneaux, pas de grille : « 6 sem. » est écrit à côté du volume. Plus simple à lire dans l’ordre, moins dense.
 
-**Jour d’entraînement, avant la séance.** État par défaut des maquettes « entraînement ». Séance `planned` aujourd’hui. Le hero est la charge proposée pour le premier mouvement qui change (couché, 82,5 kg), pas le nom de tous les exercices. Sous le chiffre : « Développé couché · 4 × 6 » et « Dernière série tenue : 80 kg × 6 ». Pastilles : 82,5 × 6, 82,5 × 7, 82,5 × 8. Bouton « Commencer à 82,5 kg ». Lien « Garder 80 kg ». Lien discret « Voir la séance », qui ouvre l’aperçu déjà existant.
+A est le bon défaut : Florian a demandé quelque chose de très visuel. B sert si la lecture verticale lui parle davantage. À 160 %, A se rapproche de B : une colonne, anneaux, une courbe, les barres, la phrase. La grille des huit semaines quitte le premier écran plutôt que de devenir illisible.
 
-**Plan de Chef sport tenu.** `keepsCoachPlan` vrai. Le hero montre la charge écrite, 80 kg, pas 82,5. Phrase : « Le plan de Chef sport reste prioritaire, et cette suite ne le remplace pas. » Bouton « Commencer ». Pas de lien « Garder », puisqu’il n’y a pas de choix. La note du coach peut tenir sur la ligne sous le chiffre si elle dit autre chose que la phrase.
+## 6. Ce qui change de place
 
-**Jour de repos.** Rien de prévu aujourd’hui, et pas de séance en cours. Le mot « Repos » a la même taille que le chiffre. Une phrase : « Prochaine séance lundi, Upper A. » Une ligne de fait : « Hier, couché tenu à 82,5 kg × 6. » Un lien « Voir lundi », qui sélectionne ce jour et ouvre Aujourd’hui. Pas de bouton « Commencer » sur du vide.
+Le résolveur ne change pas les données. Il change l’ordre, pour que le fait rare soit en haut, sans faire défiler.
 
-**Séance en cours.** `status === "active"`, même si la date n’est pas aujourd’hui. Le hero devient le titre et « Reprendre ». On ne repropose pas 82,5 kg : le choix est déjà fait. On n’ouvre pas le mode sport tout seul au démarrage à froid. Si l’app était déjà sur l’overlay, elle le reste, comme aujourd’hui.
+**Semaine ordinaire.** Anneaux, courbes, muscles, grille. Maquettes « semaine ». Jeudi 22 octobre : poussée lundi, jambes mercredi, dos vendredi et Upper B samedi encore prévus.
 
-**Juste après la séance, avec record.** Séance du jour `done`, et la série du jour est un vrai record : charge plus lourde, ou même charge avec plus de répétitions. On n’utilise pas le départage par date de `bestLoads`, qui remplacerait le record à chaque séance à charge égale et ferait une fête à chaque Upper B. Affichage **kg × reps**, couleur sauge (`--sage`, 6,7:1 sur la carte claire, 10:1 en sombre). Pas de 1RM estimé ici. Pas de bouton plein : le bilan est un lien « Bilan de la séance ». Les pastilles « Ensuite » sont la suite calculée (82,5 × 7, 82,5 × 8, 85 × 6), sans écrire de séance.
+**Après un record.** La bannière passe devant les anneaux. « 82,5 × 6 », en sauge, avec la courbe dont le dernier point est sauge aussi. La légende dit « 99 kg estimés » pour ne pas faire passer le record de charge pour l’estimation. On ne redessine pas le couché une seconde fois en dessous. La grande grille cède la place : l’écran ne doit pas défiler. Phrase : « Record de charge. La suite est 82,5 × 7. » Ligne : « Prochaine séance : Upper B samedi → ». Le record reste en haut pendant la semaine qui suit, puis l’ordre ordinaire revient.
 
-**Juste après, sans record.** Même squelette, chiffre en encre et non en sauge, phrase « Upper B terminée. » Pas de mot « record ».
+**Semaine légère.** Quatre capsules de cycle. Les trois premières sont pleines, la quatrième est plus claire et s’appelle « légère ». Ce n’est pas un gros « 72,5 » avec un bouton. La charge est une ligne : « Couché 72,5 kg, puis retour à 80. » L’anneau de volume se compare à une semaine légère (moy. 6,0 t dans la maquette), pas à 20 t, sinon la semaine a l’air ratée alors qu’elle est voulue. La courbe du couché ne plonge pas : `e1rmSeries` ne baisse pas sur une séance légère. Phrase : « Deux séances sans l’objectif. On allège, puis on reprend. » On n’écrit pas « quatre séances » : le code allège au bout de trois (`DELOAD_EVERY`), la phrase actuelle dit encore « Quatre ». On aligne la phrase avant de l’afficher.
 
-**Séance manquée.** `planned` et date avant aujourd’hui. `splitCarnet` la range déjà avec le passé. Accueil peut dire, une fois : « Upper B d’hier n’est pas notée. » Lien « Ouvrir ». Pas de pastille sur l’onglet, pas de rouge, pas de rappel à chaque ouverture de la journée suivante.
+**Séance en cours.** La ligne du bas devient « Upper B en cours → » et ouvre Aujourd’hui, où « Reprendre » existe déjà. Accueil n’ouvre pas le mode sport.
 
-**Semaine légère.** `trainingBlock` vaut `stall` ou `cadence`, et le plan n’est pas tenu. Le hero est la charge allégée. Pour deux échecs à 80 kg : **72,5 kg**, bouton « Commencer à 72,5 kg », lien « Garder 80 kg », phrase exacte « Deux séances sans l’objectif : on allège une fois, puis on reprend la charge. » Pastilles : 72,5 × 6, 80 × 6, 80 × 7. Le kicker dit « Semaine légère », pas « échec ». Pas de fond d’alerte.
+**Plan de Chef sport tenu.** La phrase est celle du plan, pas le palier calculé. Le cycle ne propose pas 72,5 kg par-dessus un plan tenu.
 
-Pour le bloc réussi, la phrase affichée doit suivre le code : trois séances, pas quatre. `CADENCE_SENTENCE` dit « Quatre » alors que `DELOAD_EVERY` vaut 3. À corriger dans la même phrase que l’écran réutilisera, pas à masquer par une rédaction maison.
+**Record et semaine légère le même jour.** Le record passe devant. La ligne du cycle reste sous les anneaux.
 
-**Reprise après une pause.** Pas de fonction dédiée aujourd’hui. Même squelette que la semaine légère, kicker « Reprise », si la dernière séance de force terminée a plus de 14 jours. La charge proposée est `deloadLoad` de la dernière charge tenue, pas un retour silencieux à un vieux record. Si un plan de Chef sport est tenu, il gagne, comme toujours. Le seuil de 14 jours est une constante d’écran, pas une nouvelle règle d’entraînement.
+## 7. Onglets
 
-**Record pendant la reprise ou l’allègement.** L’état « record » ne s’applique qu’à une séance déjà terminée. Le matin, l’allègement prime.
+Accueil est le premier onglet, et l’écran d’ouverture à froid. Aujourd’hui reste le deuxième : c’est là qu’on s’entraîne. Progrès et Carnet ne bougent pas.
 
-## 5. Hiérarchie
+Quatre libellés tiennent. À 160 %, ils restent plafonnés autour de 12,5 px pour que « Aujourd’hui » ne se coupe pas. VoiceOver lit le mot entier.
 
-De haut en bas, toujours dans cet ordre.
+L’import qui ouvre déjà le Carnet continue de l’ouvrir.
 
-1. La date, en sourcil.
-2. Le titre « Accueil ». Un seul `h1`.
-3. La semaine.
-4. Le fait du jour : chiffre, « Repos », ou record.
-5. Une ou deux lignes qui disent de quel mouvement il s’agit.
-6. La phrase, seulement si le chiffre ne se suffit pas.
-7. Les trois pastilles, s’il y a une suite.
-8. Le bouton, puis les liens texte.
-9. La barre d’onglets, et la bulle à droite au-dessus d’elle.
+## 8. La bulle
 
-Rien en dessous. À 100 % et à 130 %, pas de défilement. À 160 %, le hero d’entraînement tient encore dans l’écran si le bouton reste sur une ligne et si la bulle n’est pas poussée par `10rem` (voir § 10).
+Sur Accueil, la bulle flottante est masquée. Dans les maquettes denses elle couvrait les barres. L’entrée du coach est la phrase, avec le visage, hauteur tactile 44 px. Elle ouvre la même feuille. Sur Aujourd’hui, Progrès et Carnet, la bulle reste où elle est. En mode sport, rien ne change : la bulle est déjà masquée sur la séance.
 
-## 6. La barre d’onglets
+La phrase n’est pas une conversation. Pas de deuxième bulle, pas de message non sollicité.
 
-**Accueil devient le premier onglet, et l’écran d’ouverture.**
+## 9. État vide
 
-L’état initial est aujourd’hui `useState<Tab>("today")`. Un démarrage à froid ouvre Accueil. Aujourd’hui reste le deuxième onglet : c’est là que la séance, la liste et « Modifier » vivent. Progrès et Carnet ne bougent pas.
+Pas de courbe inventée, pas de grille d’échecs, pas de 80 kg d’exemple. Les deux anneaux sont au repos, sans arc de progression. Une phrase : « Déposez le plan pour voir la semaine. » Un bouton : « Déposer le plan ». Le même geste que l’accueil actuel.
 
-Ordre : Accueil, Aujourd’hui, Progrès, Carnet.
+## 10. Performance
 
-Pourquoi pas remplacer Aujourd’hui. La synthèse et la séance n’ont pas le même travail. Fusionner les deux ramène la liste des exercices sur le premier écran, et l’on perd le calme qui fait l’intérêt d’Accueil.
+Tout est déjà en mémoire. `tonnage`, `e1rmSeries`, `muscleTotals`, `programPreview` sont des fonctions pures. La courbe d’Accueil est un tracé court, pas le graphique complet de Progrès, pas une bibliothèque. Huit semaines de cases ne coûtent rien. Pas d’appel réseau pour peindre l’écran.
 
-Quatre mots tiennent à 100 % (libellés à 11 px, « Aujourd’hui » s’arrête vers 177 px dans une cellule d’environ 195). À 160 %, les libellés d’onglets sont plafonnés à 12,5 px. « Aujourd’hui » reste entier (bord droit mesuré à 181 px, cellule à 195). Le titre, lui, passe de 34 px à 54,4 px. Les onglets ne suivent pas le corps du texte jusqu’au bout : une barre de quatre mots qui grossit comme un titre se coupe. Le nom complet reste lu par VoiceOver.
+## 11. Accessibilité
 
-L’import qui ouvre déjà le Carnet (`setTab("history")`) continue de le faire. On ne ramène pas de force sur Accueil quelqu’un qui est en train de lire une autre section.
+Contrastes des jetons, déjà mesurés. Cuivre `#9a3e12` sur carte claire : 6,5:1. Sauge `#246346` sur carte claire : 6,7:1. Les mêmes teintes claires en sombre sont au-dessus de 8:1. Le bouton n’est pas sur cet écran. Le cuivre vif ne sert qu’au point et au filet.
 
-## 7. Mode sport et bulle du coach
+Le premier cran de la grille est une marque, pas un texte. Le « 6 sem. » est en encre, à côté.
 
-Le mode sport est l’overlay de séance. Il couvre Accueil. On n’y dessine pas un second hero. Les règles déjà en place restent : la bulle est masquée sur la séance, le geste, le bilan, l’aperçu et le repos entre les séries.
+**Dynamic Type.** Le titre et la phrase suivent la taille de l’iPhone. Les nombres des graphiques grandissent moins, pour que l’anneau et la courbe gardent leur dessin.
 
-Accueil ne démarre pas le mode sport tout seul. Le bouton « Commencer à 82,5 kg » fait exactement ce que fait `StartActions` : `begin(true)` pour la hausse, `begin(false)` pour « Garder ». Ensuite l’overlay prend la main. Au retour du bilan, Accueil est dessous, dans l’état « séance terminée ».
+- 100 %. Titre 34 px. Phrase 13 px.
+- 160 %. Titre 54 px. Phrase 24 px. Les anneaux, la courbe du couché et les barres tiennent encore, avec la ligne « Prochaine séance ». La grille des huit semaines n’est plus dans ce premier écran. Les libellés d’onglets ne dépassent pas leur quart d’écran.
 
-La bulle ne dit rien d’elle-même sur Accueil. Elle ne s’ouvre pas pour commenter le record. Toucher la citation d’un plan tenu peut ouvrir le coach, plus tard. Ce n’est pas nécessaire pour la première version.
+À vérifier sur 390 × 844 et 375 × 667, à 130 % aussi, le jour de l’implémentation.
 
-La bulle reste à droite, au-dessus de la barre, hors du bouton. Le CSS livré la place à `bottom: calc(10rem + env(safe-area-inset-bottom))`. À 160 %, 10 rem valent 256 px : la bulle monte sur la carte. Les maquettes la fixent en pixels au-dessus de la barre (108 px). C’est le placement à reprendre pour tout l’app, pas seulement pour Accueil.
+**VoiceOver**, le texte du graphique, pas seulement la couleur.
 
-## 8. États vides
+- Anneaux : « 2 séances sur 4. Volume 17,9 tonnes, moyenne 20,4 tonnes. »
+- Courbe : « Couché, 96 kilogrammes estimés, plus 3 % en quatre semaines. »
+- Squat : « Squat, 116,7 kilogrammes estimés, une séance notée. »
+- Barres : le nom et le nombre, « Quadriceps, 10 séries. »
+- Grille : « 6 semaines tenues sur 8. »
+- Manqué et prévu se distinguent par la forme (creux), pas seulement par la couleur.
 
-**Aucune séance.** Pas de semaine fictive, pas de 80 kg d’exemple. Le hero dit « Rien encore. » Un bouton : « Déposer le plan ». La même promesse que l’accueil actuel : les séances restent sur ce téléphone.
-
-**Des séances existent, rien aujourd’hui, rien devant.** « Repos », sans phrase de prochaine séance. Lien « Créer une séance », vers la feuille déjà là.
-
-**Agenda indisponible, jeton absent, Worker en erreur.** On n’affiche pas la ligne. Pas de bandeau d’erreur sur Accueil. La synthèse ne dépend pas du réseau.
-
-**Séance cardio.** Le hero peut dire la sortie (« Course, 32 min ») s’il n’y a pas de force ce jour-là. Pas de record de charge, pas de pastilles de répétitions. Le cardio ne compte pas dans `countsForProgress`.
-
-## 9. Performance
-
-Accueil ne charge rien de plus pour se peindre. Les séances sont déjà dans l’état de l’app. `startOffer`, `programPreview`, `bestLoads` sont des fonctions pures, déjà appelées par Aujourd’hui et Progrès.
-
-Pas de courbe sur cet écran, donc pas de canvas. Pas de seconde copie des séances.
-
-L’agenda, le jour où on l’ajoutera, part après le premier rendu. Une requête, un cache pour la journée, échec silencieux. S’il n’y a pas de jeton, on ne tente pas.
-
-Aujourd’hui les trois écrans sont montés ensemble, Progrès inclus, et masqués avec `hidden`. Accueil doit rester un petit DOM. On ne profite pas de ce chantier pour démonter Progrès, sauf si la mesure montre que le premier affichage en souffre.
-
-## 10. Accessibilité
-
-Contrastes mesurés sur les jetons réels.
-
-| Couple | Ratio | Usage |
-| --- | --- | --- |
-| Encre `#1b1916` sur fond `#efeae2` | 14,6:1 | Titre, chiffre |
-| Cuivre `#9a3e12` sur carte `#fbf8f3` | 6,5:1 | Kicker, liens |
-| Sauge `#246346` sur carte claire | 6,7:1 | Record, y compris en petit |
-| Encre douce `#5c574f` sur fond clair | 6,0:1 | Métadonnées |
-| Bouton clair, `#f6f1e8` sur `#1b1916` | 15,6:1 | « Commencer à … » |
-| Cuivre sombre `#e8a06a` sur carte `#17191e` | 8,1:1 | Kicker sombre |
-| Sauge sombre `#9dcfb0` sur carte sombre | 10:1 | Record sombre |
-| Bouton sombre, `#1b120c` sur `#e8925a` | 7,6:1 | Le bouton cuivre |
-
-Le cuivre vif `#c4622d` sur carte claire est à 3,9:1. Il sert au point de la semaine et au filet, pas à une phrase.
-
-**Dynamic Type.** Le corps suit la taille de l’iPhone, comme le reste de l’app.
-
-- 100 %. Titre 34 px, ligne 13,5 px, chiffre 76 px, onglets 11 px.
-- 160 %. Titre 54,4 px, ligne 21,6 px, chiffre 86 px. Les onglets restent à 12,5 px pour que « Aujourd’hui » ne se coupe pas. Le bouton d’action est plafonné à 18 px et tenu sur une ligne : à 27 px, « Commencer à 82,5 kg » passait sur deux lignes et la bulle couvrait le lien. Les zones tactiles restent à 44 px. La carte se termine vers 665 px, la bulle commence à 680, la barre à 758. Rien ne se coupe, rien ne passe sous la barre.
-- 130 % se situe entre les deux. Le même plafond d’onglet et de bouton évite le cas limite. À vérifier sur appareil au moment de l’implémentation, avec 390 × 844 et 375 × 667.
-
-**VoiceOver**, dans l’ordre du DOM.
-
-- Titre « Accueil ».
-- Chaque jour : « samedi 24 octobre, séance prévue » (ou « séance notée », ou « aujourd’hui »). Le point coloré n’est pas une image à part.
-- Le hero groupé : « Upper B, développé couché, 82,5 kilogrammes, 4 séries de 6. Dernière série tenue, 80 kilogrammes par 6. »
-- Le bouton, puis « Garder 80 kilogrammes », puis « Voir la séance ».
-- La bulle : « Ouvrir le coach », déjà en place.
-- Les onglets gardent leur nom complet même si le dessin est petit.
-
-Pas d’animation de compteur sur le chiffre. Si un fondu est ajouté plus tard, il respecte `prefers-reduced-motion`, déjà traité pour le coach.
-
-Le focus visible cuivre (`:focus-visible`) s’applique aux liens et au bouton, comme ailleurs.
-
-## 11. Deux héros
-
-Le choix est réel. Les deux sont côte à côte dans les maquettes « comparaison ».
-
-**A · Le chiffre.** Proposée. 82,5 kg occupe la carte. On comprend la décision sans lire la liste. Aujourd’hui reste disponible pour les six exercices.
-
-**B · La carte.** C’est l’écran Aujourd’hui, raccourci : titre Upper B, deux exercices, « puis écarté, militaire… », le même bouton. C’est familier, et c’est un doublon. Le chiffre de la décision y est à 17 px dans un bouton, pas à 76 px.
-
-A est le bon hero pour les quatre états. B n’a pas de forme utile pour « Repos » ni pour un record : elle redeviendrait une fiche de séance vide, ou une fiche déjà notée. Un seul langage, celui du chiffre, couvre l’entraînement, le repos, le record et l’allègement.
+Pas d’animation de compteur. `prefers-reduced-motion` reste respecté.
 
 ## 12. Plan
 
-**P0. L’écran dit juste, et l’on peut s’entraîner depuis lui.**
+**P0.** L’onglet existe et ne répète pas Aujourd’hui.
 
-- Onglet Accueil en première position. Démarrage à froid sur Accueil. Aujourd’hui, Progrès, Carnet inchangés dans leur rôle.
-- `homeContext` pur, testé : entraînement, repos, en cours, terminée, record, plan tenu, vide.
-- Hero A, libellés de `startOffer` sans les reformuler. `begin(true)` / `begin(false)` comme `StartActions`. Pas de seconde question dans la séance.
-- `keepsCoachPlan` gagne : chiffre du plan, bouton « Commencer », phrase du plan.
-- Bande de semaine, jour touché → Aujourd’hui.
-- État vide « Déposer le plan ».
-- Clair et sombre, avec les jetons déjà là.
+- Accueil en premier, ouverture à froid. Aucun bouton « Commencer ».
+- Semaine, anneaux, courbe du couché s’il y a au moins trois points, barres de séries, phrase, ligne « Prochaine séance ».
+- Squat sans courbe tant qu’il n’y a pas trois séances.
+- Toucher un graphique de charge ouvre Progrès. La ligne et les jours ouvrent Aujourd’hui.
+- Clair, sombre, 100 % et 160 %.
 
-**P1. L’écran change selon le moment.**
+**P1.** L’écran réagit.
 
-- Record seulement si la série du jour est strictement meilleure, affiché en kg × reps, couleur sauge, lien vers le bilan.
-- Semaine légère avec `STALL_SENTENCE` ou la phrase de cadence alignée sur 3 séances.
-- Reprise après 14 jours, même formule `deloadLoad`, sauf plan tenu.
-- Séance manquée, une ligne, une fois.
-- Passage 100 / 130 / 160 % sur 390 × 844 et 375 × 667. Bulle en pixels au-dessus de la barre. Bouton d’action sur une ligne. Onglets plafonnés, noms complets pour VoiceOver.
-- Noms accessibles du hero et des jours.
+- Bannière record (kg × reps) séparée de l’estimation, dernier point en sauge, pendant la semaine qui suit.
+- Bannière de cycle quand `trainingBlock` est `stall` ou `cadence`, volume comparé à la semaine légère, phrase alignée sur trois séances.
+- Grille de huit semaines et série de semaines tenues.
+- Plan tenu : la phrase du plan, pas le palier calculé.
+- Bulle masquée sur cet onglet seulement.
 
-**P2. Ce qui peut attendre.**
-
-- Une ligne d’agenda, après le premier rendu, dédupliquée avec l’heure de la séance, silence si le Worker ne répond pas.
-- Citation du `coachNote` quand le plan est tenu.
-- Cardio seul au hero, sans pastilles de charge.
-
-Hors de ce chantier : la formule de progression, le Worker, le jeton, le mode sport, le déploiement.
+**P2.** Le squat gagne une courbe le jour où trois séances existent. Rien d’autre tant qu’une donnée nouvelle n’existe pas.
 
 ## 13. Maquettes
 
-Fichiers PNG, 390 × 844 points, facteur 2 (780 × 1688 px), sauf les comparaisons (860 × 928 points). Inter, rayons, cartes, bouton, onglets et bulle reprennent les règles de l’app. Les PNG ne sont pas dans le dépôt.
+PNG 390 × 844 points, facteur 2, sauf les comparaisons (deux téléphones). Inter, cartes, onglets et couleurs viennent de l’app. Les graphiques sont dessinés pour cet écran : anneaux à bouts ronds, courbe lissée avec dégradé, barres capsules, grille teintée. Pas dans le dépôt.
 
 | Fichier | Ce qu’on voit |
 | --- | --- |
-| `accueil-entrainement-clair.png` | Samedi, Upper B, 82,5 kg, avant la séance. Clair. |
-| `accueil-entrainement-sombre.png` | Le même jour, sombre. |
-| `accueil-repos-clair.png` | Dimanche, « Repos », prochaine séance lundi. Clair. |
-| `accueil-repos-sombre.png` | Le même repos, sombre. |
-| `accueil-record-clair.png` | Le soir, record 82,5 × 6, en sauge. Clair. |
-| `accueil-record-sombre.png` | Le même record, sombre. |
-| `accueil-deload-clair.png` | Samedi 7 novembre, semaine légère, 72,5 kg. Clair. |
-| `accueil-deload-sombre.png` | Le même allègement, sombre. |
-| `accueil-texte-160-clair.png` | Le jour d’entraînement à 160 % de texte. Clair. |
-| `accueil-texte-160-sombre.png` | Le même texte agrandi, sombre. |
-| `accueil-hero-comparaison-clair.png` | A, le chiffre, à côté de B, la carte. Clair. |
-| `accueil-hero-comparaison-sombre.png` | Les deux héros, sombre. |
+| `dashboard-semaine-clair.png` | Jeudi, semaine en cours. Anneaux 2/4 et 17,9 t, courbes, barres, grille. Clair. |
+| `dashboard-semaine-sombre.png` | La même semaine, sombre. |
+| `dashboard-record-clair.png` | La semaine d’après le record 82,5 × 6, bannière en haut. Clair. |
+| `dashboard-record-sombre.png` | Le même record, sombre. |
+| `dashboard-deload-clair.png` | Semaine légère, quatre capsules de cycle, 72,5 kg en ligne. Clair. |
+| `dashboard-deload-sombre.png` | La même semaine légère, sombre. |
+| `dashboard-texte-160-clair.png` | La semaine ordinaire, texte à 160 %. Clair. |
+| `dashboard-texte-160-sombre.png` | Le même texte agrandi, sombre. |
+| `dashboard-comparaison-clair.png` | A, les tuiles, à côté de B, les sections. Clair. |
+| `dashboard-comparaison-sombre.png` | Les deux présentations, sombre. |
 
-A est marquée « proposée » sur les comparaisons.
+A est marquée « proposée ».
