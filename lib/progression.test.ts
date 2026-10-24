@@ -11,6 +11,7 @@ import {
   saveProgression,
   setDelta,
   silenceProgression,
+  programPreview,
   startOffer,
   startWithProgression,
   suggestForExercise,
@@ -395,5 +396,73 @@ describe("plan de reprise", () => {
     saveProgression("sun", { choice: "ignored", mode: "hold", items: [] });
     expect(loadProgression("sun")?.choice).toBe("ignored");
     expect(sessionStore.size).toBe(0);
+  });
+});
+
+describe("suite sur plusieurs séances", () => {
+  function bench(date: string, load: number, reps: number, plannedReps = reps) {
+    return doneSession(date, exercise({
+      planned: { sets: 4, reps: plannedReps, loadKg: load, restSec: 180, rpe: 8 },
+      sets: [set({ loadKg: load, reps, rpe: 8 }), set({ loadKg: load, reps, rpe: 8 })],
+    }), { id: date });
+  }
+
+  it("ajoute des répétitions après la hausse, sans confirmer exercice par exercice", () => {
+    const history = [bench("2026-10-01", 80, 6)];
+    const planned = doneSession("2026-10-24", exercise(), { id: "today", status: "planned" });
+    const preview = programPreview(planned.exercises[0], history, { skipSessionId: "today" });
+    expect(preview?.sentence).toBe("On monte la charge, puis les répétitions dans la fourchette, avec un allègement après deux échecs ou quatre réussites.");
+    expect(preview?.upcoming.map((step) => step.label)).toEqual(["82,5 kg × 6", "82,5 kg × 7", "82,5 kg × 8"]);
+    expect(startOffer(planned, history)).toMatchObject({
+      kind: "choice",
+      upLabel: "Commencer à 82,5 kg",
+      keepLabel: "Garder 80 kg",
+    });
+  });
+
+  it("allège après deux séances sans l’objectif, en un seul choix", () => {
+    const history = [bench("2026-10-08", 80, 4, 6), bench("2026-10-01", 80, 4, 6)];
+    const planned = doneSession("2026-10-24", exercise(), { id: "today", status: "planned" });
+    const suggestion = suggestForExercise(planned.exercises[0], history, "today");
+    expect(suggestion?.loadKg).toBe(72.5);
+    expect(suggestion?.reason).toMatch(/Deux séances sans l’objectif/);
+    expect(startOffer(planned, history)).toMatchObject({
+      kind: "choice",
+      upLabel: "Commencer à 72,5 kg",
+      keepLabel: "Garder 80 kg",
+    });
+    const preview = programPreview(planned.exercises[0], history, { skipSessionId: "today" });
+    expect(preview?.sentence).toMatch(/on allège une fois/);
+    expect(preview?.upcoming[0].label).toBe("72,5 kg × 6");
+    expect(preview?.upcoming[1].label).toBe("80 kg × 6");
+  });
+
+  it("prévoit un allègement après trois séances réussies, sans revenir à une charge plus ancienne", () => {
+    const history = [bench("2026-10-15", 85, 6), bench("2026-10-08", 82.5, 6), bench("2026-10-01", 80, 6)];
+    const planned = doneSession("2026-10-24", exercise({
+      planned: { sets: 4, reps: 6, loadKg: 85, restSec: 180, rpe: 8 },
+    }), { id: "today", status: "planned" });
+    const suggestion = suggestForExercise(planned.exercises[0], history, "today");
+    expect(suggestion?.loadKg).toBe(77.5);
+    expect(suggestion?.loadKg).toBeLessThan(85);
+    const heavyThenLight = [
+      bench("2026-10-15", 80, 6),
+      bench("2026-10-08", 90, 6),
+      bench("2026-10-01", 100, 6),
+    ];
+    const today = doneSession("2026-10-24", exercise(), { id: "today", status: "planned" });
+    expect(suggestForExercise(today.exercises[0], heavyThenLight, "today")?.loadKg).toBe(82.5);
+  });
+
+  it("ne modifie pas un plan de Chef sport en montrant la suite", () => {
+    const history = [bench("2026-10-01", 80, 6)];
+    const planned = doneSession("2026-10-24", exercise(), { id: "today", status: "planned", source: "coach" });
+    const before = JSON.stringify(planned);
+    const preview = programPreview(planned.exercises[0], history, { coachPlan: true, skipSessionId: "today" });
+    expect(JSON.stringify(planned)).toBe(before);
+    expect(preview?.sentence).toMatch(/Chef sport reste prioritaire/);
+    expect(preview?.upcoming[0].label).toBe("82,5 kg × 6");
+    expect(planned.exercises[0].planned.loadKg).toBe(80);
+    expect(startOffer(planned, history).kind).toBe("choice");
   });
 });

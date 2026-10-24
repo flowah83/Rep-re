@@ -50,10 +50,17 @@ export function suggestForExercise(exercise: ExerciseLog, history: Session[], sk
   const unit = exercise.unit ?? scored.find((set) => set.unit)?.unit ?? null;
   const notedEffort = scored.some((set) => set.rpe != null || set.rir != null);
   const plannedHard = (exercise.planned.rpe ?? 0) >= 8;
+  const block = trainingBlock(exercise, history, skipSessionId);
 
   let nextLoad = load;
   let reason: string;
-  if (hit && !effort.blocksIncrease && !(plannedHard && !notedEffort)) {
+  if (block === "stall") {
+    nextLoad = deloadLoad(load, step);
+    reason = `Deux séances sans l’objectif. Suggestion : ${formatLoad(nextLoad, unit)} × ${target}.`;
+  } else if (block === "cadence" && hit && !effort.blocksIncrease && !(plannedHard && !notedEffort)) {
+    nextLoad = deloadLoad(load, step);
+    reason = `Quatre séances réussies. Suggestion : ${formatLoad(nextLoad, unit)} × ${target}.`;
+  } else if (hit && !effort.blocksIncrease && !(plannedHard && !notedEffort)) {
     nextLoad = snap(load + step, step);
     const shown = formatLoad(nextLoad, unit);
     reason = effort.easy
@@ -318,23 +325,91 @@ export function startOffer(session: Session, history: Session[]): StartOffer {
   if (keepsCoachPlan(session)) return { kind: "hold" };
   const existing = loadProgression(session.id);
   if (existing && existing.choice !== "pending") return { kind: "plain" };
-  const items = buildAdjustments(session, history).filter(isIncrease);
+  const items = buildAdjustments(session, history).filter(loadMoved);
   if (!items.length) return { kind: "plain" };
   const first = items[0];
   if (items.length === 1 && first.fromLoadKg != null && first.toLoadKg != null) {
+    const lighter = first.toLoadKg + 0.01 < first.fromLoadKg;
     return {
       kind: "choice",
       upLabel: `Commencer à ${formatKg(first.toLoadKg)} kg`,
       keepLabel: `Garder ${formatKg(first.fromLoadKg)} kg`,
-      summary: `${first.name} peut passer de ${formatKg(first.fromLoadKg)} à ${formatKg(first.toLoadKg)} kg. Un seul choix pour toute la séance.`,
+      summary: lighter
+        ? `${first.name} peut passer de ${formatKg(first.fromLoadKg)} à ${formatKg(first.toLoadKg)} kg, pour alléger. Un seul choix pour toute la séance.`
+        : `${first.name} peut passer de ${formatKg(first.fromLoadKg)} à ${formatKg(first.toLoadKg)} kg. Un seul choix pour toute la séance.`,
     };
   }
+  const lighter = items.some((item) => item.fromLoadKg != null && item.toLoadKg != null && item.toLoadKg + 0.01 < item.fromLoadKg);
   return {
     kind: "choice",
-    upLabel: "Commencer avec les hausses",
+    upLabel: lighter ? "Commencer avec l’ajustement" : "Commencer avec les hausses",
     keepLabel: "Garder le plan",
-    summary: `${items.length} charges peuvent monter. Un seul choix pour toute la séance.`,
+    summary: lighter
+      ? "Les charges peuvent changer. Un seul choix pour toute la séance."
+      : `${items.length} charges peuvent monter. Un seul choix pour toute la séance.`,
   };
+}
+
+export type ProgramStep = { loadKg: number | null; reps: number; label: string };
+
+export type ProgramPreview = {
+  sentence: string;
+  upcoming: ProgramStep[];
+};
+
+const PROGRAM_SENTENCE = "On monte la charge, puis les répétitions dans la fourchette, avec un allègement après deux échecs ou quatre réussites.";
+const COACH_SENTENCE = "Le plan de Chef sport reste prioritaire, et cette suite ne le remplace pas.";
+const STALL_SENTENCE = "Deux séances sans l’objectif : on allège une fois, puis on reprend la charge.";
+const CADENCE_SENTENCE = "Quatre séances réussies : on allège une fois, puis on reprend.";
+
+/** Suite lisible, sans écrire dans le carnet ni toucher un plan de Chef sport. */
+export function programPreview(
+  exercise: ExerciseLog,
+  history: Session[],
+  options: { coachPlan?: boolean; skipSessionId?: string } = {},
+): ProgramPreview | null {
+  const suggestion = suggestForExercise(exercise, history, options.skipSessionId);
+  if (!suggestion) return null;
+  const reps = suggestion.reps;
+  if (reps == null || reps <= 0) return null;
+  const step = exercise.stepKg > 0 ? exercise.stepKg : 2.5;
+  const top = reps <= 5 ? reps : reps + 2;
+  const block = trainingBlock(exercise, history, options.skipSessionId);
+  const unit = exercise.unit ?? null;
+  let load = suggestion?.loadKg ?? exercise.planned.loadKg;
+  const upcoming: ProgramStep[] = [programStep(load, reps, unit)];
+  if (block && exercise.planned.loadKg != null) {
+    const back = exercise.planned.loadKg;
+    upcoming.push(programStep(back, reps, unit));
+    const third = advanceProgram(back, reps, reps, top, step);
+    upcoming.push(programStep(third.loadKg, third.reps, unit));
+  } else {
+    let cursorReps = reps;
+    for (let index = 0; index < 2; index += 1) {
+      const next = advanceProgram(load, cursorReps, reps, top, step);
+      load = next.loadKg;
+      cursorReps = next.reps;
+      upcoming.push(programStep(load, cursorReps, unit));
+    }
+  }
+  const sentence = options.coachPlan ? COACH_SENTENCE : block === "stall" ? STALL_SENTENCE : block === "cadence" ? CADENCE_SENTENCE : PROGRAM_SENTENCE;
+  return { sentence, upcoming };
+}
+
+function loadMoved(item: Adjustment): boolean {
+  if (item.fromLoadKg != null && item.toLoadKg != null) return Math.abs(item.toLoadKg - item.fromLoadKg) > 0.01;
+  return isIncrease(item);
+}
+
+function programStep(loadKg: number | null, reps: number, unit: string | null): ProgramStep {
+  const label = loadKg == null ? `poids du corps × ${reps}` : `${formatLoad(loadKg, unit)} × ${reps}`;
+  return { loadKg, reps, label };
+}
+
+function advanceProgram(loadKg: number | null, reps: number, target: number, top: number, step: number): { loadKg: number | null; reps: number } {
+  if (loadKg == null) return { loadKg: null, reps: reps + 1 };
+  if (reps < top) return { loadKg, reps: reps + 1 };
+  return { loadKg: snap(loadKg + step, step), reps: target };
 }
 
 export function readProgressionRaw(): string | null {
@@ -415,6 +490,59 @@ function pack(exercise: ExerciseLog, loadKg: number | null, reps: number | null,
     reason,
     changesPlan: !sameLoad || !sameReps,
   };
+}
+
+const DELOAD_EVERY = 3;
+
+function trainingBlock(exercise: ExerciseLog, history: Session[], skipSessionId?: string): "stall" | "cadence" | null {
+  const recent = recentOutcomes(exercise, history, skipSessionId);
+  if (recent.length >= 2 && recent.slice(0, 2).every((item) => !item.hit)) return "stall";
+  const step = exercise.stepKg > 0 ? exercise.stepKg : 2.5;
+  if (recent.length >= DELOAD_EVERY && recent.slice(0, DELOAD_EVERY).every((item) => item.hit) && steadyBlock(recent.slice(0, DELOAD_EVERY), step)) {
+    return "cadence";
+  }
+  return null;
+}
+
+function recentOutcomes(exercise: ExerciseLog, history: Session[], skipSessionId?: string): { loadKg: number | null; hit: boolean }[] {
+  const key = normalizeExerciseKey(exercise.name);
+  const target = exercise.planned.reps != null && exercise.planned.reps > 0 ? exercise.planned.reps : null;
+  return history
+    .filter((session) => session.id !== skipSessionId && !session.cardio && session.status === "done")
+    .filter((session) => session.exercises.some((item) => normalizeExerciseKey(item.name) === key && item.sets.some(isHardSet)))
+    .sort((a, b) => {
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return (b.endedAt ?? "").localeCompare(a.endedAt ?? "");
+    })
+    .slice(0, DELOAD_EVERY)
+    .map((session) => {
+      const logged = session.exercises.find((item) => normalizeExerciseKey(item.name) === key && item.sets.some(isHardSet));
+      const working = logged?.sets.filter((set) => isHardSet(set) && set.reps != null) ?? [];
+      const loads = working.map((set) => set.loadKg).filter((value): value is number => value != null && Number.isFinite(value));
+      const loadKg = loads.length ? modeLoad(loads) : null;
+      const atLoad = loadKg == null ? working : working.filter((set) => set.loadKg != null && Math.abs(set.loadKg - loadKg) < 0.051);
+      const scored = atLoad.length ? atLoad : working;
+      const minReps = scored.length ? Math.min(...scored.map((set) => set.reps ?? 0)) : 0;
+      const ownTarget = logged?.planned.reps != null && logged.planned.reps > 0 ? logged.planned.reps : null;
+      const goal = ownTarget ?? target ?? minReps;
+      return { loadKg, hit: minReps >= goal };
+    });
+}
+
+function steadyBlock(outcomes: { loadKg: number | null }[], step: number): boolean {
+  const loads = outcomes.map((item) => item.loadKg);
+  if (loads.some((load) => load == null)) return false;
+  const newest = loads[0] as number;
+  return loads.every((load) => {
+    const value = load as number;
+    return value <= newest + step * 0.51 && value >= newest - step * 3;
+  });
+}
+
+function deloadLoad(load: number, step: number): number {
+  const bySteps = snap(Math.max(0, load - step * 2), step);
+  const byRatio = snap(Math.max(0, load * 0.9), step);
+  return Math.min(bySteps, byRatio);
 }
 
 function latestPerformance(name: string, history: Session[], skipSessionId?: string): ExerciseLog | null {
