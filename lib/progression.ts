@@ -59,7 +59,7 @@ export function suggestForExercise(exercise: ExerciseLog, history: Session[], sk
     reason = `Deux séances sans l’objectif. Suggestion : ${formatLoad(nextLoad, unit)} × ${target}.`;
   } else if (block === "cadence" && hit && !effort.blocksIncrease && !(plannedHard && !notedEffort)) {
     nextLoad = deloadLoad(load, step);
-    reason = `Quatre séances réussies. Suggestion : ${formatLoad(nextLoad, unit)} × ${target}.`;
+    reason = `Trois séances réussies. Suggestion : ${formatLoad(nextLoad, unit)} × ${target}.`;
   } else if (hit && !effort.blocksIncrease && !(plannedHard && !notedEffort)) {
     nextLoad = snap(load + step, step);
     const shown = formatLoad(nextLoad, unit);
@@ -357,10 +357,10 @@ export type ProgramPreview = {
   upcoming: ProgramStep[];
 };
 
-const PROGRAM_SENTENCE = "On monte la charge, puis les répétitions dans la fourchette, avec un allègement après deux échecs ou quatre réussites.";
+const PROGRAM_SENTENCE = "On monte la charge, puis les répétitions dans la fourchette, avec un allègement après deux échecs ou trois réussites.";
 const COACH_SENTENCE = "Le plan de Chef sport reste prioritaire, et cette suite ne le remplace pas.";
 const STALL_SENTENCE = "Deux séances sans l’objectif : on allège une fois, puis on reprend la charge.";
-const CADENCE_SENTENCE = "Quatre séances réussies : on allège une fois, puis on reprend.";
+const CADENCE_SENTENCE = "Trois séances réussies : on allège une fois, puis on reprend.";
 
 /** Suite lisible, sans écrire dans le carnet ni toucher un plan de Chef sport. */
 export function programPreview(
@@ -493,6 +493,21 @@ function pack(exercise: ExerciseLog, loadKg: number | null, reps: number | null,
 }
 
 const DELOAD_EVERY = 3;
+
+/** Où en est le mouvement : deux échecs, trois réussites stables, ou rien de spécial. */
+export function movementCycle(
+  exercise: ExerciseLog,
+  history: Session[],
+  skipSessionId?: string,
+): { block: "stall" | "cadence" | null; loadKg: number | null; deloadKg: number | null } {
+  const block = trainingBlock(exercise, history, skipSessionId);
+  const recent = latestPerformance(exercise.name, history, skipSessionId);
+  const working = recent?.sets.filter((set) => isHardSet(set) && set.loadKg != null) ?? [];
+  const loads = working.map((set) => set.loadKg).filter((load): load is number => load != null && Number.isFinite(load));
+  const loadKg = loads.length ? modeLoad(loads) : (exercise.planned.loadKg ?? null);
+  const step = exercise.stepKg > 0 ? exercise.stepKg : 2.5;
+  return { block, loadKg, deloadKg: loadKg == null ? null : deloadLoad(loadKg, step) };
+}
 
 function trainingBlock(exercise: ExerciseLog, history: Session[], skipSessionId?: string): "stall" | "cadence" | null {
   const recent = recentOutcomes(exercise, history, skipSessionId);

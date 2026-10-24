@@ -34,7 +34,7 @@ export function CoachLayer() {
   const app = useApp();
   return (
     <>
-      {app.coachOpen ? null : (
+      {app.coachOpen || app.tab === "home" ? null : (
         <button type="button" className="coach-fab" data-testid="coach-button" aria-label="Ouvrir le coach" onClick={() => app.setCoachOpen(true)}>
           <CoachFace />
         </button>
