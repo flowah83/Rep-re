@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loadWeather, readWeather, type WeatherSnapshot } from "@/lib/weather";
+import { loadWeather, readWeather, weatherCondition, weatherVariantFromSearch, type WeatherSnapshot, type WeatherVariant } from "@/lib/weather";
 
 export function WeatherChip() {
   const [snap, setSnap] = useState<WeatherSnapshot | null>(null);
   const [stale, setStale] = useState(false);
+  const [variant, setVariant] = useState<WeatherVariant>("tile");
 
   useEffect(() => {
+    setVariant(weatherVariantFromSearch(window.location.search));
     let cancel = false;
     const store = browserStore();
     const cached = readWeather(store);
@@ -31,28 +33,61 @@ export function WeatherChip() {
   }, []);
 
   const label = snap ? weatherLabel(snap, stale) : undefined;
+  const sky = snap && variant === "widget" ? ` sky-${iconKind(snap.code)}` : "";
   return (
-    <div className="weather-chip" data-testid="weather-toulon" aria-label={label} role={snap ? "img" : undefined}>
-      {snap ? (
-        <>
-          <WeatherIcon code={snap.code} />
-          <span>
-            <b className="num">{snap.temp}°</b>
-            <small className="num">{stale ? clock(snap.at) : rangeText(snap)}</small>
-          </span>
-        </>
-      ) : null}
+    <div className={`meteo meteo-${variant}${snap ? "" : " is-empty"}${sky}`} data-testid="weather-toulon" data-variant={variant} aria-label={label} role={snap ? "img" : undefined}>
+      {snap ? <WeatherFace snap={snap} stale={stale} variant={variant} /> : null}
     </div>
+  );
+}
+
+function WeatherFace({ snap, stale, variant }: { snap: WeatherSnapshot; stale: boolean; variant: WeatherVariant }) {
+  const condition = weatherCondition(snap.code);
+  const hasRange = snap.min != null && snap.max != null;
+  if (variant === "line") {
+    return (
+      <>
+        <WeatherIcon code={snap.code} />
+        <b className="num">{snap.temp}°</b>
+        <span>Toulon</span>
+        <span>{condition}</span>
+        {stale ? <span className="num">{clock(snap.at)}</span> : hasRange ? <span className="num range">{snap.min}° / {snap.max}°</span> : null}
+      </>
+    );
+  }
+  if (variant === "widget") {
+    return (
+      <>
+        <WeatherIcon code={snap.code} />
+        <div>
+          <b className="num">{snap.temp}°</b>
+          <small>Toulon</small>
+        </div>
+        <em className="num">
+          {stale ? clock(snap.at) : hasRange ? (
+            <>
+              <span>min {snap.min}°</span>
+              <span>max {snap.max}°</span>
+            </>
+          ) : condition}
+        </em>
+      </>
+    );
+  }
+  return (
+    <>
+      <WeatherIcon code={snap.code} />
+      <div>
+        <b className="num">{snap.temp}°</b>
+        <p>Toulon · {condition}</p>
+        {stale ? <p className="num range">{clock(snap.at)}</p> : hasRange ? <p className="num range">min {snap.min}° · max {snap.max}°</p> : null}
+      </div>
+    </>
   );
 }
 
 function fresh(snap: WeatherSnapshot): boolean {
   return Date.now() - snap.at < 30 * 60 * 1000;
-}
-
-function rangeText(snap: WeatherSnapshot): string {
-  if (snap.min == null || snap.max == null) return "Toulon";
-  return `${snap.min}° ${snap.max}°`;
 }
 
 function clock(at: number): string {

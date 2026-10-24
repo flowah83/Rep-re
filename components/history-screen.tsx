@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useApp, type HistFilter } from "@/components/app-context";
+import { SettingsButton } from "@/components/settings-button";
 import { hardSetCount, tonnage } from "@/lib/calc";
 import { historyBucket } from "@/lib/display";
 import { cardioSummary, formatMinutes, groupSessionsNewestWeekFirst, groupSessionsSoonestWeekFirst, splitCarnet } from "@/lib/history";
@@ -34,8 +35,13 @@ export function HistoryScreen() {
 
   return (
     <div className="screen" data-screen="history">
-      <div className="eyebrow">Séances notées</div>
-      <h1 className="title">Carnet</h1>
+      <div className="toprow">
+        <div>
+          <div className="eyebrow">Séances notées</div>
+          <h1 className="title">Carnet</h1>
+        </div>
+        <SettingsButton />
+      </div>
       <input
         className="searchfield"
         data-testid="history-search"

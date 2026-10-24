@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useApp } from "@/components/app-context";
+import { SettingsButton } from "@/components/settings-button";
 import { cardioSummary } from "@/lib/history";
 import { describePlan, estimateMinutes } from "@/lib/display";
 import { coachIsReady } from "@/lib/coach-store";
@@ -35,10 +36,7 @@ export function TodayScreen() {
           <div className="eyebrow">{longDate(app.selectedDate === app.today ? app.today : app.selectedDate)}</div>
           <h1 className="title">{app.selectedDate === app.today ? "Aujourd’hui" : "Ce jour-là"}</h1>
         </div>
-        <button type="button" className="iconbtn text" aria-label="Réglages" data-testid="open-settings" onClick={() => app.setSheet("settings")}>
-          <Gear />
-          <span>Réglages</span>
-        </button>
+        <SettingsButton />
       </div>
       <div className="weekrow">
         <button type="button" className="weeknav" aria-label="Semaine précédente" data-testid="week-prev" onClick={() => app.setSelectedDate(addDays(app.selectedDate, -7))}>
@@ -268,13 +266,3 @@ function rank(session: Session) {
   return 2;
 }
 
-function Gear() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <path d="M3 5.5h12M3 9h12M3 12.5h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <circle cx="6.5" cy="5.5" r="1.5" fill="var(--bg-elev)" stroke="currentColor" strokeWidth="1.4" />
-      <circle cx="11.5" cy="9" r="1.5" fill="var(--bg-elev)" stroke="currentColor" strokeWidth="1.4" />
-      <circle cx="7.5" cy="12.5" r="1.5" fill="var(--bg-elev)" stroke="currentColor" strokeWidth="1.4" />
-    </svg>
-  );
-}
