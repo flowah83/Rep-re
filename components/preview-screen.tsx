@@ -5,7 +5,7 @@ import { useApp } from "@/components/app-context";
 import { estimateMinutes, runFacts, seriesWord, unitOfExercise, unitPhrase } from "@/lib/display";
 import { cardioSummary } from "@/lib/history";
 import { StartActions } from "@/components/start-actions";
-import { buildAdjustments, keepsCoachPlan, loadProgression, type Adjustment } from "@/lib/progression";
+import { buildAdjustments, keepsCoachPlan, loadProgression, programPreview, type Adjustment } from "@/lib/progression";
 import type { ExerciseLog, Session } from "@/lib/types";
 import { formatKg, formatLong, formatRestLabel } from "@/lib/utils";
 
@@ -49,6 +49,7 @@ export function PreviewScreen({ id }: { id: string }) {
           ) : null}
           <p className="fine">Vous lisez le plan. Rien n’est modifié tant que vous ne commencez pas.</p>
           {willApply ? <p className="fine">Le choix se fait en bas : une charge pour toute la séance, ou le plan.</p> : null}
+          <ProgramLine session={session} history={app.sessions} />
           {session.cardio || runLike ? (
             <section className="preview-ex">
               <h2>{session.cardio?.sport ?? session.exercises[0]?.name ?? "Course"}</h2>
@@ -66,7 +67,16 @@ export function PreviewScreen({ id }: { id: string }) {
           {runLike
             ? null
             : session.exercises.map((exercise, index) => (
-                <ExerciseRow key={exercise.id} index={index + 1} exercise={exercise} adjustment={adjustments.get(exercise.id)} held={held} />
+                <ExerciseRow
+                  key={exercise.id}
+                  index={index + 1}
+                  exercise={exercise}
+                  adjustment={adjustments.get(exercise.id)}
+                  held={held}
+                  history={app.sessions}
+                  coachPlan={session.source === "coach"}
+                  sessionId={session.id}
+                />
               ))}
         </div>
         <div className="preview-foot">
@@ -77,17 +87,32 @@ export function PreviewScreen({ id }: { id: string }) {
   );
 }
 
+function ProgramLine({ session, history }: { session: Session; history: Session[] }) {
+  const lead = session.exercises.find((exercise) => exercise.planned.reps != null || exercise.planned.loadKg != null);
+  if (!lead || session.cardio) return null;
+  const preview = programPreview(lead, history, { coachPlan: session.source === "coach", skipSessionId: session.id });
+  if (!preview) return null;
+  return <p className="fine">{preview.sentence}</p>;
+}
+
 function ExerciseRow({
   index,
   exercise,
   adjustment,
   held,
+  history,
+  coachPlan,
+  sessionId,
 }: {
   index: number;
   exercise: ExerciseLog;
   adjustment?: Adjustment;
   held: boolean;
+  history: Session[];
+  coachPlan: boolean;
+  sessionId: string;
 }) {
+  const upcoming = programPreview(exercise, history, { coachPlan, skipSessionId: sessionId });
   const unit = unitPhrase(unitOfExercise(exercise));
   const planLoad = exercise.planned.loadKg;
   const suggested = suggestionLoad(planLoad, adjustment);
@@ -122,6 +147,16 @@ function ExerciseRow({
       {exercise.planned.restSec > 0 ? <p className="num">Repos {formatRestLabel(exercise.planned.restSec)}</p> : null}
       {exercise.planned.rpe != null ? <p className="num">RPE visé {formatKg(exercise.planned.rpe)}</p> : null}
       {exercise.note?.trim() ? <p className="preview-warn">{exercise.note.trim()}</p> : null}
+      {upcoming ? (
+        <div className="program" data-testid="next-sessions">
+          <p className="program-k">Prochaines séances</p>
+          <ol>
+            {upcoming.upcoming.map((step, stepIndex) => (
+              <li key={`${step.label}-${stepIndex}`}>{step.label}</li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
     </section>
   );
 }

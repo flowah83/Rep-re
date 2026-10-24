@@ -1,7 +1,7 @@
 "use client";
 
 import { useApp } from "@/components/app-context";
-import { startOffer } from "@/lib/progression";
+import { programPreview, startOffer } from "@/lib/progression";
 import type { Session } from "@/lib/types";
 
 export function StartActions({
@@ -17,6 +17,10 @@ export function StartActions({
 }) {
   const app = useApp();
   const offer = startOffer(session, app.sessions);
+  const lead = session.exercises.find((exercise) => exercise.planned.reps != null || exercise.planned.loadKg != null);
+  const preview = place === "card" && primary && session.status === "planned" && lead
+    ? programPreview(lead, app.sessions, { coachPlan: session.source === "coach", skipSessionId: session.id })
+    : null;
   const startId = place === "preview" ? "preview-start" : primary ? "start-session" : undefined;
 
   const begin = (apply: boolean) => {
@@ -53,6 +57,17 @@ export function StartActions({
         <p className="fine" data-testid="plan-rise">
           {offer.summary}
         </p>
+      ) : null}
+      {preview ? (
+        <div className="program" data-testid="program-preview">
+          <p>{preview.sentence}</p>
+          <p className="program-k">Prochaines séances</p>
+          <ol>
+            {preview.upcoming.map((step, index) => (
+              <li key={`${step.label}-${index}`}>{step.label}</li>
+            ))}
+          </ol>
+        </div>
       ) : null}
       <button type="button" className="btn" data-testid={startId} onClick={() => begin(offer.kind === "choice")}>
         {offer.kind === "choice" ? offer.upLabel : "Commencer"}
