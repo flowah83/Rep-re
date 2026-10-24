@@ -1816,6 +1816,7 @@ h1.title, .card h2, .sesshead h1, .preview-ex h2, .sport-end h1, .onboard h1 {
   height: auto;
   line-height: 1.15;
   text-wrap: balance;
+  font-size: min(0.6875rem, 12.5px);
 }
 .toprow, .kicker, .sessbar, .sesshead, .ex, .crumb, .linkrow {
   flex-wrap: wrap;
@@ -1851,3 +1852,134 @@ h1.title, .card h2, .sesshead h1, .preview-ex h2, .sport-end h1, .onboard h1 {
 .program-k { margin-top: 4px; font-weight: 700; color: var(--ink); }
 .program ol { margin: 2px 0 0; padding-left: 1.15rem; }
 .program li + li { margin-top: 2px; }
+
+.home-screen { padding-bottom: calc(6.75rem + env(safe-area-inset-bottom)); }
+.home-tools { display: flex; align-items: center; gap: 8px; }
+.weather-chip {
+  width: 92px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  color: var(--ink);
+}
+.weather-chip > span { display: flex; flex-direction: column; align-items: flex-end; min-width: 46px; }
+.weather-chip b { font-size: min(1.05rem, 17px); font-weight: 620; letter-spacing: -0.03em; line-height: 1; }
+.weather-chip small { font-size: 10px; color: var(--ink-soft); font-weight: 550; line-height: 1.2; }
+.weather-icon { width: 22px; height: 22px; color: var(--copper); flex: none; }
+.home-week { margin: 12px 0 8px; }
+.home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.home-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 10px 12px 8px;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  min-width: 0;
+}
+button.home-card { appearance: none; }
+.home-card.span2, .home-next, .fact { grid-column: 1 / -1; }
+.home-k {
+  margin: 0;
+  font-size: min(0.6875rem, 12px);
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  color: var(--ink-soft);
+}
+.home-num {
+  margin: 1px 0 0;
+  font-size: min(1.5rem, 26px);
+  line-height: 1.05;
+  font-weight: 560;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.home-num small { font-size: min(0.8rem, 14px); font-weight: 550; letter-spacing: -0.02em; margin-left: 1px; }
+.home-num.sage, .record .home-num { color: var(--sage); }
+.home-sub { margin: 1px 0 0; font-size: min(0.75rem, 13px); color: var(--ink-soft); line-height: 1.25; }
+.rings-card { display: flex; align-items: center; gap: 12px; }
+.ringwrap { width: 108px; height: 108px; flex: none; }
+.ringsvg { width: 108px; height: 108px; display: block; }
+.ring-copy { min-width: 0; }
+.spark { width: 100%; height: 40px; display: block; margin-top: 4px; }
+.mbars { list-style: none; margin: 8px 0 2px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.mbars li { display: grid; grid-template-columns: 5.6rem minmax(0, 1fr) 1.4rem; align-items: center; gap: 8px; font-size: min(0.8125rem, 14px); }
+.mbars b { text-align: right; font-weight: 620; }
+.mtrack { height: 8px; border-radius: 99px; background: color-mix(in srgb, var(--copper) 16%, var(--bg-elev-2)); overflow: hidden; }
+.mtrack i { display: block; height: 100%; border-radius: 99px; background: var(--copper); }
+.pips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+.pip { height: 8px; border-radius: 99px; background: var(--copper); position: relative; }
+.pip.light { background: color-mix(in srgb, var(--copper) 32%, var(--bg-elev-2)); }
+.pip.miss { background: transparent; box-shadow: inset 0 0 0 1.5px var(--stone); }
+.pip-labels { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 3px; }
+.pip-labels span { text-align: center; font-size: 10px; color: var(--ink-soft); font-weight: 600; min-height: 12px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.pair div { min-width: 0; }
+.pair span { display: block; font-size: min(0.75rem, 13px); color: var(--ink-soft); }
+.pair b { font-size: min(1rem, 16px); font-weight: 600; }
+.pair i { display: block; height: 8px; border-radius: 99px; background: var(--copper); margin-top: 4px; }
+.pair i.sage { background: var(--sage); }
+.heat-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.heat { display: flex; flex-direction: column; gap: 2px; }
+.heat-row { display: grid; grid-template-columns: repeat(7, 10px); gap: 2px; }
+.heat i { width: 10px; height: 10px; border-radius: 3px; background: var(--heat-0); display: block; }
+.heat i.l1 { background: color-mix(in srgb, var(--copper) 38%, var(--heat-0)); }
+.heat i.l2 { background: color-mix(in srgb, var(--copper) 58%, var(--heat-0)); }
+.heat i.l3 { background: color-mix(in srgb, var(--copper) 78%, var(--heat-0)); }
+.heat i.l4 { background: var(--copper); }
+.heat i.miss { background: transparent; box-shadow: inset 0 0 0 1.5px var(--stone); }
+.heat i.plan { background: transparent; box-shadow: inset 0 0 0 1.5px var(--copper); }
+.heat i.today { box-shadow: inset 0 0 0 1.5px var(--ink); }
+.insight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  font-weight: 550;
+}
+.insight .coach-face { width: 28px; height: 28px; flex: none; }
+.home-next {
+  min-height: 36px;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: left;
+  padding: 4px 2px 0;
+}
+.fact {
+  margin-top: 8px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  padding: 8px 2px 0;
+}
+.fact .home-k { margin-bottom: 2px; }
+.day.missed .mark { background: transparent; box-shadow: inset 0 0 0 1.5px var(--stone); width: 7px; height: 7px; }
+.home-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding-bottom: 16px; }
+.home-empty h2 { font-size: 1.25rem; margin: 4px 0; }
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.mbars li { position: relative; }

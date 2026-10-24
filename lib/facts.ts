@@ -1,0 +1,80 @@
+/** Faits courts, justes, sans conseil médical et sans mythe d’entraînement. */
+export const FACTS: readonly string[] = [
+  "L’estimation d’Epley, charge × (1 + répétitions / 30), n’est fiable qu’entre 1 et 10 répétitions.",
+  "80 kg × 6 donnent environ 96 kg selon Epley. Ce n’est pas un max testé sur une répétition.",
+  "82,5 kg × 6 donnent environ 99 kg selon Epley. Le record de charge, lui, reste 82,5 × 6.",
+  "100 kg × 5 donnent environ 116,7 kg selon Epley.",
+  "Un record de charge et une estimation de force ne disent pas la même chose.",
+  "Au-delà de 10 répétitions, Epley n’est plus utilisée ici : on garde la charge tenue.",
+  "Tenir la même charge une répétition de plus est déjà une progression.",
+  "Passer de 80 à 82,5 kg, c’est un peu plus de 3 % sur la barre.",
+  "La double progression monte d’abord la charge, puis les répétitions dans la fourchette.",
+  "Deux séances de suite sans l’objectif de répétitions sont un signal pour alléger une fois.",
+  "Trois séances réussies d’affilée, à charge stable, précèdent ici une semaine plus légère.",
+  "Une semaine légère laisse les articulations et le système nerveux souffler. Le muscle ne s’efface pas en sept jours.",
+  "Le tendon s’adapte plus lentement que le muscle. Monter la charge trop vite est le risque classique.",
+  "Une séance plus légère ne fait pas baisser le record tenu : la courbe garde le meilleur niveau.",
+  "Un seul point ne fait pas une pente. Il faut plusieurs séances pour dessiner une courbe.",
+  "La semaine n’est pas finie le jeudi. Comparer son volume à une semaine complète trop tôt donne un faux retard.",
+  "Le tonnage est la somme charge × répétitions des séries dures. Une série d’échauffement ne compte pas.",
+  "Une charge notée « kg par main » compte les deux mains dans le tonnage.",
+  "Une séance fermée en cours de route ne contient que ce qui a été noté. Ce volume est un plancher.",
+  "Une série laissée de côté ne compte ni dans le volume, ni dans le record.",
+  "Le développé couché charge surtout les pectoraux, les épaules et les triceps.",
+  "Le squat barre charge surtout les quadriceps et les fessiers. Le tronc stabilise.",
+  "Le soulevé de terre roumain charge les ischios, les fessiers et le dos, ce n’est pas un soulevé classique.",
+  "Une prise plus serrée au couché augmente la part des triceps.",
+  "Les élévations latérales sont un petit volume qui compte beaucoup pour le deltoïde moyen.",
+  "Les épaules travaillent déjà dans la poussée et dans le tirage. Viser un 50/50 parfait n’est pas une loi.",
+  "Les ischios sont souvent moins sollicités que les quadriceps dans un programme centré sur le squat.",
+  "Le premier exercice de la séance reçoit la force la plus fraîche.",
+  "Descendre la barre en contrôle fait partie du travail. Laisser tomber la charge n’entraîne pas la descente.",
+  "L’amplitude complète, si les articulations la supportent, étire le muscle sous charge.",
+  "Le repos entre séries lourdes, souvent deux à cinq minutes, permet de mieux répéter la charge.",
+  "Un échauffement du mouvement, en séries légères, prépare mieux qu’un échauffement général seul.",
+  "Un échauffement trop long peut fatiguer avant la série qui compte.",
+  "Le RPE 8 veut dire qu’il restait environ deux répétitions possibles. Encore faut-il l’avoir noté.",
+  "Un RPE manquant n’est pas un effort faible. Une moyenne avec des trous ne veut rien dire.",
+  "Garder une à trois répétitions en réserve permet souvent de progresser sans aller à l’échec à chaque série.",
+  "La force dépend autant de la coordination nerveuse que de la taille du muscle.",
+  "Le muscle se reconstruit entre les séances. La série n’est que le signal.",
+  "Les fibres rapides portent les charges lourdes. Les fibres lentes tiennent les efforts longs.",
+  "On ne change pas le type de ses fibres en quelques séances. Chez l’adulte, il bouge peu.",
+  "La barre olympique standard pèse 20 kg, avant les disques.",
+  "Deux disques de 2,5 kg, un de chaque côté, ajoutent 5 kg à la barre.",
+  "Noter les séries le jour même évite d’inventer les charges le lendemain.",
+  "Deux séances le même jour ne font pas deux jours de fréquence.",
+  "Une séance manquée n’efface pas les semaines d’avant.",
+  "S’entraîner à heure fixe n’est pas obligatoire. La régularité de la semaine compte davantage.",
+  "Le sommeil court, plusieurs nuits de suite, dégrade souvent la force et l’attention du lendemain.",
+  "Les muscles utilisent les protéines des repas de la journée. Il n’y a pas de fenêtre magique de 30 minutes après la séance.",
+  "Boire pendant l’effort aide, surtout quand il fait chaud.",
+  "La chaleur augmente la fréquence cardiaque pour un même effort. L’été à Toulon, la séance peut sembler plus dure.",
+  "Le froid du matin raidit un peu. L’échauffement compte davantage en hiver.",
+  "Marcher entre deux séances de fonte ne casse pas la récupération du muscle.",
+  "Une course ou une nage fatigue le corps même si le tonnage de barre ne bouge pas.",
+  "Une mauvaise nuit se voit souvent sur la séance du lendemain, sans que la courbe de force soit cassée.",
+  "Le système nerveux peut limiter la barre avant que le muscle soit épuisé.",
+  "Le gainage transmet la force au squat et au soulevé. Il ne sert pas seulement à dessiner les abdos.",
+  "La presse à cuisses charge les jambes avec moins de contrainte sur le dos que le squat.",
+  "Le développé militaire charge surtout les épaules et les triceps.",
+  "Le magnésie améliore la prise. Il ne rend pas la barre plus légère.",
+  "Changer la largeur des mains change les muscles les plus sollicités, pas le nom de la courbe.",
+  "Une séance de jambes pèse lourd dans le tonnage parce que les charges sont hautes, pas parce qu’elle vaut plus qu’une poussée.",
+  "Un jour de repos entre deux séances du même muscle laisse en général le temps de revenir frais.",
+  "Les Jeux olympiques modernes s’ouvrent en 1896 à Athènes, et l’haltérophilie y est déjà au programme.",
+  "La légende de Milon de Crotone, qui aurait porté un veau chaque jour, est l’image ancienne de la progression graduelle.",
+  "Le premier mouvement noté d’une séance nouvelle n’a pas encore de courbe. Le niveau vient avec les séances suivantes.",
+];
+
+export function dayNumber(iso: string): number {
+  const [year, month, day] = iso.split("-").map(Number);
+  return Math.floor(Date.UTC(year, (month || 1) - 1, day || 1) / 86400000);
+}
+
+/** Un fait par jour, dans l’ordre, sans répétition avant d’avoir épuisé la liste. */
+export function factForDate(iso: string, shift = 0): string {
+  const count = FACTS.length;
+  const index = ((dayNumber(iso) + shift) % count + count) % count;
+  return FACTS[index];
+}

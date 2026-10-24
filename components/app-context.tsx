@@ -20,7 +20,7 @@ import type { BackupFile, CustomExercise, Session, Settings } from "@/lib/types"
 import { publicBase } from "@/lib/base-path";
 import { localDate } from "@/lib/utils";
 
-export type Tab = "today" | "progress" | "history";
+export type Tab = "home" | "today" | "progress" | "history";
 export type RangeKey = 28 | 84 | 365;
 export type { HistFilter } from "@/lib/display";
 export type Overlay =
@@ -124,7 +124,7 @@ export function AppProvider({
   const [settings, setSettings] = useState(initial.settings);
   const [sessions, setSessions] = useState(initial.sessions);
   const [customs, setCustoms] = useState(initial.customs);
-  const [tab, setTab] = useState<Tab>("today");
+  const [tab, setTab] = useState<Tab>("home");
   const [selectedDate, setSelectedDate] = useState(today);
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [sheet, setSheet] = useState<SheetName>(initial.importPreview && initial.settings.onboarded ? "import" : null);

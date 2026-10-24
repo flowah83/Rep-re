@@ -11,6 +11,7 @@ import { CoachLayer } from "@/components/coach-panel";
 import { ScrollEdge } from "@/components/scroll-edge";
 import { Sheets } from "@/components/sheets";
 import { PreviewScreen } from "@/components/preview-screen";
+import { HomeScreen } from "@/components/home-screen";
 import { TodayScreen } from "@/components/today-screen";
 import { ImportSummary } from "@/components/sheets";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,9 @@ function Shell() {
   return (
     <div className="app" data-testid="app-ready">
       <div className="shell" inert={app.overlay || app.sheet ? true : undefined}>
+        <div hidden={app.tab !== "home"}>
+          <HomeScreen />
+        </div>
         <div hidden={app.tab !== "today"}>
           <TodayScreen />
         </div>
@@ -52,7 +56,11 @@ function Shell() {
           <HistoryScreen />
         </div>
         <nav className="tabbar" aria-label="Sections">
-          <button type="button" className={`tab${app.tab === "today" ? " on" : ""}`} data-testid="tab-today" onClick={() => app.setTab("today")}>
+          <button type="button" className={`tab${app.tab === "home" ? " on" : ""}`} aria-current={app.tab === "home" ? "page" : undefined} data-testid="tab-home" onClick={() => app.setTab("home")}>
+            <HomeIcon />
+            Accueil
+          </button>
+          <button type="button" className={`tab${app.tab === "today" ? " on" : ""}`} aria-current={app.tab === "today" ? "page" : undefined} data-testid="tab-today" onClick={() => app.setTab("today")}>
             <TodayIcon />
             Aujourd’hui
           </button>
@@ -162,6 +170,14 @@ function useOverlayHistory(open: boolean, close: () => void) {
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, [close]);
+}
+
+function HomeIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4.8 11.1 12 5l7.2 6.1V19a1.2 1.2 0 0 1-1.2 1.2h-3.8v-5.1H9.8v5.1H6A1.2 1.2 0 0 1 4.8 19v-7.9Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 function TodayIcon() {

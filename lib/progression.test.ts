@@ -411,7 +411,7 @@ describe("suite sur plusieurs séances", () => {
     const history = [bench("2026-10-01", 80, 6)];
     const planned = doneSession("2026-10-24", exercise(), { id: "today", status: "planned" });
     const preview = programPreview(planned.exercises[0], history, { skipSessionId: "today" });
-    expect(preview?.sentence).toBe("On monte la charge, puis les répétitions dans la fourchette, avec un allègement après deux échecs ou quatre réussites.");
+    expect(preview?.sentence).toBe("On monte la charge, puis les répétitions dans la fourchette, avec un allègement après deux échecs ou trois réussites.");
     expect(preview?.upcoming.map((step) => step.label)).toEqual(["82,5 kg × 6", "82,5 kg × 7", "82,5 kg × 8"]);
     expect(startOffer(planned, history)).toMatchObject({
       kind: "choice",
@@ -444,6 +444,7 @@ describe("suite sur plusieurs séances", () => {
     }), { id: "today", status: "planned" });
     const suggestion = suggestForExercise(planned.exercises[0], history, "today");
     expect(suggestion?.loadKg).toBe(77.5);
+    expect(suggestion?.reason).toMatch(/Trois séances réussies/);
     expect(suggestion?.loadKg).toBeLessThan(85);
     const heavyThenLight = [
       bench("2026-10-15", 80, 6),
