@@ -5,6 +5,7 @@ import {
   buildCoachContext,
   calendarBodyForTool,
   chefSportNotice,
+  describeAction,
   isChefSportTitle,
   openAiPayload,
   partitionToolCalls,
@@ -145,6 +146,22 @@ describe("outils du coach", () => {
     const withPlan = buildCoachContext([planned], "2026-10-22");
     expect(withPlan.plan[0].intention).toBe("hypertrophie");
     expect(withPlan.plan[0].note_chef_sport).toMatch(/couché/);
+  });
+
+  it("envoie la note d’exercice, la séance en cours et la flèche de charge", () => {
+    const live = session();
+    live.status = "active";
+    live.exercises[0].note = "Coudes bas";
+    live.exercises[0].sets[0].done = false;
+    const context = buildCoachContext([live], "2026-10-22", {
+      focus: { sessionId: "s1", exerciseId: "e1", setId: "set-1" },
+      memoire: "Reprise après le Japon.",
+    });
+    expect(context.memoire).toMatch(/Japon/);
+    expect(context.plan[0].exercices[0].note).toBe("Coudes bas");
+    expect(context.seance_en_cours).toMatchObject({ exercice: "Développé couché barre", note: "Coudes bas", charge_kg: 80 });
+    const line = describeAction(call("update_exercise", { sessionId: "s1", exerciseId: "e1", loadKg: 75 }), [live]);
+    expect(line.summary).toBe("Développé couché barre · 80 kg → 75 kg");
   });
 
   it("envoie le modèle demandé et ignore un message système venu du téléphone", () => {

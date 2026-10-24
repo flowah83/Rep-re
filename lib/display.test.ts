@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bestLoads } from "./calc";
-import { describePlan, estimateMinutes, historyBucket, runFacts, seriesWord, unitPhrase } from "./display";
+import { describePlan, estimateMinutes, historyBucket, plateGlance, runFacts, seriesWord, unitPhrase } from "./display";
 import type { ExerciseLog, Session } from "./types";
 
 function exercise(partial: Partial<ExerciseLog> = {}): ExerciseLog {
@@ -18,6 +18,12 @@ function exercise(partial: Partial<ExerciseLog> = {}): ExerciseLog {
 }
 
 describe("lignes de plan", () => {
+  it("annonce les disques seulement pour une barre", () => {
+    expect(plateGlance(60, "kg", 20)).toBe("20 kg de chaque côté");
+    expect(plateGlance(20, "kg/main", 20)).toBeNull();
+    expect(plateGlance(70, "corps", 20)).toBeNull();
+  });
+
   it("dit 1 série et n’écrit pas un repos de 0 s", () => {
     expect(seriesWord(1)).toBe("1 série");
     expect(describePlan(exercise())).toBe("1 série");

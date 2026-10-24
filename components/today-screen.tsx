@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useApp } from "@/components/app-context";
 import { cardioSummary } from "@/lib/history";
 import { describePlan, estimateMinutes } from "@/lib/display";
+import { coachIsReady } from "@/lib/coach-store";
 import { buildAdjustments, keepsCoachPlan, loadProgression, revertAdjustment, saveProgression, type Adjustment } from "@/lib/progression";
 import type { Session } from "@/lib/types";
 import { addDays, formatKg, mondayOf, parseISODate, weekdayLetter } from "@/lib/utils";
@@ -235,6 +236,11 @@ function HoldNote({ session }: { session: Session }) {
       {gaps.length ? (
         <button type="button" className="linkish" data-testid="plan-gaps" onClick={() => setOpen((value) => !value)}>
           Voir les {gaps.length} écart{gaps.length > 1 ? "s" : ""}
+        </button>
+      ) : null}
+      {coachIsReady() ? (
+        <button type="button" className="linkish" data-testid="ask-coach" onClick={() => app.setCoachOpen(true)}>
+          Demander au coach
         </button>
       ) : null}
       {open ? (

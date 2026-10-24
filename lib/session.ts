@@ -18,8 +18,32 @@ export function buildSets(count: number, loadKg: number | null, warmup: boolean)
   }));
 }
 
+export function setSettled(set: SetLog): boolean {
+  return set.done || set.skipped === true;
+}
+
 export function nextUndone(ex: ExerciseLog): SetLog | undefined {
-  return ex.sets.find((s) => !s.done);
+  return ex.sets.find((set) => !setSettled(set));
+}
+
+export function sessionFullyLogged(session: Session): boolean {
+  return session.exercises.length > 0 && session.exercises.every((exercise) => exercise.sets.length > 0 && exercise.sets.every(setSettled));
+}
+
+export function firstOpenSlot(session: Session): { exercise: ExerciseLog; set: SetLog } | null {
+  for (const exercise of session.exercises) {
+    const set = exercise.sets.find((item) => !setSettled(item));
+    if (set) return { exercise, set };
+  }
+  return null;
+}
+
+export function skipSet(session: Session, exerciseId: string, setId: string): Session {
+  return { ...patchSet(session, exerciseId, setId, { skipped: true, done: false }), restEndsAt: null };
+}
+
+export function noteSetRpe(session: Session, exerciseId: string, setId: string, rpe: number): Session {
+  return patchSet(session, exerciseId, setId, { rpe });
 }
 
 export function patchSet(session: Session, exerciseId: string, setId: string, patch: Partial<SetLog>): Session {
@@ -53,13 +77,15 @@ export function completeSet(session: Session, exerciseId: string, setId: string)
   const done = !set.done;
   let next = patchSet(session, exerciseId, setId, {
     done,
+    skipped: done ? false : set.skipped,
     reps: done ? reps : set.reps,
     loadKg,
-    rpe: done ? (set.rpe ?? (set.warmup ? null : ex.planned.rpe)) : set.rpe,
+    rpe: set.rpe,
   });
-  if (done && !set.warmup) {
+  const moreOpen = next.exercises.some((item) => item.sets.some((entry) => !setSettled(entry)));
+  if (done && !set.warmup && ex.planned.restSec > 0 && moreOpen) {
     next = { ...next, restEndsAt: Date.now() + ex.planned.restSec * 1000 };
-  } else if (!done) {
+  } else {
     next = { ...next, restEndsAt: null };
   }
   return next;

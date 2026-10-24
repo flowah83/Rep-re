@@ -95,6 +95,32 @@ export function coachFailure(status: number, exhausted = false): { error: string
   return { error: "Le coach n’a pas pu répondre. Réessayez dans un moment.", status: 502 };
 }
 
+export type StreamFold = { text: string; calls: { id: string; name: string; arguments: string; thoughtSignature?: string }[] };
+
+/** Ajoute un morceau Gemini (texte ou appel d’outil) au message en cours. */
+export function foldGeminiChunk(state: StreamFold, data: unknown): StreamFold {
+  const parts = (data as { candidates?: { content?: { parts?: GeminiPart[] } }[] })?.candidates?.[0]?.content?.parts ?? [];
+  let text = state.text;
+  const calls = [...state.calls];
+  for (const part of parts) {
+    if (part.text) text += part.text;
+    if (part.functionCall?.name) {
+      calls.push({
+        id: `call_${calls.length + 1}`,
+        name: part.functionCall.name,
+        arguments: JSON.stringify(part.functionCall.args ?? {}),
+        ...(part.thoughtSignature ? { thoughtSignature: part.thoughtSignature } : {}),
+      });
+    }
+  }
+  return { text, calls };
+}
+
+export function streamUrl(call: AiCall): string {
+  if (call.provider !== "gemini") return call.url;
+  return call.url.replace(":generateContent", ":streamGenerateContent?alt=sse");
+}
+
 export function readAiMessage(provider: "gemini" | "openai", data: unknown): { role: "assistant"; content: string; tool_calls: { id: string; name: string; arguments: string; thoughtSignature?: string }[] } {
   if (provider === "openai") return readOpenAi(data);
   return readGemini(data);

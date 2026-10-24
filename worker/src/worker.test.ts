@@ -230,6 +230,27 @@ describe("worker", () => {
     expect(deleted?.headers.get("If-Match")).toBe('"t1"');
   });
 
+  it("diffuse le texte Gemini au fil de l’eau", async () => {
+    const body = [
+      'data: {"candidates":[{"content":{"parts":[{"text":"Bon"}]}}]}',
+      'data: {"candidates":[{"content":{"parts":[{"text":"jour"}]}}]}',
+      "",
+    ].join("\n");
+    const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(
+      async () => new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } }),
+    );
+    const response = await handleRequest(
+      post("/coach/stream", { messages: [{ role: "user", content: "Salut" }], context: {} }, "phone-token", "https://flowah83.github.io"),
+      env,
+      fetchImpl,
+    );
+    expect(response.status).toBe(200);
+    expect(String(fetchImpl.mock.calls[0][0])).toContain("streamGenerateContent");
+    const text = await response.text();
+    expect(text).toContain("Bonjour");
+    expect(text).toContain('"message"');
+  });
+
   it("construit un événement et relit l’heure de Paris", () => {
     const ics = buildIcs({ uid: "abc", title: "🏋️ Poussée", start: "2026-10-25T18:15", end: "2026-10-25T19:30" });
     expect(ics).toContain("SUMMARY:🏋️ Poussée");

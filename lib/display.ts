@@ -1,4 +1,5 @@
 import type { ExerciseLog, Session } from "./types";
+import { platesPerSide } from "./calc";
 import { cardioSummary, formatMinutes } from "./history";
 import { formatKg, formatRestLabel, stripAccents } from "./utils";
 
@@ -16,6 +17,16 @@ export function unitOfExercise(exercise: { unit?: string | null; name?: string }
   if (exercise.unit) return exercise.unit;
   if (stripAccents(exercise.name ?? "").includes("haltere")) return "kg/main";
   return null;
+}
+
+/** Disques d’une barre. Rien pour un haltère ou le poids du corps. */
+export function plateGlance(loadKg: number | null, unit: string | null | undefined, barKg: number): string | null {
+  if (loadKg == null) return null;
+  if (unit === "kg/main" || unit === "kg/jambe" || unit === "corps" || unit === "poids du corps") return null;
+  const result = platesPerSide(loadKg, barKg);
+  if (result.perSide <= 0 || result.plates.length === 0) return null;
+  const bits = result.plates.flatMap((plate) => Array.from({ length: plate.count }, () => formatKg(plate.kg)));
+  return `${bits.join(" + ")} kg de chaque côté`;
 }
 
 export function seriesWord(count: number): string {

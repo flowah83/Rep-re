@@ -1,12 +1,15 @@
 import {
   buildAiCall,
   coachFailure,
+  foldGeminiChunk,
   modelChain,
   modelName,
   providerName,
   readAiMessage,
   shouldTryNextModel,
+  streamUrl,
   type AiEnv,
+  type StreamFold,
 } from "./ai";
 import {
   basicHeader,
@@ -51,12 +54,83 @@ export async function handleRequest(request: Request, env: Env, fetchImpl: Fetch
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "") || "/";
   try {
+    if (path.endsWith("/coach/stream")) return cors(await coachStream(request, env, fetchImpl), origin, allowed);
     if (path.endsWith("/coach")) return cors(await coach(request, env, fetchImpl), origin, allowed);
     if (path.endsWith("/calendar")) return cors(await calendar(request, env, fetchImpl), origin, allowed);
     return cors(json({ error: "Adresse inconnue." }, 404), origin, allowed);
   } catch {
     return cors(json({ error: "Le service n’a pas pu répondre." }, 500), origin, allowed);
   }
+}
+
+async function coachStream(request: Request, env: Env, fetchImpl: FetchLike): Promise<Response> {
+  const body = await readJson(request);
+  const provider = providerName(env.AI_PROVIDER);
+  const call = buildAiCall({ ...env, AI_MODEL: provider === "gemini" ? modelChain(env)[0] : modelName(env) }, body.context ?? {}, body.messages);
+  if ("error" in call) return json({ error: call.error }, call.status);
+  if (provider !== "gemini") {
+    const once = await coach(new Request(request.url, { method: "POST", headers: request.headers, body: JSON.stringify(body) }), env, fetchImpl);
+    const data = (await once.json()) as { message?: { content?: string }; error?: string };
+    if (!once.ok) return json(data, once.status);
+    const text = data.message?.content ?? "";
+    return sse(encodeSse({ text }) + encodeSse({ message: data.message }));
+  }
+  const response = await fetchImpl(streamUrl(call), { method: "POST", headers: call.headers, body: call.body });
+  if (!response.ok || !response.body) {
+    const failure = coachFailure(response.status, shouldTryNextModel(response.status));
+    return json({ error: failure.error }, failure.status);
+  }
+  const encoder = new TextEncoder();
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      let pending = "";
+      let folded: StreamFold = { text: "", calls: [] };
+      const push = (payload: unknown) => controller.enqueue(encoder.encode(encodeSse(payload)));
+      try {
+        while (true) {
+          const step = await reader.read();
+          if (step.value) pending += decoder.decode(step.value, { stream: !step.done });
+          let cut = pending.indexOf("\n");
+          while (cut >= 0) {
+            const line = pending.slice(0, cut).trim();
+            pending = pending.slice(cut + 1);
+            folded = consumeGeminiLine(folded, line, push);
+            cut = pending.indexOf("\n");
+          }
+          if (step.done) break;
+        }
+        if (pending.trim()) folded = consumeGeminiLine(folded, pending.trim(), push);
+        push({ message: { role: "assistant", content: folded.text, tool_calls: folded.calls } });
+        controller.close();
+      } catch {
+        controller.error(new Error("flux interrompu"));
+      }
+    },
+  });
+  return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream; charset=utf-8" } });
+}
+
+function consumeGeminiLine(state: StreamFold, line: string, push: (payload: unknown) => void): StreamFold {
+  if (!line.startsWith("data:")) return state;
+  const raw = line.slice(5).trim();
+  if (!raw || raw === "[DONE]") return state;
+  try {
+    const next = foldGeminiChunk(state, JSON.parse(raw) as unknown);
+    if (next.text !== state.text) push({ text: next.text });
+    return next;
+  } catch {
+    return state;
+  }
+}
+
+function encodeSse(payload: unknown): string {
+  return `data: ${JSON.stringify(payload)}\n\n`;
+}
+
+function sse(body: string): Response {
+  return new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream; charset=utf-8" } });
 }
 
 async function coach(request: Request, env: Env, fetchImpl: FetchLike): Promise<Response> {

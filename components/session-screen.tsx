@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/app-context";
-import { unitOfExercise, unitPhrase } from "@/lib/display";
+import { CoachFace } from "@/components/coach-face";
+import { plateGlance, unitOfExercise, unitPhrase } from "@/lib/display";
+import { playChime, unlockChime } from "@/lib/chime";
 import {
   loadProgression,
   reapplyAdjustment,
@@ -12,9 +14,11 @@ import {
   type ProgressionRecord,
 } from "@/lib/progression";
 import { recallPlan } from "@/lib/snapshot";
-import { lastPerformance, completeSet, patchSet } from "@/lib/session";
+import { lastPerformance, completeSet, firstOpenSlot, noteSetRpe, patchSet, sessionFullyLogged, setSettled, skipSet } from "@/lib/session";
 import type { ExerciseLog, Session, SetLog } from "@/lib/types";
 import { formatClock, formatKg } from "@/lib/utils";
+
+const ALERT_KEY = "repere-rest-alert-asked";
 
 export function SessionScreen({ id }: { id: string }) {
   const app = useApp();
@@ -22,50 +26,91 @@ export function SessionScreen({ id }: { id: string }) {
   const [exerciseId, setExerciseId] = useState<string | null>(null);
   const [record, setRecord] = useState<ProgressionRecord | null>(() => loadProgression(id));
   const [menu, setMenu] = useState(false);
+  const [list, setList] = useState(false);
+  const [review, setReview] = useState(false);
   const [abandon, setAbandon] = useState(false);
   const [closeAsk, setCloseAsk] = useState(false);
   const [editing, setEditing] = useState<null | "load" | "reps">(null);
   const [draft, setDraft] = useState("");
   const [warmNote, setWarmNote] = useState(false);
+  const [wakeFail, setWakeFail] = useState(false);
+  const [wakeTry, setWakeTry] = useState(0);
   const persist = (next: ProgressionRecord) => {
     saveProgression(id, next);
     setRecord(next);
   };
+  const correcting = session?.status === "done";
+  const finished = Boolean(session && session.status === "active" && sessionFullyLogged(session) && !review);
+  const slot = session ? firstOpenSlot(session) : null;
+  const exercise = session
+    ? ((exerciseId ? session.exercises.find((item) => item.id === exerciseId) : null) ??
+      (review || correcting ? session.exercises[0] : slot?.exercise) ??
+      session.exercises[0])
+    : undefined;
+  const current = exercise
+    ? (exercise.sets.find((set) => !setSettled(set)) ?? exercise.sets[exercise.sets.length - 1])
+    : undefined;
+  const focusSetter = useRef(app.setSportFocus);
+  focusSetter.current = app.setSportFocus;
+  useEffect(() => {
+    if (!session) return;
+    focusSetter.current(
+      exercise && current ? { sessionId: session.id, exerciseId: exercise.id, setId: current.id } : { sessionId: session.id },
+    );
+    return () => focusSetter.current(null);
+  }, [session, exercise, current]);
+  useEffect(() => {
+    if (!("wakeLock" in navigator)) {
+      setWakeFail(true);
+      return;
+    }
+    let lock: WakeLockSentinel | null = null;
+    let stopped = false;
+    const request = async () => {
+      try {
+        lock = await navigator.wakeLock.request("screen");
+        if (!stopped) setWakeFail(false);
+      } catch {
+        if (!stopped) setWakeFail(true);
+      }
+    };
+    void request();
+    const onVis = () => {
+      if (!stopped && document.visibilityState === "visible") void request();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      stopped = true;
+      document.removeEventListener("visibilitychange", onVis);
+      void lock?.release();
+    };
+  }, [wakeTry]);
   if (!session) return null;
-  const correcting = session.status === "done";
-  const exercise =
-    session.exercises.find((item) => item.id === exerciseId) ??
-    session.exercises.find((item) => item.sets.some((set) => !set.done)) ??
-    session.exercises[0];
-  if (!exercise) return null;
-  const current = exercise.sets.find((set) => !set.done) ?? exercise.sets[exercise.sets.length - 1];
-  if (!current) return null;
-  const previous = lastPerformance(app.sessions, exercise.name, session.id);
-  const work = exercise.sets.filter((set) => !set.warmup);
-  const workIndex = current.warmup ? 0 : Math.max(1, work.indexOf(current) + 1);
-  const shownLoad = editing === "load" && draft !== "" ? readNumber(draft) : (current.loadKg ?? exercise.planned.loadKg);
-  const shownReps = editing === "reps" && draft !== "" ? readNumber(draft) : (current.reps ?? exercise.planned.reps);
-  const lastDone = [...exercise.sets].reverse().find((set) => set.done);
-  const delta = setDelta(record?.items.find((item) => item.exerciseId === exercise.id), current);
-  const cueLines = exercise.cues.filter((line) => line.trim());
-  const cue = cueLines.length > 1 ? cueLines[1] : (cueLines[0] ?? "");
+  if (!exercise && !finished) return null;
 
   const change = (updater: (currentSession: Session) => Session) => void app.updateSession(session.id, updater);
 
   const openEdit = (field: "load" | "reps") => {
+    if (!exercise || !current) return;
     setEditing(field);
     const value = field === "load" ? (current.loadKg ?? exercise.planned.loadKg) : (current.reps ?? exercise.planned.reps);
     setDraft(value == null ? "" : String(value).replace(".", ","));
   };
 
   const stepEdit = (direction: number) => {
+    if (!exercise) return;
     const step = editing === "reps" ? 1 : exercise.stepKg || 2.5;
     const base = editing === "reps" ? shownReps : shownLoad;
     const next = Math.max(0, Math.round(((base ?? 0) + direction * step) * 100) / 100);
     setDraft(String(next).replace(".", ","));
   };
 
+  const shownLoad = exercise && current ? (editing === "load" && draft !== "" ? readNumber(draft) : (current.loadKg ?? exercise.planned.loadKg)) : null;
+  const shownReps = exercise && current ? (editing === "reps" && draft !== "" ? readNumber(draft) : (current.reps ?? exercise.planned.reps)) : null;
+
   const commit = () => {
+    if (!exercise || !current) return;
+    unlockChime();
     const loadKg = shownLoad;
     const reps = shownReps;
     if (current.done) {
@@ -76,14 +121,18 @@ export function SessionScreen({ id }: { id: string }) {
     change((item) => completeSet(patchSet(item, exercise.id, current.id, { loadKg, reps }), exercise.id, current.id));
     setWarmNote(warmup);
     setEditing(null);
+    setExerciseId(null);
+    setReview(false);
   };
 
   const undo = (set: SetLog) => {
+    if (!exercise) return;
     change((item) => completeSet(item, exercise.id, set.id));
     setWarmNote(false);
   };
 
   const revertExercise = () => {
+    if (!exercise) return;
     const item = record?.items.find((entry) => entry.exerciseId === exercise.id && entry.active);
     if (!item || !record) return;
     void app.updateSession(id, (currentSession) => revertAdjustment(currentSession, item));
@@ -100,8 +149,10 @@ export function SessionScreen({ id }: { id: string }) {
 
   const jump = (nextId: string) => {
     setExerciseId(nextId);
+    setReview(true);
     setEditing(null);
     setMenu(false);
+    setList(false);
     setWarmNote(false);
   };
 
@@ -143,143 +194,92 @@ export function SessionScreen({ id }: { id: string }) {
 
   const logged = loggedLine(session);
   const hasLogged = session.exercises.some((item) => item.sets.some((set) => set.done));
+  const resting = Boolean(session.restEndsAt) && !correcting && !finished;
+  const nextExercise = exercise ? session.exercises[session.exercises.findIndex((item) => item.id === exercise.id) + 1] : undefined;
+  const handoff = exercise && resting ? transitionLine(session, exercise) : null;
 
   return (
-    <div className="overlay">
-      <div className="overlay-in session-screen" data-screen="session">
+    <div className={`overlay sport-mode${resting ? " resting" : ""}`}>
+      <div className="overlay-in session-screen" data-screen="session" data-testid="session-screen">
         <div className="sessbar">
           <button type="button" className="navline" data-testid="close-session" onClick={() => app.closeOverlay()}>
-            ‹ Séance
+            {correcting ? "Fermer" : "Pause"}
           </button>
-          {correcting ? (
-            <button type="button" className="linkend" onClick={() => app.closeOverlay()}>
-              Fermer
-            </button>
-          ) : (
+          <button type="button" className="coach-mini" data-testid="session-coach" aria-label="Ouvrir le coach" onClick={() => app.setCoachOpen(true)}>
+            <CoachFace />
+          </button>
+          {correcting ? null : (
             <button type="button" className="linkend" data-testid="abandon-session" onClick={() => { setMenu(false); setAbandon(true); }}>
               Abandonner
             </button>
           )}
         </div>
-        <div className="sesshead">
-          <div>
-            <h1>{exercise.name}</h1>
-          </div>
-          <button type="button" className="iconbtn text" aria-label="Plus d’actions" data-testid="session-menu" onClick={() => setMenu((value) => !value)}>
-            ···
-          </button>
-        </div>
-        <p className="eyebrow num">
-          {session.title}
-          {session.startedAt ? <> · <Elapsed from={session.startedAt} /></> : null}
-          {work.length ? ` · série ${Math.min(workIndex || 1, work.length)} sur ${work.length}` : ""}
-        </p>
-        <p className="last num">{previous ? `La dernière fois · ${previous}` : "Pas encore d’historique pour ce geste."}</p>
-        {exercise.note ? <p className="exnote">{exercise.note}</p> : null}
-        {current.warmup ? <p className="warmline">Échauffement</p> : null}
-        {menu ? (
-          <div className="menu" role="menu">
-            {session.exercises.map((item) => (
-              <button type="button" key={item.id} onClick={() => jump(item.id)}>
-                {item.name}
-              </button>
-            ))}
-            {record?.items.some((item) => item.active) ? (
-              <button type="button" data-testid="progression-revert-plan" onClick={revertPlan}>
-                Revenir au plan
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => {
-                app.setPlatesKg(shownLoad ?? app.settings.barKg);
-                app.setSheet("plates");
-                setMenu(false);
-              }}
-            >
-              Calculer les disques
-            </button>
-            <button type="button" data-testid="open-gesture" onClick={() => app.openGesture(session.id, exercise.id)}>
-              Le geste
-            </button>
-            {correcting ? null : (
-              <button type="button" onClick={() => { setMenu(false); setCloseAsk(true); }}>
-                Clore la séance
-              </button>
-            )}
-          </div>
-        ) : null}
-        <div className="sessbody">
-          <div className="bigpair">
-            <button type="button" className="bigcard" data-testid="edit-load" onClick={() => openEdit("load")}>
-              <span>Charge</span>
-              <b className="num">{shownLoad == null ? "—" : formatKg(shownLoad)}</b>
-              <small>{unitPhrase(unitOfExercise(exercise))}</small>
-              {delta?.place === "load" ? (
-                <small>
-                  <span className="delta" data-testid="progression-delta" onClick={(event) => { event.stopPropagation(); revertExercise(); }}>
-                    {delta.text}
-                  </span>
-                </small>
-              ) : null}
-            </button>
-            <button type="button" className="bigcard" data-testid="edit-reps" onClick={() => openEdit("reps")}>
-              <span>Reps</span>
-              <b className="num">{shownReps == null ? "—" : shownReps}</b>
-              <small>{shownReps != null && shownReps === exercise.planned.reps ? "comme le plan" : "répétitions"}</small>
-            </button>
-          </div>
-          {editing ? (
-            <div className="nudges">
-              <button type="button" aria-label="Diminuer" onClick={() => stepEdit(-1)}>
-                −
-              </button>
-              <input
-                inputMode="decimal"
-                aria-label={editing === "load" ? "Charge" : "Répétitions"}
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-              />
-              <button type="button" aria-label="Augmenter" onClick={() => stepEdit(1)}>
-                +
-              </button>
-            </div>
-          ) : null}
-          <button type="button" className="btn" data-testid="complete-set" onClick={commit}>
-            {current.done ? "Enregistrer" : "C’est fait"}
-          </button>
-          {lastDone ? (
-            <button type="button" className="undoline" data-testid="undo-set" onClick={() => undo(lastDone)}>
-              {undoLabel(exercise, lastDone)}
-            </button>
-          ) : null}
-          {warmNote ? <p className="exnote">Échauffement noté.</p> : null}
-          {cue ? <p className="cue">{cue}</p> : null}
-          {record?.mode !== "hold" && record?.items.some((item) => item.exerciseId === exercise.id && !item.active && item.fromLoadKg != null) ? (
-            <button
-              type="button"
-              className="linkish"
-              onClick={() => {
-                const item = record.items.find((entry) => entry.exerciseId === exercise.id && !entry.active);
-                if (!item) return;
-                void app.updateSession(id, (currentSession) => reapplyAdjustment(currentSession, item));
-                persist({ ...record, items: record.items.map((entry) => (entry.exerciseId === exercise.id ? { ...entry, active: true } : entry)) });
-              }}
-            >
-              Remettre la hausse
-            </button>
-          ) : null}
-        </div>
-        {session.restEndsAt && !correcting ? (
-          <RestBand
-            endsAt={session.restEndsAt}
-            subtitle={restSubtitle(session.exercises.find((item) => item.sets.some((set) => !set.done)) ?? exercise)}
-            onSkip={() => change((item) => ({ ...item, restEndsAt: null }))}
+        {finished ? (
+          <EndScreen session={session} onBilan={closeFull} onReview={() => { setReview(true); setExerciseId(session.exercises[0]?.id ?? null); }} />
+        ) : exercise && current ? (
+          <ActiveSet
+            session={session}
+            exercise={exercise}
+            current={current}
+            record={record}
+            list={list}
+            menu={menu}
+            editing={editing}
+            draft={draft}
+            warmNote={warmNote}
+            resting={resting}
+            wakeFail={wakeFail}
+            shownLoad={shownLoad}
+            shownReps={shownReps}
+            nextName={handoff ? undefined : nextExercise?.name}
+            handoff={handoff}
+            barKg={app.settings.barKg}
+            onCrumb={() => { setList((value) => !value); setMenu(false); }}
+            onMenu={() => { setMenu((value) => !value); setList(false); }}
+            onJump={jump}
+            onSkip={() => {
+              change((item) => skipSet(item, exercise.id, current.id));
+              setList(false);
+              setExerciseId(null);
+              setReview(false);
+            }}
+            onEdit={openEdit}
+            onDraft={setDraft}
+            onStep={stepEdit}
+            onCommit={commit}
+            onUndo={undo}
+            onRevertExercise={revertExercise}
+            onRevertPlan={revertPlan}
+            onPlates={() => {
+              app.setPlatesKg(shownLoad ?? app.settings.barKg);
+              app.setSheet("plates");
+              setMenu(false);
+            }}
+            onGesture={() => app.openGesture(session.id, exercise.id)}
+            onCloseAsk={() => { setMenu(false); setCloseAsk(true); }}
+            onRpe={(rpe) => {
+              const last = lastDoneWork(session);
+              if (!last) return;
+              change((item) => noteSetRpe(item, last.exercise.id, last.set.id, rpe));
+            }}
+            onSkipRest={() => change((item) => ({ ...item, restEndsAt: null }))}
+            onWake={() => setWakeTry((value) => value + 1)}
+            correcting={correcting}
+            lastDone={[...exercise.sets].reverse().find((set) => set.done)}
+            delta={setDelta(record?.items.find((item) => item.exerciseId === exercise.id), current)}
+            previous={lastPerformance(app.sessions, exercise.name, session.id)}
+            onReapply={() => {
+              if (!record) return;
+              const item = record.items.find((entry) => entry.exerciseId === exercise.id && !entry.active);
+              if (!item) return;
+              void app.updateSession(id, (currentSession) => reapplyAdjustment(currentSession, item));
+              persist({ ...record, items: record.items.map((entry) => (entry.exerciseId === exercise.id ? { ...entry, active: true } : entry)) });
+            }}
           />
         ) : null}
       </div>
       {abandon ? (
-        <div className="dimsheet" role="dialog" aria-modal="true" aria-label="Abandonner cette séance" data-testid="abandon-sheet">
+        <div className="dimsheet sport-mode" role="dialog" aria-modal="true" aria-label="Abandonner cette séance" data-testid="abandon-sheet">
           <div className="dimcard">
             <div className="grab" />
             <h2>Abandonner cette séance ?</h2>
@@ -300,12 +300,12 @@ export function SessionScreen({ id }: { id: string }) {
         </div>
       ) : null}
       {closeAsk ? (
-        <div className="dimsheet" role="dialog" aria-modal="true" aria-label="Clore la séance">
+        <div className="dimsheet sport-mode" role="dialog" aria-modal="true" aria-label="Clore la séance">
           <div className="dimcard">
             <div className="grab" />
             <h2>Clore la séance ?</h2>
             <p>Les exercices non notés resteront vides.</p>
-            <button type="button" className="btn" data-testid="finish-session" onClick={closeFull}>
+            <button type="button" className="btn" data-testid="close-confirm" onClick={closeFull}>
               Clore
             </button>
             <button type="button" className="btn ghost" onClick={() => setCloseAsk(false)}>
@@ -314,6 +314,249 @@ export function SessionScreen({ id }: { id: string }) {
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function ActiveSet({
+  session,
+  exercise,
+  current,
+  record,
+  list,
+  menu,
+  editing,
+  draft,
+  warmNote,
+  resting,
+  wakeFail,
+  shownLoad,
+  shownReps,
+  nextName,
+  handoff,
+  barKg,
+  onCrumb,
+  onMenu,
+  onJump,
+  onSkip,
+  onEdit,
+  onDraft,
+  onStep,
+  onCommit,
+  onUndo,
+  onRevertExercise,
+  onRevertPlan,
+  onPlates,
+  onGesture,
+  onCloseAsk,
+  onRpe,
+  onSkipRest,
+  onWake,
+  correcting,
+  lastDone,
+  delta,
+  previous,
+  onReapply,
+}: {
+  session: Session;
+  exercise: ExerciseLog;
+  current: SetLog;
+  record: ProgressionRecord | null;
+  list: boolean;
+  menu: boolean;
+  editing: null | "load" | "reps";
+  draft: string;
+  warmNote: boolean;
+  resting: boolean;
+  wakeFail: boolean;
+  shownLoad: number | null;
+  shownReps: number | null;
+  nextName?: string;
+  handoff: string | null;
+  barKg: number;
+  onCrumb: () => void;
+  onMenu: () => void;
+  onJump: (id: string) => void;
+  onSkip: () => void;
+  onEdit: (field: "load" | "reps") => void;
+  onDraft: (value: string) => void;
+  onStep: (direction: number) => void;
+  onCommit: () => void;
+  onUndo: (set: SetLog) => void;
+  onRevertExercise: () => void;
+  onRevertPlan: () => void;
+  onPlates: () => void;
+  onGesture: () => void;
+  onCloseAsk: () => void;
+  onRpe: (rpe: number) => void;
+  onSkipRest: () => void;
+  onWake: () => void;
+  correcting: boolean;
+  lastDone?: SetLog;
+  delta: ReturnType<typeof setDelta>;
+  previous: string | null;
+  onReapply: () => void;
+}) {
+  const index = Math.max(1, session.exercises.findIndex((item) => item.id === exercise.id) + 1);
+  const work = exercise.sets.filter((set) => !set.warmup);
+  const workIndex = current.warmup ? 0 : Math.max(1, work.indexOf(current) + 1);
+  const seriesLabel = current.warmup && !current.done ? "Échauffement" : `Série ${Math.min(workIndex || 1, work.length)} sur ${work.length}`;
+  const crumbLabel = `Exercice ${index} sur ${session.exercises.length}, ${seriesLabel}`;
+  const cueLines = exercise.cues.filter((line) => line.trim());
+  const cue = cueLines.length > 1 ? cueLines[1] : (cueLines[0] ?? "");
+  const plates = plateGlance(shownLoad, unitOfExercise(exercise), barKg);
+  const doneWork = lastDoneWork(session);
+  return (
+    <>
+      <button type="button" className="crumb" data-testid="session-crumb" aria-label={crumbLabel} onClick={onCrumb}>
+        <span className="segs" aria-hidden="true">
+          {session.exercises.map((item, itemIndex) => {
+            const state = item.sets.every(setSettled) ? "done" : item.id === exercise.id ? "now" : "";
+            return <i key={item.id} className={state} data-seg={itemIndex + 1} />;
+          })}
+        </span>
+        <span>Exercice {index} sur {session.exercises.length}</span>
+        <span className="num">{seriesLabel}</span>
+        {session.startedAt ? <Elapsed from={session.startedAt} /> : <span className="num">0:00</span>}
+      </button>
+      {handoff ? <p className="puis">{handoff}</p> : nextName ? <p className="puis">Puis {nextName.toLowerCase()}</p> : null}
+      {wakeFail ? (
+        <button type="button" className="wakehint" data-testid="wake-fail" onClick={onWake}>
+          L’écran peut s’éteindre. Touchez pour réessayer.
+        </button>
+      ) : null}
+      <div className="sesshead">
+        <h1>{exercise.name}</h1>
+        <button type="button" className="iconbtn text" aria-label="Plus d’actions" data-testid="session-menu" onClick={onMenu}>
+          ···
+        </button>
+      </div>
+      {exercise.planned.rpe != null ? <p className="last num">RPE visé {formatKg(exercise.planned.rpe)}</p> : null}
+      <p className="last num">{previous ? `La dernière fois · ${previous}` : "Pas encore d’historique pour ce geste."}</p>
+      {exercise.note ? <p className="exnote">{exercise.note}</p> : null}
+      {list ? (
+        <div className="menu listmenu" role="menu" data-testid="exercise-list">
+          {session.exercises.map((item) => (
+            <button type="button" key={item.id} onClick={() => onJump(item.id)}>
+              {item.sets.every(setSettled) ? "✓ " : ""}
+              {item.name}
+            </button>
+          ))}
+          {current.done ? null : (
+            <button type="button" data-testid="skip-set" onClick={onSkip}>
+              Passer cette série
+            </button>
+          )}
+        </div>
+      ) : null}
+      {menu ? (
+        <div className="menu" role="menu">
+          {record?.items.some((item) => item.active) ? (
+            <button type="button" data-testid="progression-revert-plan" onClick={onRevertPlan}>
+              Revenir au plan
+            </button>
+          ) : null}
+          <button type="button" onClick={onPlates}>
+            Calculer les disques
+          </button>
+          <button type="button" data-testid="open-gesture" onClick={onGesture}>
+            Le geste
+          </button>
+          {correcting ? null : (
+            <button type="button" onClick={onCloseAsk}>
+              Clore la séance
+            </button>
+          )}
+        </div>
+      ) : null}
+      <div className="sessbody">
+        <div className="bigpair">
+          <button type="button" className="bigcard" data-testid="edit-load" onClick={() => onEdit("load")}>
+            <span>Charge</span>
+            <b className="num">{shownLoad == null ? "—" : formatKg(shownLoad)}</b>
+            <small>{unitPhrase(unitOfExercise(exercise))}</small>
+            {delta?.place === "load" ? (
+              <small>
+                <span className="delta" data-testid="progression-delta" onClick={(event) => { event.stopPropagation(); onRevertExercise(); }}>
+                  {delta.text}
+                </span>
+              </small>
+            ) : null}
+          </button>
+          <button type="button" className="bigcard" data-testid="edit-reps" onClick={() => onEdit("reps")}>
+            <span>Reps</span>
+            <b className="num">{shownReps == null ? "—" : shownReps}</b>
+            <small>{shownReps != null && shownReps === exercise.planned.reps ? "comme le plan" : "répétitions"}</small>
+          </button>
+        </div>
+        {plates && !resting ? <p className="platesline num">{plates}</p> : null}
+        {editing ? (
+          <div className="nudges">
+            <button type="button" aria-label="Diminuer" onClick={() => onStep(-1)}>
+              −
+            </button>
+            <input
+              inputMode="decimal"
+              aria-label={editing === "load" ? "Charge" : "Répétitions"}
+              value={draft}
+              onChange={(event) => onDraft(event.target.value)}
+            />
+            <button type="button" aria-label="Augmenter" onClick={() => onStep(1)}>
+              +
+            </button>
+          </div>
+        ) : null}
+        <button type="button" className="btn" data-testid="complete-set" onClick={onCommit}>
+          {current.done ? "Enregistrer" : "C’est fait"}
+        </button>
+        {lastDone ? (
+          <button type="button" className="undoline" data-testid="undo-set" onClick={() => onUndo(lastDone)}>
+            {undoLabel(exercise, lastDone)}
+          </button>
+        ) : null}
+        {warmNote ? <p className="exnote">Échauffement noté.</p> : null}
+        {cue ? <p className="cue">{cue}</p> : null}
+        {reviewBack(record, exercise) ? (
+          <button type="button" className="linkish" onClick={onReapply}>
+            Remettre la hausse
+          </button>
+        ) : null}
+      </div>
+      {resting && session.restEndsAt ? (
+        <RestBand
+          endsAt={session.restEndsAt}
+          line={handoff ?? sameRestLine(exercise, current)}
+          plates={plates}
+          rpe={doneWork?.set.rpe ?? null}
+          onRpe={onRpe}
+          onSkip={onSkipRest}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function reviewBack(record: ProgressionRecord | null, exercise: ExerciseLog) {
+  return record?.mode !== "hold" && record?.items.some((item) => item.exerciseId === exercise.id && !item.active && item.fromLoadKg != null);
+}
+
+function EndScreen({ session, onBilan, onReview }: { session: Session; onBilan: () => void; onReview: () => void }) {
+  return (
+    <div className="sport-end" data-testid="session-end">
+      <p className="eyebrow">{session.title}</p>
+      <h1>Séance terminée</h1>
+      {session.startedAt ? <p className="meta num"><Elapsed from={session.startedAt} /></p> : null}
+      <ul>
+        {session.exercises.map((exercise) => (
+          <li key={exercise.id}>{exercise.name}</li>
+        ))}
+      </ul>
+      <button type="button" className="btn" data-testid="finish-session" onClick={onBilan}>
+        Voir le bilan
+      </button>
+      <button type="button" className="btn ghost" data-testid="review-session" onClick={onReview}>
+        Corriger une série
+      </button>
     </div>
   );
 }
@@ -333,7 +576,7 @@ function blankOut(session: Session, record: ProgressionRecord | null): Session {
     exercises: next.exercises.map((exercise) => ({
       ...exercise,
       planned: exercise.planned,
-      sets: exercise.sets.map((set) => ({ ...set, done: false, reps: set.warmup ? set.reps : null, rpe: null })),
+      sets: exercise.sets.map((set) => ({ ...set, done: false, skipped: false, reps: set.warmup ? set.reps : null, rpe: null })),
     })),
   };
 }
@@ -359,7 +602,7 @@ function undoLabel(exercise: ExerciseLog, set: SetLog): string {
 }
 
 function shortName(name: string) {
-  return name.replace(/^Développé\s+/i, "").toLowerCase();
+  return name.replace(/^Développé\s+/i, "");
 }
 
 function readNumber(value: string): number | null {
@@ -367,24 +610,103 @@ function readNumber(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function RestBand({ endsAt, subtitle, onSkip }: { endsAt: number; subtitle: string; onSkip: () => void }) {
+function lastDoneWork(session: Session): { exercise: ExerciseLog; set: SetLog } | null {
+  let found: { exercise: ExerciseLog; set: SetLog } | null = null;
+  for (const exercise of session.exercises) {
+    for (const set of exercise.sets) {
+      if (set.done && !set.warmup) found = { exercise, set };
+    }
+  }
+  return found;
+}
+
+function sameRestLine(exercise: ExerciseLog, current: SetLog): string {
+  if (current.warmup) return "Échauffement";
+  const work = exercise.sets.filter((set) => !set.warmup);
+  const number = Math.max(1, work.indexOf(current) + 1);
+  const load = current.loadKg ?? exercise.planned.loadKg;
+  const unit = unitPhrase(unitOfExercise(exercise));
+  return `Série ${number}${load != null ? ` · ${formatKg(load)} ${unit}` : ""}`;
+}
+
+function transitionLine(session: Session, exercise: ExerciseLog): string | null {
+  const index = session.exercises.findIndex((item) => item.id === exercise.id);
+  if (index <= 0) return null;
+  const anyWorkDone = exercise.sets.some((set) => !set.warmup && set.done);
+  if (anyWorkDone) return null;
+  const previous = session.exercises[index - 1];
+  if (!previous.sets.some((set) => set.done)) return null;
+  const open = exercise.sets.find((set) => !setSettled(set));
+  const load = open?.loadKg ?? exercise.planned.loadKg;
+  const unit = unitPhrase(open?.unit ?? unitOfExercise(exercise));
+  return `${shortName(previous.name)} terminé. Puis ${shortName(exercise.name).toLowerCase()}${load != null ? ` · ${formatKg(load)} ${unit}` : ""}`;
+}
+
+function RestBand({
+  endsAt,
+  line,
+  plates,
+  rpe,
+  onRpe,
+  onSkip,
+}: {
+  endsAt: number;
+  line: string;
+  plates: string | null;
+  rpe: number | null;
+  onRpe: (rpe: number) => void;
+  onSkip: () => void;
+}) {
   const [now, setNow] = useState(() => Date.now());
   const fired = useRef<number | null>(null);
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 200);
-    return () => window.clearInterval(id);
+    const onVis = () => {
+      if (document.visibilityState === "visible") setNow(Date.now());
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, [endsAt]);
   useEffect(() => {
     if (now < endsAt || fired.current === endsAt) return;
     fired.current = endsAt;
-    chime();
+    playChime();
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      try {
+        new Notification("Repos terminé", { body: "Vous pouvez enchaîner la série suivante." });
+      } catch {
+        /* notification indisponible */
+      }
+    }
   }, [now, endsAt]);
+  useEffect(() => {
+    if (typeof Notification === "undefined" || Notification.permission !== "default") return;
+    try {
+      if (localStorage.getItem(ALERT_KEY)) return;
+      localStorage.setItem(ALERT_KEY, "1");
+    } catch {
+      return;
+    }
+    void Notification.requestPermission().catch(() => undefined);
+  }, []);
   const left = Math.max(0, (endsAt - now) / 1000);
   return (
-    <section className="restband" data-testid="rest-timer">
+    <section className="restband" data-testid="rest-timer" aria-live="polite">
       <div>
         <b className="num">{formatClock(left)}</b>
-        <p>{subtitle}</p>
+        <p>{line}</p>
+        {plates ? <p className="num">{plates}</p> : null}
+        <div className="rperow">
+          <span>Effort</span>
+          {[6, 7, 8, 9, 10].map((value) => (
+            <button type="button" key={value} className={rpe === value ? "on" : ""} onClick={() => onRpe(value)} aria-label={`Effort ${value}`}>
+              {value}
+            </button>
+          ))}
+        </div>
       </div>
       <button type="button" className="pass" onClick={onSkip}>
         Passer
@@ -393,52 +715,12 @@ function RestBand({ endsAt, subtitle, onSkip }: { endsAt: number; subtitle: stri
   );
 }
 
-function chime() {
-  try {
-    if (typeof navigator.vibrate === "function") navigator.vibrate([80, 40, 80]);
-  } catch {
-    /* vibration indisponible */
-  }
-  try {
-    const context = new AudioContext();
-    const osc = context.createOscillator();
-    const gain = context.createGain();
-    osc.frequency.value = 740;
-    gain.gain.value = 0.04;
-    osc.connect(gain);
-    gain.connect(context.destination);
-    osc.start();
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.35);
-    osc.stop(context.currentTime + 0.4);
-    window.setTimeout(() => void context.close(), 600);
-  } catch {
-    /* son indisponible */
-  }
-  if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-    try {
-      new Notification("Repos terminé", { body: "Vous pouvez enchaîner la série suivante." });
-    } catch {
-      /* notification indisponible */
-    }
-  }
-}
-
 function Elapsed({ from }: { from?: string }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
-  if (!from) return <span>0:00</span>;
-  return <span>{formatClock((now - Date.parse(from)) / 1000)}</span>;
-}
-
-function restSubtitle(exercise?: ExerciseLog) {
-  if (!exercise) return "C’était la dernière série.";
-  const next = exercise.sets.find((set) => !set.done);
-  if (!next) return `Puis ${exercise.name}.`;
-  if (next.warmup) return "Puis l’échauffement.";
-  const number = exercise.sets.filter((set) => !set.warmup).indexOf(next) + 1;
-  const load = next.loadKg ?? exercise.planned.loadKg;
-  return `Puis série ${number}${load != null ? ` · ${formatKg(load)} ${unitPhrase(next.unit ?? unitOfExercise(exercise))}` : ""}`;
+  if (!from) return <span className="num">0:00</span>;
+  return <span className="num">{formatClock((now - Date.parse(from)) / 1000)}</span>;
 }

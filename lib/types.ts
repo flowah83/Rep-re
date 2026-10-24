@@ -39,6 +39,8 @@ export type SetLog = {
   precision?: string | null;
   warmup: boolean;
   done: boolean;
+  /** Série laissée de côté : elle ne compte pas, et elle ne bloque pas la fin. */
+  skipped?: boolean;
 };
 
 export type Planned = {

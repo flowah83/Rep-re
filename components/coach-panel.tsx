@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { CoachFace } from "@/components/coach-face";
 import { coachErrorText } from "@/lib/display";
 import { useApp } from "@/components/app-context";
 import {
@@ -16,23 +17,29 @@ import {
 import {
   coachIsReady,
   loadCoachChat,
+  loadCoachMemo,
   recordCoachNotice,
+  rememberCoachLine,
   requestCoach,
+  requestCoachStream,
   saveCoachChat,
   type StoredTurn,
 } from "@/lib/coach-store";
 import { uid } from "@/lib/utils";
 
+const OFFLINE = "Vous êtes hors ligne. Le carnet marche. Le coach répondra avec le réseau.";
+const RATE = "Le coach souffle un peu. Réessayez dans une minute.";
+
 export function CoachLayer() {
-  const [open, setOpen] = useState(false);
+  const app = useApp();
   return (
     <>
-      {open ? null : (
-        <button type="button" className="coach-fab" data-testid="coach-button" aria-label="Ouvrir le coach" onClick={() => setOpen(true)}>
-          <Bubble />
+      {app.coachOpen ? null : (
+        <button type="button" className="coach-fab" data-testid="coach-button" aria-label="Ouvrir le coach" onClick={() => app.setCoachOpen(true)}>
+          <CoachFace />
         </button>
       )}
-      {open ? <CoachSheet onClose={() => setOpen(false)} /> : null}
+      {app.coachOpen ? <CoachSheet onClose={() => app.setCoachOpen(false)} /> : null}
     </>
   );
 }
@@ -44,18 +51,36 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
+  const [partial, setPartial] = useState("");
+  const [face, setFace] = useState<"idle" | "thinking" | "speaking">("idle");
+  const [online, setOnline] = useState(true);
+  const [muted, setMuted] = useState(false);
+  const [slow, setSlow] = useState(false);
+  const [tall, setTall] = useState(false);
+  const [drag, setDrag] = useState(0);
+  const [closing, setClosing] = useState(false);
+  const [detail, setDetail] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
+  const dialog = useRef<HTMLDivElement>(null);
+  const field = useRef<HTMLTextAreaElement>(null);
   const turnsRef = useRef(turns);
+  const partialRef = useRef("");
+  const dragRef = useRef<{ y: number; t: number; dy: number } | null>(null);
+  const lastHistory = useRef<StoredTurn[] | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   turnsRef.current = turns;
+  partialRef.current = partial;
 
   useEffect(() => {
     setTurns(loadCoachChat());
     setReady(coachIsReady());
+    setOnline(navigator.onLine);
+    dialog.current?.focus();
   }, []);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight });
-  }, [turns, error, busy]);
+  }, [turns, error, busy, partial]);
 
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -74,6 +99,26 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", down);
+    return () => {
+      window.removeEventListener("online", up);
+      window.removeEventListener("offline", down);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!busy) {
+      setSlow(false);
+      return;
+    }
+    const id = window.setTimeout(() => setSlow(true), 20000);
+    return () => window.clearTimeout(id);
+  }, [busy]);
+
   const remember = (next: StoredTurn[]) => {
     const trimmed = next.slice(-40);
     turnsRef.current = trimmed;
@@ -81,14 +126,34 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
     saveCoachChat(trimmed);
   };
 
-  const pending = turns.some((turn) => turn.pending);
+  const close = () => {
+    if (closing) return;
+    setClosing(true);
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.setTimeout(onClose, reduce ? 120 : 280);
+  };
 
-  const send = async () => {
-    const text = draft.trim();
-    if (!text || busy || pending || !ready) return;
+  const sendText = async (text: string) => {
+    if (!text || busy || !ready || muted) return;
+    if (!navigator.onLine) {
+      setError(OFFLINE);
+      return;
+    }
     setDraft("");
+    if (field.current) field.current.style.height = "44px";
     setError("");
-    const next = [...turnsRef.current, { id: uid(), role: "user" as const, content: text }];
+    let history = turnsRef.current;
+    const pendingTurn = history.find((turn) => turn.pending);
+    if (pendingTurn) {
+      const ignored = (pendingTurn.toolCalls ?? []).map((call) => toolTurn(call.id, "Ignoré. Rien n’a été modifié."));
+      history = [
+        ...history.map((item) => (item.id === pendingTurn.id ? { ...item, pending: false } : item)),
+        ...ignored,
+        { id: uid(), role: "assistant" as const, content: "On garde le plan." },
+      ];
+      rememberCoachLine("Ignoré. On garde le plan.");
+    }
+    const next = [...history, { id: uid(), role: "user" as const, content: text }];
     remember(next);
     await complete(next);
   };
@@ -96,41 +161,67 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
   const complete = async (history: StoredTurn[], depth = 0, sessions = app.sessions) => {
     if (depth > 3) return;
     setBusy(true);
+    setPartial("");
+    setFace("thinking");
+    lastHistory.current = history;
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
-      const data = await requestCoach("/coach", {
-        context: buildCoachContext(sessions, app.today),
-        messages: toApi(history),
-      });
+      const data = await requestCoachStream(
+        {
+          context: buildCoachContext(sessions, app.today, { focus: app.readSportFocus(), memoire: loadCoachMemo() }),
+          messages: toApi(history),
+        },
+        (text) => {
+          setPartial(text);
+          setFace("speaking");
+        },
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
       const message = data.message as { content?: string; tool_calls?: ToolCall[] } | undefined;
       const calls = Array.isArray(message?.tool_calls) ? message.tool_calls.slice(0, 8) : [];
       const groups = partitionToolCalls(calls);
+      const content = (message?.content || partialRef.current || (groups.writes.length ? "Voici ce que je propose." : "")).trim();
       const assistant: StoredTurn = {
         id: uid(),
         role: "assistant",
-        content: message?.content || (groups.writes.length ? "Voici ce que je propose." : ""),
+        content: content || (calls.length ? "" : "Le coach n’a rien répondu."),
         toolCalls: calls,
         pending: groups.writes.length > 0,
       };
       let next = [...history, assistant];
+      setPartial("");
       if (!groups.writes.length && groups.reads.length) {
         const results = await Promise.all(groups.reads.map((call) => readCalendar(call)));
         next = [...next, ...results];
         remember(next);
         setBusy(false);
+        setFace("idle");
         await complete(next, depth + 1, sessions);
         return;
       }
       if (!groups.writes.length && groups.unknown.length) {
-        next = [
-          ...next,
-          ...groups.unknown.map((call) => toolTurn(call.id, "Cette action n’existe pas.")),
-        ];
+        next = [...next, ...groups.unknown.map((call) => toolTurn(call.id, "Cette action n’existe pas."))];
       }
       remember(next);
     } catch (caught) {
-      setError(coachErrorText(caught instanceof Error ? caught.message : "Le coach n’a pas pu répondre."));
+      if (controller.signal.aborted) {
+        if (partialRef.current) remember([...history, { id: uid(), role: "assistant", content: partialRef.current }]);
+        setPartial("");
+        return;
+      }
+      const message = caught instanceof Error ? caught.message : "Le coach n’a pas pu répondre.";
+      const shown = presentError(message);
+      setError(shown.text);
+      if (shown.mute) {
+        setMuted(true);
+        window.setTimeout(() => setMuted(false), 60_000);
+      }
     } finally {
       setBusy(false);
+      setFace("idle");
+      abortRef.current = null;
     }
   };
 
@@ -180,14 +271,12 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
         }
         await app.replaceSessions(state.sessions, state.customs);
       } else {
-        for (const call of groups.writes) results.push(toolTurn(call.id, "Annulé. Rien n’a été modifié."));
-        lines.push("Annulé. Rien n’a été modifié.");
+        for (const call of groups.writes) results.push(toolTurn(call.id, "Ignoré. Rien n’a été modifié."));
       }
       const cleared = turnsRef.current.map((item) => (item.id === turn.id ? { ...item, pending: false } : item));
-      const next = [...cleared, ...results, { id: uid(), role: "assistant" as const, content: lines.filter(Boolean).join("\n") }];
-      remember(next);
-      setBusy(false);
-      if (apply && ready) await complete(next, 0, state.sessions);
+      const note = apply ? "C’est noté." : "On garde le plan.";
+      rememberCoachLine(apply ? lines.filter(Boolean).join(" · ") : "Ignoré. On garde le plan.");
+      remember([...cleared, ...results, { id: uid(), role: "assistant" as const, content: note }]);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "La modification n’a pas pu être enregistrée.");
     } finally {
@@ -195,15 +284,56 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const onPointerDown = (event: ReactPointerEvent) => {
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    dragRef.current = { y: event.clientY, t: performance.now(), dy: 0 };
+  };
+  const onPointerMove = (event: ReactPointerEvent) => {
+    if (!dragRef.current) return;
+    const dy = event.clientY - dragRef.current.y;
+    dragRef.current.dy = dy;
+    if (dy > 0) setDrag(dy);
+    else if (dy < -48) setTall(true);
+  };
+  const onPointerUp = () => {
+    if (!dragRef.current) return;
+    const dy = dragRef.current.dy;
+    const dt = Math.max(1, performance.now() - dragRef.current.t);
+    dragRef.current = null;
+    if (dy > 0 && (dy > window.innerHeight / 3 || dy / dt > 0.8)) {
+      close();
+      return;
+    }
+    if (tall && dy > 48) setTall(false);
+    setDrag(0);
+  };
+
+  const chips = chipList(app.overlay, app.sessions);
+  const visible = turns.filter((turn) => turn.role !== "tool");
+  const lastId = visible.at(-1)?.id;
+
   return (
-    <div className="coach-sheet" role="dialog" aria-modal="true" aria-label="Coach" data-testid="coach-sheet">
-      <div className="coach-sheet-in">
+    <>
+      <button type="button" className={`coach-scrim${closing ? " out" : ""}`} data-testid="coach-scrim" aria-label="Fermer le coach" onClick={close} />
+      <div
+        className={`coach-bubble${tall ? " tall" : ""}${closing ? " out" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Coach"
+        data-testid="coach-sheet"
+        tabIndex={-1}
+        ref={dialog}
+        style={drag > 0 ? { transform: `translateY(${drag}px)` } : undefined}
+      >
+        <div className="coach-grab" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
+          <i />
+        </div>
         <header className="coach-head">
-          <button type="button" className="navline" onClick={onClose}>
+          <CoachFace state={face} />
+          <strong>Coach</strong>
+          <button type="button" className="navline" onClick={close}>
             Fermer
           </button>
-          <strong>Coach</strong>
-          <span />
         </header>
         <div className="coach-log" ref={scroller}>
           {!ready ? (
@@ -215,15 +345,54 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
               </p>
             </div>
           ) : null}
-          {turns.filter((turn) => turn.role !== "tool").map((turn) => (
+          {visible.map((turn) => (
             <div key={turn.id} className={`coach-msg ${turn.role}`}>
-              {turn.content ? <p>{turn.content}</p> : null}
-              {turn.pending && turn.toolCalls?.length ? (
-                <ConfirmCard turn={turn} busy={busy} onApply={() => void resolve(turn, true)} onCancel={() => void resolve(turn, false)} />
-              ) : null}
+              {turn.role === "assistant" ? <CoachFace state="idle" /> : null}
+              <div className="coach-stack">
+                {turn.content ? <p aria-live={turn.id === lastId ? "polite" : undefined}>{turn.content}</p> : null}
+                {turn.pending && turn.toolCalls?.length ? (
+                  <ConfirmCard
+                    turn={turn}
+                    busy={busy}
+                    open={detail}
+                    onToggle={() => setDetail((value) => !value)}
+                    onApply={() => void resolve(turn, true)}
+                    onCancel={() => void resolve(turn, false)}
+                  />
+                ) : null}
+              </div>
             </div>
           ))}
-          {busy ? <p className="coach-wait">Le coach réfléchit…</p> : null}
+          {busy && !partial ? (
+            <div className="coach-msg assistant" aria-live="polite">
+              <CoachFace state="thinking" />
+              <p className="coach-dots" aria-label="Le coach réfléchit">
+                <i /><i /><i />
+              </p>
+            </div>
+          ) : null}
+          {partial ? (
+            <div className="coach-msg assistant">
+              <CoachFace state="speaking" />
+              <p aria-live="polite">{partial}</p>
+            </div>
+          ) : null}
+          {slow && busy ? (
+            <p className="coach-wait">
+              Ça prend trop de temps.{" "}
+              <button
+                type="button"
+                className="linkish"
+                onClick={() => {
+                  abortRef.current?.abort();
+                  const history = lastHistory.current;
+                  if (history) void complete(history);
+                }}
+              >
+                Réessayer
+              </button>
+            </p>
+          ) : null}
           {error ? (
             <p className="err">
               {error}{" "}
@@ -231,7 +400,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
                 type="button"
                 className="linkish"
                 onClick={() => {
-                  onClose();
+                  close();
                   app.setSheet("settings");
                 }}
               >
@@ -240,66 +409,123 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
             </p>
           ) : null}
         </div>
+        {!online ? <p className="coach-offline" data-testid="coach-offline">{OFFLINE}</p> : null}
+        {ready && chips.length ? (
+          <div className="coach-chips">
+            {chips.map((chip) => (
+              <button key={chip} type="button" data-testid="coach-chip" disabled={busy || muted} onClick={() => void sendText(chip)}>
+                {chip}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <form
           className="coach-compose"
           onSubmit={(event) => {
             event.preventDefault();
-            void send();
+            void sendText(draft.trim());
           }}
         >
-          <input
+          <textarea
+            ref={field}
             className="field"
             data-testid="coach-input"
+            rows={1}
             value={draft}
             placeholder={ready ? "Écrire au coach" : "Le coach n’est pas activé"}
-            disabled={!ready || busy || pending}
+            disabled={!ready || busy || muted}
             autoComplete="off"
             autoCorrect="off"
             enterKeyHint="send"
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              const node = event.target;
+              node.style.height = "auto";
+              node.style.height = `${Math.min(node.scrollHeight, 84)}px`;
+            }}
           />
-          <button type="submit" className="coach-send" data-testid="coach-send" disabled={!ready || busy || pending || !draft.trim()} aria-label="Envoyer">
-            Envoyer
-          </button>
+          {busy ? (
+            <button type="button" className="coach-send" data-testid="coach-stop" aria-label="Arrêter" onClick={() => abortRef.current?.abort()}>
+              <span className="stopmark" />
+            </button>
+          ) : (
+            <button type="submit" className="coach-send" data-testid="coach-send" disabled={!ready || muted || !draft.trim()} aria-label="Envoyer">
+              <Arrow />
+            </button>
+          )}
         </form>
       </div>
-    </div>
+    </>
   );
 }
 
 function ConfirmCard({
   turn,
   busy,
+  open,
+  onToggle,
   onApply,
   onCancel,
 }: {
   turn: StoredTurn;
   busy: boolean;
+  open: boolean;
+  onToggle: () => void;
   onApply: () => void;
   onCancel: () => void;
 }) {
   const app = useApp();
   const described = (turn.toolCalls ?? []).filter((call) => call.name !== "list_events").map((call) => describeAction(call, app.sessions));
   const chef = described.some((item) => item.chefSport);
+  const hidden = described.length > 3 && !open;
+  const shown = hidden ? described.slice(0, 3) : described;
   return (
     <article className="coach-card" data-testid="coach-confirm">
-      <h3>Appliquer ces changements ?</h3>
+      <h3>{changeTitle(described.length)}</h3>
       <ul>
-        {described.map((item, index) => (
+        {shown.map((item, index) => (
           <li key={index}>{item.summary}</li>
         ))}
       </ul>
+      {described.length > 3 ? (
+        <button type="button" className="linkish" onClick={onToggle}>
+          {open ? "Réduire" : "Voir le détail"}
+        </button>
+      ) : null}
       {chef ? <p className="fine">Chef sport en sera informé au prochain « Envoyer à Chef sport ».</p> : null}
       <div className="coach-actions">
         <button type="button" className="btn" data-testid="coach-apply" disabled={busy} onClick={onApply}>
-          Appliquer
+          Tout accepter
         </button>
         <button type="button" className="btn ghost" data-testid="coach-cancel" disabled={busy} onClick={onCancel}>
-          Annuler
+          Ignorer
         </button>
       </div>
     </article>
   );
+}
+
+function changeTitle(count: number): string {
+  if (count <= 1) return "Un changement";
+  if (count === 2) return "Deux changements";
+  return `${count} changements`;
+}
+
+function chipList(overlay: { kind: string; id?: string } | null, sessions: { id: string; cardio?: unknown }[]): string[] {
+  if (overlay?.kind === "bilan") return ["Résume pour Chef sport"];
+  if (overlay?.kind === "session" || overlay?.kind === "gesture") {
+    const session = sessions.find((item) => item.id === overlay.id || ("sessionId" in overlay && item.id === (overlay as { sessionId?: string }).sessionId));
+    if (session?.cardio) return ["Quelle allure ?", "Je coupe court"];
+    return ["Cette charge me va", "Je suis fatigué", "Rappelle le conseil"];
+  }
+  return ["Adapter ma séance du jour", "Pourquoi cette charge ?", "J’ai une garde"];
+}
+
+function presentError(message: string): { text: string; mute: boolean } {
+  if (/429|souffle/i.test(message)) return { text: RATE, mute: true };
+  if (/401|accès refusé|code refusé/i.test(message)) return { text: "Le code secret est refusé.", mute: false };
+  if (/hors ligne|failed to fetch|network|joignable/i.test(message)) return { text: OFFLINE, mute: false };
+  return { text: coachErrorText(message), mute: false };
 }
 
 async function readCalendar(call: ToolCall): Promise<StoredTurn> {
@@ -319,7 +545,10 @@ function toolTurn(id: string, content: string): StoredTurn {
 }
 
 function toApi(turns: StoredTurn[]) {
-  return turns.map((turn) => {
+  const slice = turns.slice(-14);
+  const start = slice.findIndex((turn) => turn.role === "user");
+  const kept = start > 0 ? slice.slice(start) : slice;
+  return kept.map((turn) => {
     if (turn.role === "tool") return { role: "tool", tool_call_id: turn.toolCallId, content: turn.content };
     if (turn.role === "assistant" && turn.toolCalls?.length) {
       return {
@@ -337,14 +566,10 @@ function toApi(turns: StoredTurn[]) {
   });
 }
 
-function Bubble() {
+function Arrow() {
   return (
-    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
-      <path
-        d="M6.2 6.5h13.6A2.7 2.7 0 0 1 22.5 9.2v7.2a2.7 2.7 0 0 1-2.7 2.7H12l-4.2 3.1v-3.1H6.2A2.7 2.7 0 0 1 3.5 16.4V9.2A2.7 2.7 0 0 1 6.2 6.5Z"
-        stroke="currentColor"
-        strokeWidth="1.7"
-      />
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path d="M9 14V4M9 4l-4 4M9 4l4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

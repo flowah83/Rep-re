@@ -75,6 +75,10 @@ type Api = {
   finishOnboarding: () => Promise<void>;
   pendingPlan: boolean;
   beginSession: (session: Session) => Promise<void>;
+  coachOpen: boolean;
+  setCoachOpen: (open: boolean) => void;
+  setSportFocus: (focus: { sessionId: string; exerciseId?: string | null; setId?: string | null } | null) => void;
+  readSportFocus: () => { sessionId: string; exerciseId?: string | null; setId?: string | null } | null;
 };
 
 const Ctx = createContext<Api | null>(null);
@@ -130,6 +134,8 @@ export function AppProvider({
   const [progressName, setProgressName] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [pendingPlan, setPendingPlan] = useState(initial.pendingPlan);
+  const [coachOpen, setCoachOpen] = useState(false);
+  const sportFocusRef = useRef<{ sessionId: string; exerciseId?: string | null; setId?: string | null } | null>(null);
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(initial.importPreview);
   const sessionsRef = useRef(sessions);
   const settingsRef = useRef(settings);
@@ -166,30 +172,6 @@ export function AppProvider({
       void navigator.serviceWorker.register(`${base}/sw.js`, { scope: base ? `${base}/` : "/" });
     }
   }, []);
-
-  useEffect(() => {
-    const active = sessions.some((session) => session.status === "active");
-    if (!active || !("wakeLock" in navigator)) return;
-    let lock: WakeLockSentinel | null = null;
-    let stopped = false;
-    const request = async () => {
-      try {
-        lock = await navigator.wakeLock.request("screen");
-      } catch {
-        /* refus du navigateur */
-      }
-    };
-    void request();
-    const onVis = () => {
-      if (!stopped && document.visibilityState === "visible") void request();
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      stopped = true;
-      document.removeEventListener("visibilitychange", onVis);
-      void lock?.release();
-    };
-  }, [sessions]);
 
   const api = useMemo<Api>(() => {
     const writeSessions = (list: Session[]) => {
@@ -392,6 +374,12 @@ export function AppProvider({
         if (previewRef.current) setSheet("import");
       },
       pendingPlan,
+      coachOpen,
+      setCoachOpen,
+      setSportFocus: (focus) => {
+        sportFocusRef.current = focus;
+      },
+      readSportFocus: () => sportFocusRef.current,
       beginSession: async (session) => {
         if (session.status === "planned") rememberPlan(session);
         const existing = loadProgression(session.id);
@@ -422,6 +410,7 @@ export function AppProvider({
     toast,
     pendingPlan,
     importPreview,
+    coachOpen,
   ]);
 
   return (

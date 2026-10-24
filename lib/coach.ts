@@ -1,7 +1,7 @@
 import { bestE1rmLabel, formatPerformedSet } from "./session";
 import { exerciseFromPlan } from "./plan";
 import type { CustomExercise, ExerciseLog, Session, SetLog } from "./types";
-import { finiteOrNull, formatLong, uid } from "./utils";
+import { finiteOrNull, formatKg, formatLong, uid } from "./utils";
 
 export type ToolCall = {
   id: string;
@@ -198,11 +198,13 @@ export function describeAction(call: ToolCall, sessions: Session[]): { summary: 
         summary: `Ajouter ${text(args.name, 80) || "un exercice"}${session ? ` à « ${session.title} »` : ""} : ${planBits(args)}.`,
         chefSport: false,
       };
-    case "update_exercise":
-      return {
-        summary: `Modifier ${exercise?.name ?? "un exercice"}${session ? ` dans « ${session.title} »` : ""} : ${planBits(args)}.`,
-        chefSport: false,
-      };
+    case "update_exercise": {
+      const from = exercise?.planned.loadKg;
+      const to = finiteOrNull(args.loadKg);
+      const shift = from != null && to != null ? `${formatKg(from)} kg → ${formatKg(to)} kg` : planBits(args);
+      const label = exercise?.name ?? (text(args.name, 80) || "un exercice");
+      return { summary: `${label} · ${shift}`, chefSport: false };
+    }
     case "remove_exercise":
       return { summary: `Retirer ${exercise?.name ?? "un exercice"}${session ? ` de « ${session.title} »` : ""}.`, chefSport: false };
     case "update_set": {
@@ -297,7 +299,9 @@ export function calendarBodyForTool(call: ToolCall): { ok: true; body: Record<st
   return { ok: false, error: "Ce n’est pas une action de calendrier." };
 }
 
-export function buildCoachContext(sessions: Session[], today: string) {
+export type CoachFocus = { sessionId: string; exerciseId?: string | null; setId?: string | null };
+
+export function buildCoachContext(sessions: Session[], today: string, extra?: { focus?: CoachFocus | null; memoire?: string }) {
   const done = sessions
     .filter((session) => session.status !== "planned" && !session.cardio)
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
@@ -308,9 +312,10 @@ export function buildCoachContext(sessions: Session[], today: string) {
   const records = names
     .map((name) => {
       const best = bestE1rmLabel(sessions, name);
-      return best ? { exercice: name, max_estime_kg: best.kg, detail: best.detail } : null;
+      const unit = sessions.flatMap((item) => item.exercises).find((item) => item.name === name)?.unit ?? null;
+      return best ? { exercice: name, max_estime_kg: best.kg, detail: best.detail, unite: unit } : null;
     })
-    .filter((item): item is { exercice: string; max_estime_kg: number; detail: string } => item != null)
+    .filter((item): item is { exercice: string; max_estime_kg: number; detail: string; unite: string | null } => item != null)
     .sort((a, b) => b.max_estime_kg - a.max_estime_kg)
     .slice(0, 15);
   return {
@@ -331,6 +336,8 @@ export function buildCoachContext(sessions: Session[], today: string) {
         minutes: session.cardio?.durationMin ?? null,
         km: session.cardio?.distanceKm ?? null,
       })),
+    seance_en_cours: focusNow(sessions, extra?.focus),
+    memoire: (extra?.memoire ?? "").trim().slice(0, 800) || null,
   };
 }
 
@@ -578,7 +585,33 @@ function compactPlan(session: Session) {
       repos_s: exercise.planned.restSec,
       rpe: exercise.planned.rpe,
       unite: exercise.unit ?? null,
+      note: exercise.note ?? null,
+      echauffements: exercise.sets.filter((set) => set.warmup).length,
     })),
+  };
+}
+
+function focusNow(sessions: Session[], focus?: CoachFocus | null) {
+  if (!focus) return null;
+  const session = sessions.find((item) => item.id === focus.sessionId);
+  if (!session) return null;
+  const exercise =
+    session.exercises.find((item) => item.id === focus.exerciseId) ??
+    session.exercises.find((item) => item.sets.some((set) => !set.done && !set.skipped));
+  const set = exercise?.sets.find((item) => item.id === focus.setId) ?? exercise?.sets.find((item) => !item.done && !item.skipped);
+  if (!exercise || !set) return { id: session.id, titre: session.title, exercice: exercise?.name ?? null, note: exercise?.note ?? null };
+  const work = exercise.sets.filter((item) => !item.warmup);
+  return {
+    id: session.id,
+    titre: session.title,
+    exercice: exercise.name,
+    note: exercise.note ?? null,
+    serie: set.warmup ? "échauffement" : Math.max(1, work.indexOf(set) + 1),
+    series: work.length,
+    charge_kg: set.loadKg ?? exercise.planned.loadKg,
+    repetitions: set.reps ?? exercise.planned.reps,
+    unite: exercise.unit ?? null,
+    repos_s: exercise.planned.restSec,
   };
 }
 
@@ -590,6 +623,7 @@ function compactDone(session: Session) {
     note: session.noteForCoach ?? session.noteForMe ?? null,
     exercices: session.exercises.slice(0, 8).map((exercise) => ({
       nom: exercise.name,
+      note: exercise.note ?? null,
       fait: exercise.detailUnknown
         ? "détail inconnu"
         : exercise.sets
