@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useApp, type HistFilter } from "@/components/app-context";
 import { hardSetCount, tonnage } from "@/lib/calc";
 import { historyBucket } from "@/lib/display";
-import { cardioSummary, formatMinutes, groupSessionsNewestWeekFirst } from "@/lib/history";
+import { cardioSummary, formatMinutes, groupSessionsNewestWeekFirst, groupSessionsSoonestWeekFirst, splitCarnet } from "@/lib/history";
 import type { Session } from "@/lib/types";
 import { formatKg, mondayOf, parseISODate, stripAccents } from "@/lib/utils";
 
@@ -19,6 +19,7 @@ const FILTERS: { id: HistFilter; label: string }[] = [
 export function HistoryScreen() {
   const app = useApp();
   const [query, setQuery] = useState("");
+  const [upcomingOpen, setUpcomingOpen] = useState(false);
   const needle = stripAccents(query.trim());
   const list = app.sessions
     .filter((session) => app.filter === "all" || historyBucket(session) === app.filter)
@@ -26,8 +27,10 @@ export function HistoryScreen() {
       if (!needle) return true;
       const hay = stripAccents(`${session.title} ${session.exercises.map((exercise) => exercise.name).join(" ")}`);
       return hay.includes(needle);
-    })
-  const weeks = groupSessionsNewestWeekFirst(list);
+    });
+  const { past, upcoming } = splitCarnet(list, app.today);
+  const pastWeeks = groupSessionsNewestWeekFirst(past);
+  const upcomingWeeks = groupSessionsSoonestWeekFirst(upcoming);
 
   return (
     <div className="screen" data-screen="history">
@@ -57,54 +60,94 @@ export function HistoryScreen() {
       ) : list.length === 0 ? (
         <p className="quiet">Aucune séance dans ce filtre.</p>
       ) : (
-        weeks.map(({ week, sessions }) => (
-          <section key={week}>
-            <div className="weeklabel">{week === mondayOf(app.today) ? "Cette semaine" : `Semaine du ${dayMonth(week)}`}</div>
-            {sessions.map((session) => (
-              <div className="session" key={session.id}>
-                <button
-                  type="button"
-                  className="sessionhit"
-                  onClick={() => {
-                    if (session.status === "done") app.openBilan(session.id);
-                    else if (session.status === "active") app.openSession(session.id);
-                    else {
-                      app.setSelectedDate(session.date);
-                      app.setTab("today");
-                    }
-                  }}
-                >
-                  <div className="sdate">
-                    <b className="num">{parseISODate(session.date).getDate()}</b>
-                    <span>{weekday(session.date)}</span>
-                  </div>
-                  <div>
-                    <h3>{session.title}</h3>
-                    <div className="exnames">
-                      {session.exercises.map((exercise) => (
-                        <span key={exercise.id}>{exercise.name}</span>
-                      ))}
-                    </div>
-                    <div className="smeta num">{statusLine(session)}</div>
-                    {session.status === "planned" ? <div className="tag">Prévu</div> : null}
-                  </div>
-                </button>
-                {session.status === "done" ? (
-                  <button type="button" className="linkish correct" data-testid="correct-session" onClick={() => app.openSession(session.id)}>
-                    Corriger
-                  </button>
-                ) : null}
-              </div>
-            ))}
-          </section>
-        ))
+        <>
+          {upcoming.length > 0 ? (
+            <section className="upcoming" data-testid="upcoming">
+              <button
+                type="button"
+                className="upcoming-toggle"
+                data-testid="upcoming-toggle"
+                aria-expanded={upcomingOpen}
+                aria-controls="upcoming-list"
+                onClick={() => setUpcomingOpen((open) => !open)}
+              >
+                <span>
+                  À venir <span className="num">({upcoming.length})</span>
+                </span>
+                <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                  <path d="M4.2 1.8 8.4 6 4.2 10.2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              {upcomingOpen ? (
+                <div id="upcoming-list">
+                  {upcomingWeeks.map(({ week, sessions }) => (
+                    <WeekBlock key={week} week={week} today={app.today} sessions={sessions} />
+                  ))}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+          {pastWeeks.length === 0 ? (
+            <p className="quiet">Aucune séance notée dans ce filtre.</p>
+          ) : (
+            pastWeeks.map(({ week, sessions }) => <WeekBlock key={week} week={week} today={app.today} sessions={sessions} />)
+          )}
+        </>
       )}
     </div>
   );
 }
 
+function WeekBlock({ week, today, sessions }: { week: string; today: string; sessions: Session[] }) {
+  const app = useApp();
+  return (
+    <section>
+      <div className="weeklabel">{week === mondayOf(today) ? "Cette semaine" : `Semaine du ${dayMonth(week)}`}</div>
+      {sessions.map((session) => {
+        const line = statusLine(session);
+        return (
+          <div className="session" key={session.id}>
+            <button
+              type="button"
+              className="sessionhit"
+              onClick={() => {
+                if (session.status === "done") app.openBilan(session.id);
+                else if (session.status === "active") app.openSession(session.id);
+                else {
+                  app.setSelectedDate(session.date);
+                  app.setTab("today");
+                }
+              }}
+            >
+              <div className="sdate">
+                <b className="num">{parseISODate(session.date).getDate()}</b>
+                <span>{weekday(session.date)}</span>
+              </div>
+              <div>
+                <h3>{session.title}</h3>
+                <div className="exnames">
+                  {session.exercises.map((exercise) => (
+                    <span key={exercise.id}>{exercise.name}</span>
+                  ))}
+                </div>
+                {line ? <div className="smeta num">{line}</div> : null}
+                {session.status === "planned" ? <div className="tag">Prévu</div> : null}
+              </div>
+            </button>
+            {session.status === "done" ? (
+              <button type="button" className="linkish correct" data-testid="correct-session" onClick={() => app.openSession(session.id)}>
+                Corriger
+              </button>
+            ) : null}
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
 function statusLine(session: Session) {
-  if (session.status === "planned") return "Prévue";
+  if (session.status === "planned") return "";
   const line = volumeLine(session);
   if (session.status !== "active") return line;
   return line === "durée non notée" ? "En cours" : `En cours · ${line}`;

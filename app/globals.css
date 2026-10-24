@@ -676,6 +676,27 @@ h1.title {
 }
 .chips button.on { background: var(--ink); color: var(--bg); border-color: transparent; }
 .weeklabel { font-size: 13px; font-weight: 650; color: var(--ink-soft); margin: 8px 0 6px; }
+.upcoming { margin: 12px 0 4px; }
+.upcoming-toggle {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  font-size: 15px;
+  font-weight: 640;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-align: left;
+}
+.upcoming-toggle svg { flex: none; color: var(--ink-soft); transition: transform 180ms ease; }
+.upcoming-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
 .session {
   width: 100%;
   display: grid;

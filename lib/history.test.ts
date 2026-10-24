@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { decodeImportToken, encodeGzip, encodeText } from "./codec";
 import { bestLoads, muscleTotals, samplesForExercise, tonnage } from "./calc";
 import { explainMatch, resolveExercise } from "./exercises";
-import { compareSessionsNewestFirst, groupSessionsNewestWeekFirst, historySignature, importSummary, parseImport, previewImport, withoutDuplicates } from "./history";
+import { compareSessionsNewestFirst, groupSessionsNewestWeekFirst, groupSessionsSoonestWeekFirst, historySignature, importSummary, parseImport, previewImport, splitCarnet, withoutDuplicates } from "./history";
 
 const historyFile = readFileSync(new URL("../fixtures/historique.json", import.meta.url), "utf8");
 const planFile = readFileSync(new URL("../fixtures/plan.json", import.meta.url), "utf8");
@@ -167,6 +167,30 @@ describe("lien gzip", () => {
     const groups = groupSessionsNewestWeekFirst(rows);
     expect(groups.map((group) => group.week)).toEqual(["2026-10-19", "2026-08-31", "2026-07-06"]);
     expect(groups[0].sessions.map((row) => row.date)).toEqual(["2026-10-24", "2026-10-24", "2026-10-22"]);
+  });
+
+  it("range les prévues et les dates futures à part, du plus proche au plus lointain", () => {
+    const today = "2026-10-24";
+    const rows = [
+      { id: "done-22", date: "2026-10-22", time: "19:00", status: "done" },
+      { id: "done-morning", date: "2026-10-24", time: "09:00", status: "done" },
+      { id: "active-today", date: "2026-10-24", time: "18:30", status: "active" },
+      { id: "older", date: "2026-09-02", time: "18:00", status: "done" },
+      { id: "overdue", date: "2026-10-20", time: "18:00", status: "planned" },
+      { id: "today-plan", date: "2026-10-24", time: "18:15", status: "planned" },
+      { id: "future-done", date: "2026-11-01", time: "10:00", status: "done" },
+      { id: "nov-8", date: "2026-11-08", time: "18:00", status: "planned" },
+      { id: "nov-6-late", date: "2026-11-06", time: "19:00", status: "planned" },
+      { id: "nov-6", date: "2026-11-06", time: "07:00", status: "planned" },
+    ];
+    const { past, upcoming } = splitCarnet(rows, today);
+    expect(past.map((row) => row.id)).toEqual(["active-today", "done-morning", "done-22", "older"]);
+    expect(upcoming.map((row) => row.id)).toEqual(["overdue", "today-plan", "future-done", "nov-6", "nov-6-late", "nov-8"]);
+    expect(groupSessionsNewestWeekFirst(past).map((group) => group.week)).toEqual(["2026-10-19", "2026-08-31"]);
+    const ahead = groupSessionsSoonestWeekFirst(upcoming);
+    expect(ahead.map((group) => group.week)).toEqual(["2026-10-19", "2026-10-26", "2026-11-02"]);
+    expect(ahead[0].sessions.map((row) => row.id)).toEqual(["overdue", "today-plan"]);
+    expect(ahead[2].sessions.map((row) => row.id)).toEqual(["nov-6", "nov-6-late", "nov-8"]);
   });
 
   it("compresse le fichier réel et le relit", async () => {
