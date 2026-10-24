@@ -43,7 +43,7 @@ export function GestureScreen({ sessionId, exerciseId }: { sessionId: string; ex
             )}
           </p>
         </div>
-        <Mannequin pattern={exercise.pattern} muscles={exercise.muscles} />
+        <Mannequin name={exercise.name} pattern={exercise.pattern} muscles={exercise.muscles} />
         <section className="block">
           <h3>Muscles</h3>
           <div className="muscles">

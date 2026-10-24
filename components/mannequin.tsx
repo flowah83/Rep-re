@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+import { withBase } from "@/lib/base-path";
+import { motionForExercise } from "@/lib/mannequin-motion";
+import type { MannequinHooks } from "@/lib/mannequin-view";
 import type { Muscle, Pattern } from "@/lib/types";
 
 type P = [number, number];
@@ -102,27 +106,135 @@ function mid(a: P, b: P, t = 0.5): P {
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 }
 
-export function Mannequin({ pattern, muscles }: { pattern: Pattern; muscles: Muscle[] }) {
+function hasWebGL() {
+  try {
+    const probe = document.createElement("canvas");
+    const gl = probe.getContext("webgl2") || probe.getContext("webgl");
+    if (!gl) return false;
+    const lose = gl.getExtension("WEBGL_lose_context");
+    lose?.loseContext();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function Mannequin({ name, pattern, muscles }: { name: string; pattern: Pattern; muscles: Muscle[] }) {
+  const plan = motionForExercise(name, pattern);
+  const [mode, setMode] = useState<"loading" | "3d" | "svg">("loading");
+  const [reduced, setReduced] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const phaseRef = useRef<HTMLSpanElement>(null);
+  const barRef = useRef<HTMLElement>(null);
+  const dotRef = useRef<HTMLElement>(null);
+  const stateRef = useRef({ plan, muscles, title: name });
+  stateRef.current = { plan, muscles, title: name };
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduced(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    if (!hasWebGL()) {
+      setMode("svg");
+      return;
+    }
+    let dead = false;
+    let handle: { stop: () => void } | null = null;
+    const hooks: MannequinHooks = {
+      getState: () => stateRef.current,
+      onFrame: (info) => {
+        if (phaseRef.current && phaseRef.current.textContent !== info.label) phaseRef.current.textContent = info.label;
+        const percent = `${Math.round(info.progress * 1000) / 10}%`;
+        if (barRef.current) barRef.current.style.width = percent;
+        if (dotRef.current) dotRef.current.style.left = percent;
+      },
+      onReady: () => {
+        if (!dead) setMode("3d");
+      },
+      onFail: () => {
+        if (dead) return;
+        if (barRef.current) barRef.current.style.width = "";
+        if (dotRef.current) dotRef.current.style.left = "";
+        setMode("svg");
+      },
+    };
+    const timer = window.setTimeout(() => {
+      if (dead) return;
+      void import("@/lib/mannequin-view")
+        .then((mod) => {
+          if (dead) return null;
+          return mod.mountMannequin(canvas, hooks, withBase("/models/body.glb"));
+        })
+        .then((mounted) => {
+          if (!mounted) return;
+          if (dead) mounted.stop();
+          else handle = mounted;
+        })
+        .catch(() => {
+          if (!dead) setMode("svg");
+        });
+    }, 0);
+    return () => {
+      dead = true;
+      window.clearTimeout(timer);
+      handle?.stop();
+    };
+  }, []);
+
   const scene = POSES[pattern];
   const hot = new Set(muscles);
+  const svg = mode === "svg";
   return (
-    <div className="stage" data-testid="mannequin">
+    <div
+      className={`stage${mode === "3d" ? " is-3d" : ""}${svg ? " is-fallback" : ""}`}
+      data-testid="mannequin"
+      data-render={mode}
+      data-motion={plan.id}
+    >
       <div className="tools">
-        <span className="loopchip">En boucle</span>
+        <span className="loopchip">{svg ? "Dessin" : reduced ? "Pose tenue" : "En boucle"}</span>
       </div>
-      <div style={{ position: "relative", height: 236 }}>
-        <Figure pose={scene.a} hot={hot} className="pose pose-a" />
-        <Figure pose={scene.b} hot={hot} className="pose pose-b" />
+      <div className="stage-view">
+        <canvas ref={canvasRef} className="stage-canvas" aria-hidden={svg} />
+        {svg ? (
+          <>
+            <Figure pose={scene.a} hot={hot} className="pose pose-a" />
+            <Figure pose={scene.b} hot={hot} className="pose pose-b" />
+          </>
+        ) : mode === "loading" ? (
+          <p className="stage-wait">Chargement du corps</p>
+        ) : null}
       </div>
       <div className="phases">
-        <span className="phase-move">{scene.move}</span>
-        <span className="phase-lock">{scene.lock}</span>
+        {svg ? (
+          <>
+            <span className="phase-move">{scene.move}</span>
+            <span className="phase-lock">{scene.lock}</span>
+          </>
+        ) : (
+          <span className="on" ref={phaseRef}>
+            {reduced ? "Pose tenue" : "En cours"}
+          </span>
+        )}
       </div>
       <div className="play" aria-hidden="true">
-        <i />
-        <b />
+        <i ref={barRef} />
+        <b ref={dotRef} />
       </div>
-      <p className="caption">Les muscles en cuivre travaillent sur ce geste. La boucle dure huit secondes, sans son.</p>
+      <p className="caption">
+        {svg
+          ? "Le dessin remplace le corps 3D sur cet appareil. Le cuivre marque les muscles du geste."
+          : reduced
+            ? "Mouvement réduit : la pose utile reste en place. Glissez pour tourner."
+            : "Glissez pour tourner. Le cuivre marque les muscles qui travaillent."}
+      </p>
     </div>
   );
 }

@@ -455,6 +455,30 @@ h1.title {
   position: relative;
 }
 .stage .tools { display: flex; justify-content: space-between; align-items: center; padding: 12px 12px 0; }
+.stage-view { position: relative; height: 252px; }
+.stage-canvas { width: 100%; height: 252px; display: block; touch-action: none; }
+.stage.is-fallback .stage-canvas { display: none; }
+.stage-wait {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.stage.is-3d .stage-wait { display: none; }
+.stage.is-3d .play i,
+.stage.is-3d .play b { animation: none; }
+.stage.is-fallback .pose-a,
+.stage.is-fallback .phase-lock { animation: none; opacity: 1; }
+.stage.is-fallback .phase-lock { background: var(--copper-bright); color: #1b120c; }
+.stage.is-fallback .pose-b,
+.stage.is-fallback .phase-move { animation: none; opacity: 0; }
+.stage.is-fallback .phase-move { opacity: 1; background: transparent; color: var(--ink-soft); }
+.stage.is-fallback .play i,
+.stage.is-fallback .play b { animation: none; width: 70%; left: 70%; }
 .loopchip { font-size: 11px; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; color: var(--copper); }
 .phases { display: flex; gap: 6px; padding: 8px 14px 10px; }
 .phases span {

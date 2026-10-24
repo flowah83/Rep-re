@@ -12,6 +12,7 @@ import { importSummary, type ImportPreview } from "@/lib/history";
 import { exerciseFromPlan } from "@/lib/plan";
 import { platesPerSide } from "@/lib/calc";
 import type { BackupFile, Pattern, Session } from "@/lib/types";
+import { withBase } from "@/lib/base-path";
 import { formatKg, localDate, uid } from "@/lib/utils";
 
 export function Sheets() {
@@ -164,6 +165,9 @@ function SettingsSheet() {
       <p className="fine">
         Pour l’installer : dans Safari, touchez Partager, puis « Sur l’écran d’accueil », et ouvrez Repère comme une app. Le minuteur
         peut garder l’écran allumé une fois l’app installée. Sur iPhone, le site ne peut pas vibrer. Le compte à rebours reste le signal fiable.
+      </p>
+      <p className="fine">
+        <a href={withBase("/LICENSES.md")}>Licences du corps 3D</a>
       </p>
     </>
   );
