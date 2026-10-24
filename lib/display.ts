@@ -1,5 +1,6 @@
 import type { ExerciseLog, Session } from "./types";
 import { platesPerSide } from "./calc";
+import { CATALOG } from "./exercises";
 import { cardioSummary, formatMinutes } from "./history";
 import { formatKg, formatRestLabel, stripAccents } from "./utils";
 
@@ -15,7 +16,11 @@ export function unitPhrase(unit?: string | null): string {
 /** Haltères : la charge est celle d’une main, même si l’ancien plan n’a pas écrit l’unité. */
 export function unitOfExercise(exercise: { unit?: string | null; name?: string }): string | null {
   if (exercise.unit) return exercise.unit;
-  if (stripAccents(exercise.name ?? "").includes("haltere")) return "kg/main";
+  const key = stripAccents(exercise.name ?? "");
+  if (key.includes("haltere")) return "kg/main";
+  const catalog = CATALOG.find((item) => stripAccents(item.name) === key);
+  if (catalog?.equipment === "halteres") return "kg/main";
+  if (catalog?.equipment === "corps") return "corps";
   return null;
 }
 

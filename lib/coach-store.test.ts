@@ -58,9 +58,19 @@ describe("testCoachConnection", () => {
   it("distingue une connexion OK, un code refusé et un serveur injoignable", async () => {
     const ok = await testCoachConnection(
       { url: " HTTPS://Repere-Coach.Repere-Flo.workers.dev/ ", token: " bon " },
-      vi.fn(async () => new Response(JSON.stringify({ error: "Adresse inconnue." }), { status: 404 })),
+      vi.fn(async (input) => {
+        expect(String(input)).toBe(`${DEFAULT_COACH_URL}/health`);
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }),
     );
     expect(ok).toMatchObject({ ok: true, message: "Connexion OK.", url: DEFAULT_COACH_URL });
+
+    const missing = await testCoachConnection(
+      { url: DEFAULT_COACH_URL, token: "secret" },
+      vi.fn(async () => new Response(JSON.stringify({ error: "Adresse inconnue." }), { status: 404 })),
+    );
+    expect(missing.ok).toBe(false);
+    expect(missing.message).toBe("Cette adresse ne répond pas.");
 
     const denied = await testCoachConnection(
       { url: DEFAULT_COACH_URL, token: "mauvais" },

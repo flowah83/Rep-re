@@ -29,3 +29,16 @@ export function rememberPlan(session: Session) {
 export function recallPlan(id: string): Session | null {
   return read()[id] ?? null;
 }
+
+export function exportPlanSnapshots(): Record<string, Session> {
+  return read();
+}
+
+export function importPlanSnapshots(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(value));
+  } catch {
+    /* stockage privé */
+  }
+}

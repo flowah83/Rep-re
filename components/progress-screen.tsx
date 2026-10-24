@@ -2,7 +2,8 @@
 
 import { useApp, type RangeKey } from "@/components/app-context";
 import { BodyMap, E1Chart, heatFill } from "@/components/chart";
-import { bestLoads, e1rmSeries, isHardSet, muscleTotals, samplesForExercise, type E1Point } from "@/lib/calc";
+import { bestLoads, e1rmSeries, heaviestSet, isHardSet, muscleTotals, samplesForExercise, type E1Point } from "@/lib/calc";
+import { cardioSummary } from "@/lib/history";
 import { unitPhrase } from "@/lib/display";
 import { MUSCLE_LABEL } from "@/lib/exercises";
 import { bestE1rmLabel } from "@/lib/session";
@@ -37,6 +38,10 @@ export function ProgressScreen() {
   const totals = muscleTotals(app.sessions, addDays(app.today, -6), app.today);
   const fill = (muscle: Muscle) => heatFill(totals[muscle]);
   const records = bestLoads(app.sessions).slice(0, 3);
+  const held = name ? heaviestSet(app.sessions, name) : null;
+  const lastRun = [...app.sessions]
+    .filter((session) => session.status === "done" && session.cardio)
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))[0];
   const sentence = recordSentence(app.sessions, app.today);
   const lastGym = lastStrengthDate(app.sessions);
 
@@ -65,7 +70,7 @@ export function ProgressScreen() {
           </select>
           <div className="segment">
             {RANGES.map((item) => (
-              <button key={item.id} type="button" className={app.range === item.id ? "on" : ""} data-testid={`range-${item.id}`} onClick={() => app.setRange(item.id)}>
+              <button key={item.id} type="button" className={app.range === item.id ? "on" : ""} aria-pressed={app.range === item.id} data-testid={`range-${item.id}`} onClick={() => app.setRange(item.id)}>
                 {item.label}
               </button>
             ))}
@@ -74,8 +79,8 @@ export function ProgressScreen() {
             <div>
               <p className="who">Meilleure estimation tenue</p>
               <p className="kg num">
-                {best ? formatKg(best.kg) : "—"}
-                <small>kg</small>
+                {best ? formatKg(best.kg) : held && held.reps > 10 ? formatKg(held.loadKg) : "—"}
+                <small>{best ? "kg" : held && held.reps > 10 ? `kg × ${held.reps}` : "kg"}</small>
               </p>
             </div>
             <div className="delta">
@@ -95,6 +100,9 @@ export function ProgressScreen() {
             </div>
           </div>
           {sentence ? <p className="callout">{sentence}</p> : null}
+          {!best && held && held.reps > 10 ? (
+            <p className="fine">Pas d’estimation au-delà de 10 répétitions. Charge tenue : {formatKg(held.loadKg)} kg × {held.reps}.</p>
+          ) : null}
           <E1Chart points={plotted} from={from} to={app.today} />
         </>
       )}
@@ -119,6 +127,11 @@ export function ProgressScreen() {
         </div>
       </div>
       <p className="callout">{callout(totals, lastGym)}</p>
+      {lastRun?.cardio ? (
+        <p className="fine">
+          Dernière course · {formatLong(lastRun.date)} · {cardioSummary(lastRun.cardio)}
+        </p>
+      ) : null}
       <div className="section-label">
         Records <span>les trois plus lourdes</span>
       </div>
@@ -136,7 +149,8 @@ export function ProgressScreen() {
               }}
             >
               <b className="num">
-                {formatKg(record.loadKg)} {unitPhrase(record.unit)}
+                {formatKg(record.loadKg)} kg × {record.reps}
+                {record.unit === "kg/main" ? " par haltère" : record.unit === "kg/jambe" ? " par jambe" : ""}
               </b>
               <span>
                 {record.name} · {shortDate(record.date)}
@@ -186,7 +200,7 @@ function callout(totals: Record<Muscle, number>, lastGym: string | null) {
 
 function lastStrengthDate(sessions: Session[]): string | null {
   const dates = sessions
-    .filter((session) => session.status !== "planned" && !session.cardio && session.exercises.some((exercise) => exercise.sets.some((set) => isHardSet(set))))
+    .filter((session) => session.status === "done" && !session.cardio && session.exercises.some((exercise) => exercise.sets.some((set) => isHardSet(set))))
     .map((session) => session.date)
     .sort();
   return dates.length ? dates[dates.length - 1] : null;

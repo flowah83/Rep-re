@@ -13,8 +13,9 @@ import {
 import { importSummary, parseImport, previewImport, textFromLocation, withoutDuplicates, type ImportPreview } from "@/lib/history";
 import { mergePlans } from "@/lib/plan";
 import type { HistFilter } from "@/lib/display";
-import { loadProgression, saveProgression, silenceProgression, startWithProgression } from "@/lib/progression";
-import { rememberPlan } from "@/lib/snapshot";
+import { loadProgression, saveProgression, silenceProgression, startWithProgression, writeProgressionRaw } from "@/lib/progression";
+import { importPlanSnapshots, rememberPlan } from "@/lib/snapshot";
+import { saveCoachConfig, loadCoachConfig } from "@/lib/coach-store";
 import type { BackupFile, CustomExercise, Session, Settings } from "@/lib/types";
 import { publicBase } from "@/lib/base-path";
 import { localDate } from "@/lib/utils";
@@ -74,7 +75,7 @@ type Api = {
   addCustom: (exercise: CustomExercise) => Promise<void>;
   finishOnboarding: () => Promise<void>;
   pendingPlan: boolean;
-  beginSession: (session: Session) => Promise<void>;
+  beginSession: (session: Session, applySuggestion?: boolean) => Promise<void>;
   coachOpen: boolean;
   setCoachOpen: (open: boolean) => void;
   setSportFocus: (focus: { sessionId: string; exerciseId?: string | null; setId?: string | null } | null) => void;
@@ -166,12 +167,20 @@ export function AppProvider({
   }, [initial.notice]);
 
   useEffect(() => {
+    void navigator.storage?.persist?.();
     if (process.env.NODE_ENV !== "production") return;
     if ("serviceWorker" in navigator) {
       const base = publicBase();
       void navigator.serviceWorker.register(`${base}/sw.js`, { scope: base ? `${base}/` : "/" });
     }
   }, []);
+
+  useEffect(() => {
+    if (overlay) setToast(null);
+  }, [overlay]);
+  useEffect(() => {
+    if (sheet) setToast(null);
+  }, [sheet]);
 
   const api = useMemo<Api>(() => {
     const writeSessions = (list: Session[]) => {
@@ -337,6 +346,12 @@ export function AppProvider({
         setSessions(backup.sessions);
         setCustoms(backup.customExercises);
         applyTheme(backup.settings.theme);
+        writeProgressionRaw(backup.progression);
+        importPlanSnapshots(backup.planSnapshots);
+        if (backup.coachToken) {
+          const current = loadCoachConfig();
+          saveCoachConfig({ url: current.url, token: backup.coachToken });
+        }
         flash("Sauvegarde restaurée sur ce téléphone.");
         setSheet(null);
       },
@@ -371,7 +386,7 @@ export function AppProvider({
         await saveSettings(next);
         setSettings(next);
         setPendingPlan(false);
-        if (previewRef.current) setSheet("import");
+        setSheet("import");
       },
       pendingPlan,
       coachOpen,
@@ -380,17 +395,33 @@ export function AppProvider({
         sportFocusRef.current = focus;
       },
       readSportFocus: () => sportFocusRef.current,
-      beginSession: async (session) => {
+      beginSession: async (session, applySuggestion = false) => {
         if (session.status === "planned") rememberPlan(session);
         const existing = loadProgression(session.id);
         const prepared = startWithProgression(session, sessionsRef.current, existing);
-        if (prepared.record && !existing) saveProgression(session.id, silenceProgression(prepared.record));
-        const next =
-          prepared.session.status === "planned"
-            ? { ...prepared.session, status: "active" as const, startedAt: prepared.session.startedAt ?? new Date().toISOString() }
-            : prepared.session;
+        let next = session;
+        if (prepared.record && !existing) {
+          if (prepared.record.mode === "applied" && applySuggestion) {
+            next = prepared.session;
+            saveProgression(session.id, { ...prepared.record, choice: "kept" });
+          } else if (prepared.record.mode === "applied") {
+            saveProgression(session.id, {
+              ...prepared.record,
+              choice: "reverted",
+              items: prepared.record.items.map((item) => ({ ...item, active: false })),
+            });
+          } else {
+            saveProgression(session.id, silenceProgression(prepared.record));
+          }
+        } else if (prepared.session !== session && existing?.choice === "kept") {
+          next = prepared.session;
+        }
+        if (next.status === "planned") {
+          next = { ...next, status: "active", startedAt: next.startedAt ?? new Date().toISOString() };
+        }
         await saveSession(next);
         setOverlay({ kind: "session", id: next.id });
+        setToast(null);
       },
     };
   }, [
@@ -416,7 +447,11 @@ export function AppProvider({
   return (
     <Ctx.Provider value={api}>
       {children}
-      {toast ? <div className="toast">{toast}</div> : null}
+      {toast ? (
+        <div className="toast" role="status" aria-live="polite">
+          {toast}
+        </div>
+      ) : null}
     </Ctx.Provider>
   );
 }

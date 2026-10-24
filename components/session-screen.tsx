@@ -203,7 +203,7 @@ export function SessionScreen({ id }: { id: string }) {
       <div className="overlay-in session-screen" data-screen="session" data-testid="session-screen">
         <div className="sessbar">
           <button type="button" className="navline" data-testid="close-session" onClick={() => app.closeOverlay()}>
-            {correcting ? "Fermer" : "Pause"}
+            {correcting ? "Fermer" : "Quitter"}
           </button>
           <button type="button" className="coach-mini" data-testid="session-coach" aria-label="Ouvrir le coach" onClick={() => app.setCoachOpen(true)}>
             <CoachFace />
@@ -290,7 +290,7 @@ export function SessionScreen({ id }: { id: string }) {
             </button>
             {hasLogged ? (
               <button type="button" className="btn ghost" data-testid="abandon-keep" onClick={keepLogged}>
-                Garder la série, ranger le reste
+                Garder ce qui est noté{emptySets(session) ? `, ${emptySets(session)} série${emptySets(session) === 1 ? "" : "s"} resteront vides` : ""}
               </button>
             ) : null}
             <button type="button" className="undoline" data-testid="abandon-erase" onClick={erase}>
@@ -437,13 +437,13 @@ function ActiveSet({
       {list ? (
         <div className="menu listmenu" role="menu" data-testid="exercise-list">
           {session.exercises.map((item) => (
-            <button type="button" key={item.id} onClick={() => onJump(item.id)}>
+            <button type="button" role="menuitem" key={item.id} onClick={() => onJump(item.id)}>
               {item.sets.every(setSettled) ? "✓ " : ""}
               {item.name}
             </button>
           ))}
           {current.done ? null : (
-            <button type="button" data-testid="skip-set" onClick={onSkip}>
+            <button type="button" role="menuitem" data-testid="skip-set" onClick={onSkip}>
               Passer cette série
             </button>
           )}
@@ -452,18 +452,18 @@ function ActiveSet({
       {menu ? (
         <div className="menu" role="menu">
           {record?.items.some((item) => item.active) ? (
-            <button type="button" data-testid="progression-revert-plan" onClick={onRevertPlan}>
+            <button type="button" role="menuitem" data-testid="progression-revert-plan" onClick={onRevertPlan}>
               Revenir au plan
             </button>
           ) : null}
-          <button type="button" onClick={onPlates}>
+          <button type="button" role="menuitem" onClick={onPlates}>
             Calculer les disques
           </button>
-          <button type="button" data-testid="open-gesture" onClick={onGesture}>
+          <button type="button" role="menuitem" data-testid="open-gesture" onClick={onGesture}>
             Le geste
           </button>
           {correcting ? null : (
-            <button type="button" onClick={onCloseAsk}>
+            <button type="button" role="menuitem" onClick={onCloseAsk}>
               Clore la séance
             </button>
           )}
@@ -579,6 +579,10 @@ function blankOut(session: Session, record: ProgressionRecord | null): Session {
       sets: exercise.sets.map((set) => ({ ...set, done: false, skipped: false, reps: set.warmup ? set.reps : null, rpe: null })),
     })),
   };
+}
+
+function emptySets(session: Session): number {
+  return session.exercises.reduce((count, exercise) => count + exercise.sets.filter((set) => !set.done && !set.skipped && !set.warmup).length, 0);
 }
 
 function loggedLine(session: Session): string {

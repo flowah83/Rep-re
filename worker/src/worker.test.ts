@@ -1,15 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { basicHeader, buildIcs, parisDayToUtc, parseEvents } from "./caldav";
-import { handleRequest, resetCalendarCache, type Env } from "./index";
+import { handleRequest, resetAuthGuard, resetCalendarCache, type Env } from "./index";
 
 const env: Env = {
   APP_TOKEN: "phone-token",
   GEMINI_API_KEY: "AIza-test",
   AI_MODEL: "gemini-3.8-flash",
   ICLOUD_APP_PASSWORD: "app-pass",
-  CALDAV_USER: "florian.lemen@icloud.com",
+  CALDAV_USER: "athlete@icloud.com",
   CALDAV_HOST: "https://caldav.icloud.com",
-  CALENDAR_NAME: "Calendrier Flo",
+  CALENDAR_NAME: "Entraînement",
   ALLOWED_ORIGIN: "https://flowah83.github.io",
 };
 
@@ -22,6 +22,7 @@ function post(path: string, body: unknown, token = "phone-token", origin?: strin
 
 afterEach(() => {
   resetCalendarCache();
+  resetAuthGuard();
   vi.unstubAllGlobals();
 });
 
@@ -33,6 +34,37 @@ describe("worker", () => {
     expect(missing.status).toBe(401);
     expect(wrong.status).toBe(401);
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("accepte un code long et répond au contrôle de connexion", async () => {
+    const token = "k".repeat(48);
+    const response = await handleRequest(post("/health", {}, token), { ...env, APP_TOKEN: token }, vi.fn());
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+  });
+
+  it("bloque après cinq codes refusés", async () => {
+    const fetchImpl = vi.fn();
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const denied = await handleRequest(post("/health", {}, "mauvais"), env, fetchImpl);
+      expect(denied.status).toBe(401);
+    }
+    const locked = await handleRequest(post("/health", {}, "phone-token"), env, fetchImpl);
+    expect(locked.status).toBe(429);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("refuse d’envoyer le mot de passe iCloud vers une autre adresse", async () => {
+    const fetchImpl = vi.fn(async () => new Response("", { status: 201 }));
+    const response = await handleRequest(
+      post("/calendar", { action: "create", title: "Squat", start: "2026-10-27T18:15", end: "2026-10-27T19:30", href: "https://evil.example/steal.ics" }),
+      env,
+      fetchImpl,
+    );
+    expect(response.status).toBe(400);
+    expect(fetchImpl).not.toHaveBeenCalled();
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toBe("Adresse de calendrier refusée.");
   });
 
   it("refuse une autre origine", async () => {
@@ -187,7 +219,7 @@ describe("worker", () => {
         return xml(207, `<D:calendar-home-set><D:href>/123/calendars/</D:href></D:calendar-home-set>`);
       }
       if (init?.method === "PROPFIND") {
-        return xml(207, `<D:response><D:href>/123/calendars/flo/</D:href><D:displayname>Calendrier Flo</D:displayname></D:response>`);
+        return xml(207, `<D:response><D:href>/123/calendars/flo/</D:href><D:displayname>Entraînement</D:displayname></D:response>`);
       }
       if (init?.method === "REPORT") {
         return xml(
@@ -203,7 +235,7 @@ describe("worker", () => {
     const events = ((await listed.json()) as { events: { title: string; start: string }[] }).events;
     expect(events[0]).toMatchObject({ title: "Garde", start: "2026-10-25T07:00" });
     const report = calls.find((item) => item.method === "REPORT");
-    expect(report?.headers.get("Authorization")).toBe(basicHeader("florian.lemen@icloud.com", "app-pass"));
+    expect(report?.headers.get("Authorization")).toBe(basicHeader("athlete@icloud.com", "app-pass"));
     expect(report?.body).toContain(`start="${parisDayToUtc("2026-10-25")}"`);
     expect(report?.body).toContain("calendar-query");
     expect(calls.filter((item) => item.method === "PROPFIND").every((item) => item.headers.get("Depth") != null)).toBe(true);

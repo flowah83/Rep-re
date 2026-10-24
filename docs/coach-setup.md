@@ -1,6 +1,6 @@
 # Activer le coach
 
-Le coach est le bouton rond, en bas à droite. Il parle avec vous dans l’application. Vos séances restent sur le téléphone. Le coach a besoin d’un petit service sur Internet pour deux choses : répondre, et lire ou écrire le calendrier iCloud « Calendrier Flo ».
+Le coach est le bouton rond, en bas à droite. Il parle avec vous dans l’application. Vos séances restent sur le téléphone. Le coach a besoin d’un petit service sur Internet pour deux choses : répondre, et lire ou écrire votre calendrier iCloud.
 
 Les suggestions de charge, avant une séance, marchent sans rien installer. Vous pouvez les accepter ou les ignorer.
 
@@ -29,7 +29,7 @@ Ce n’est pas le mot de passe de votre identifiant Apple.
 1. Sur l’iPhone : Réglages → votre nom → Connexion et sécurité → Mots de passe pour les apps.
 2. Créez un mot de passe. Le nom peut être « Repère ».
 3. Copiez les quatre groupes de lettres. C’est `ICLOUD_APP_PASSWORD`.
-4. Le calendrier doit s’appeler exactement **Calendrier Flo**, sur le compte **florian.lemen@icloud.com**.
+4. Notez l’adresse iCloud du calendrier (`CALDAV_USER`) et le nom exact du calendrier (`CALENDAR_NAME`). Ils ne vont pas dans le dépôt.
 5. Les heures sont celles de Paris. Une garde de 24 h a le mot **Garde** dans le titre. Le coach en tient compte.
 6. Les événements de Chef sport commencent par 🏋️, 🏃 ou 🏊. S’il en change un, la modification est ajoutée au texte du bouton « Envoyer à Chef sport ».
 
@@ -50,13 +50,17 @@ Inventez une longue suite de lettres et de chiffres, par exemple 30 caractères,
 
 ## 6. Donner les trois codes au service
 
-Dans Cloudflare → Workers et Pages → `repere-coach` → Settings → Variables and Secrets, ajoutez trois secrets (pas des variables visibles) :
+Dans Cloudflare → Workers et Pages → `repere-coach` → Settings → Variables and Secrets, ajoutez ces secrets (pas des variables visibles) :
 
 1. `GEMINI_API_KEY` : la clé de l’étape 2.
 2. `ICLOUD_APP_PASSWORD` : le mot de passe d’application de l’étape 3.
-3. `APP_TOKEN` : le code inventé à l’étape 4.
+3. `APP_TOKEN` : le code inventé à l’étape 4. Un code long, déjà noté. Ne le raccourcissez pas.
+4. `CALDAV_USER` : l’adresse iCloud du calendrier.
+5. `CALENDAR_NAME` : le nom exact du calendrier.
 
-Ces trois codes restent chez Cloudflare. Ils ne sont pas dans le téléphone, ni dans GitHub, ni dans le code.
+Ces codes restent chez Cloudflare. Ils ne sont pas dans le téléphone, ni dans GitHub, ni dans le code. Le mot de passe iCloud n’est envoyé qu’aux serveurs `*.icloud.com`.
+
+Depuis la machine, la même chose se fait avec `npx wrangler secret put NOM`. Le workflow GitHub ignore le déploiement, de façon visible, tant que `CLOUDFLARE_API_TOKEN` et `CLOUDFLARE_ACCOUNT_ID` manquent. Le site, lui, se publie quand même.
 
 Le modèle est déjà `gemini-3.8-flash`. Pour en changer un jour, ajoutez une variable (pas un secret) nommée `AI_MODEL`.
 

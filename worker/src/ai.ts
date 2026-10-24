@@ -40,7 +40,7 @@ export function modelChain(env: AiEnv): string[] {
 }
 
 export function shouldTryNextModel(status: number): boolean {
-  return status === 500 || status === 503;
+  return status === 429 || status === 500 || status === 503;
 }
 
 /** Un flux peut essayer le modèle suivant : saturation, panne, ou silence. */

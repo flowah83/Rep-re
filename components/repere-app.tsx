@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppProvider, useApp, useBoot } from "@/components/app-context";
 import { BilanScreen } from "@/components/bilan-screen";
 import { GestureScreen } from "@/components/gesture-screen";
@@ -38,19 +38,6 @@ export function RepereApp() {
 function Shell() {
   const app = useApp();
   useOverlayHistory(Boolean(app.overlay), app.closeOverlay);
-  const noted = useRef(false);
-  useEffect(() => {
-    if (noted.current || !app.settings.onboarded || app.overlay) return;
-    noted.current = true;
-    try {
-      const key = "repere-seen-release";
-      const seen = localStorage.getItem(key);
-      if (!seen && app.sessions.length > 0) app.flash("Repère a été mis à jour.");
-      localStorage.setItem(key, "2");
-    } catch {
-      /* stockage privé */
-    }
-  }, [app]);
   if (!app.settings.onboarded) return <Onboarding />;
   return (
     <div className="app" data-testid="app-ready">
@@ -85,6 +72,7 @@ function Shell() {
       {app.overlay?.kind === "preview" ? <PreviewScreen id={app.overlay.id} /> : null}
       <Sheets />
       <CoachLayer />
+      <UpdateBanner />
       <ScrollEdge />
     </div>
   );
@@ -101,6 +89,51 @@ function Onboarding() {
       <Button data-testid="onboarding-start" onClick={() => void app.finishOnboarding()}>
         Déposer le plan
       </Button>
+    </div>
+  );
+}
+
+function UpdateBanner() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    const mark = (worker: ServiceWorker | null) => {
+      if (!worker) return;
+      if (worker.state === "installed" && navigator.serviceWorker.controller) setReady(true);
+      worker.addEventListener("statechange", () => {
+        if (worker.state === "installed" && navigator.serviceWorker.controller) setReady(true);
+      });
+    };
+    const listen = (registration: ServiceWorkerRegistration) => {
+      if (registration.waiting && navigator.serviceWorker.controller) setReady(true);
+      mark(registration.installing);
+      registration.addEventListener("updatefound", () => mark(registration.installing));
+    };
+    void navigator.serviceWorker.getRegistration().then((registration) => {
+      if (registration) listen(registration);
+    });
+    const onChange = () => {
+      if (sessionStorage.getItem("repere-reload") === "1") window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", onChange);
+    return () => navigator.serviceWorker.removeEventListener("controllerchange", onChange);
+  }, []);
+  if (!ready) return null;
+  return (
+    <div className="update-banner" role="status">
+      <p>Une version plus récente est prête. Les séances restent sur ce téléphone.</p>
+      <button
+        type="button"
+        data-testid="reload-app"
+        onClick={() => {
+          sessionStorage.setItem("repere-reload", "1");
+          void navigator.serviceWorker.getRegistration().then((registration) => {
+            registration?.waiting?.postMessage({ type: "repere-reload" });
+          });
+        }}
+      >
+        Recharger
+      </button>
     </div>
   );
 }

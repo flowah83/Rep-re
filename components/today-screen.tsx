@@ -5,6 +5,8 @@ import { useApp } from "@/components/app-context";
 import { cardioSummary } from "@/lib/history";
 import { describePlan, estimateMinutes } from "@/lib/display";
 import { coachIsReady } from "@/lib/coach-store";
+import { StartActions } from "@/components/start-actions";
+import { RestPill } from "@/components/rest-pill";
 import { buildAdjustments, keepsCoachPlan, loadProgression, revertAdjustment, saveProgression, type Adjustment } from "@/lib/progression";
 import type { Session } from "@/lib/types";
 import { addDays, formatKg, mondayOf, parseISODate, weekdayLetter } from "@/lib/utils";
@@ -70,6 +72,7 @@ export function TodayScreen() {
       {showBand && active ? (
         <button type="button" className="liveband" data-testid="resume-band" onClick={() => app.openSession(active.id)}>
           <span>{active.title} en cours</span>
+          <RestPill session={active} bare />
           <span>Reprendre</span>
         </button>
       ) : null}
@@ -125,7 +128,6 @@ export function TodayScreen() {
 function SessionCard({ session, primary, upcoming = false }: { session: Session; primary: boolean; upcoming?: boolean }) {
   const app = useApp();
   const minutes = estimateMinutes(session);
-  const action = session.status === "done" ? "Voir le bilan" : session.status === "active" ? "Reprendre" : "Commencer";
   const shown = session.exercises.slice(0, 2);
   const rest = session.exercises.slice(2);
   const record = loadProgression(session.id);
@@ -143,8 +145,8 @@ function SessionCard({ session, primary, upcoming = false }: { session: Session;
           ? cardioSummary(session.cardio)
           : `${session.intention ? `${capitalize(session.intention)} · ` : ""}environ ${minutes} min · ${session.exercises.length} exercice${session.exercises.length > 1 ? "s" : ""}`}
       </p>
+      {session.status === "active" ? <RestPill session={session} /> : null}
       <HoldNote session={session} />
-      <RiseNote session={session} />
       {session.cardio ? null : (
         <>
           {shown.map((exercise) => (
@@ -165,31 +167,7 @@ function SessionCard({ session, primary, upcoming = false }: { session: Session;
           ))}
         </>
       )}
-      {session.status !== "done" ? (
-        <button
-          type="button"
-          className="btn ghost"
-          data-testid={primary ? "open-preview" : undefined}
-          onClick={() => app.openPreview(session.id)}
-        >
-          Voir la séance
-        </button>
-      ) : null}
-      <button
-        type="button"
-        className="btn"
-        data-testid={primary ? "start-session" : undefined}
-        onClick={() => {
-          if (session.status === "done") app.openBilan(session.id);
-          else if (session.status === "active") app.openSession(session.id);
-          else {
-            app.setSelectedDate(session.date);
-            void app.beginSession(session);
-          }
-        }}
-      >
-        {action}
-      </button>
+      <StartActions session={session} place="card" primary={primary} allowEdit={!upcoming} />
       {canRevert && record ? (
         <button
           type="button"
@@ -203,18 +181,6 @@ function SessionCard({ session, primary, upcoming = false }: { session: Session;
           }}
         >
           Revenir au plan
-        </button>
-      ) : null}
-      {session.status === "planned" && !upcoming ? (
-        <button
-          type="button"
-          className="btn ghost"
-          onClick={() => {
-            app.setEditId(session.id);
-            app.setSheet("edit");
-          }}
-        >
-          Modifier
         </button>
       ) : null}
     </>
@@ -233,16 +199,18 @@ function HoldNote({ session }: { session: Session }) {
         <b>On garde le plan de Chef sport.</b>
       </p>
       <p>{note ? `${note}${/accepter/i.test(note) ? "" : " Rien à accepter."}` : "Il reste comme Chef sport l’a écrit. Rien à accepter."}</p>
-      {gaps.length ? (
-        <button type="button" className="linkish" data-testid="plan-gaps" onClick={() => setOpen((value) => !value)}>
-          Voir les {gaps.length} écart{gaps.length > 1 ? "s" : ""}
-        </button>
-      ) : null}
-      {coachIsReady() ? (
-        <button type="button" className="linkish" data-testid="ask-coach" onClick={() => app.setCoachOpen(true)}>
-          Demander au coach
-        </button>
-      ) : null}
+      <div className="linkrow">
+        {gaps.length ? (
+          <button type="button" className="linkish" data-testid="plan-gaps" onClick={() => setOpen((value) => !value)}>
+            Voir les {gaps.length} écart{gaps.length > 1 ? "s" : ""}
+          </button>
+        ) : null}
+        {coachIsReady() ? (
+          <button type="button" className="linkish" data-testid="ask-coach" onClick={() => app.setCoachOpen(true)}>
+            Demander au coach
+          </button>
+        ) : null}
+      </div>
       {open ? (
         <ul className="progression-list">
           {gaps.map((item) => (
@@ -251,47 +219,6 @@ function HoldNote({ session }: { session: Session }) {
               <p className="shift">
                 {item.fromLoadKg != null ? `${formatKg(item.fromLoadKg)} kg` : "le plan"} → {item.toLoadKg != null ? `${formatKg(item.toLoadKg)} kg` : "sans charge"}
               </p>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
-  );
-}
-
-function RiseNote({ session }: { session: Session }) {
-  const app = useApp();
-  const [open, setOpen] = useState(false);
-  if (session.status !== "planned" || keepsCoachPlan(session)) return null;
-  const existing = loadProgression(session.id);
-  if (existing) return null;
-  const items = buildAdjustments(session, app.sessions);
-  if (!items.length) return null;
-  return (
-    <div className="holdnote" data-testid="plan-rise">
-      <p>
-        {items.length === 1 ? "1 charge peut monter quand vous commencez." : `${items.length} charges peuvent monter quand vous commencez.`} Le plan reste tant que vous ne touchez à rien.
-      </p>
-      <button
-        type="button"
-        className="linkish"
-        data-testid="stay-on-plan"
-        onClick={() => {
-          saveProgression(session.id, { choice: "reverted", mode: "applied", items: items.map((item) => ({ ...item, active: false })) });
-          app.flash("On reste au plan.");
-        }}
-      >
-        Rester au plan
-      </button>
-      <button type="button" className="linkish" onClick={() => setOpen((value) => !value)}>
-        Voir le détail
-      </button>
-      {open ? (
-        <ul className="progression-list">
-          {items.map((item) => (
-            <li key={item.exerciseId}>
-              <b>{item.name}</b>
-              <p className="shift">{item.reason}</p>
             </li>
           ))}
         </ul>

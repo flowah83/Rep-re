@@ -44,7 +44,7 @@ export function muscleTotals(
 ): Record<Muscle, number> {
   const totals = emptyMuscles();
   for (const session of sessions) {
-    if (session.cardio || session.status === "planned") continue;
+    if (!countsForProgress(session)) continue;
     if (session.date < fromIso || session.date > toIso) continue;
     for (const ex of session.exercises) {
       const n = ex.sets.filter(isHardSet).length;
@@ -103,7 +103,7 @@ export function e1rmSeries(
 export function samplesForExercise(sessions: Session[], name: string) {
   const samples: { date: string; loadKg: number; reps: number }[] = [];
   for (const session of sessions) {
-    if (session.cardio || session.status === "planned") continue;
+    if (!countsForProgress(session)) continue;
     for (const ex of session.exercises) {
       if (ex.name !== name) continue;
       for (const set of ex.sets) {
@@ -145,10 +145,15 @@ export type BestLoad = {
   unit?: string | null;
 };
 
+/** Séance close : une série encore en cours ne devient ni un record, ni un point de courbe. */
+export function countsForProgress(session: Session): boolean {
+  return session.status === "done" && !session.cardio;
+}
+
 export function bestLoads(sessions: Session[]): BestLoad[] {
   const map = new Map<string, BestLoad>();
   for (const session of sessions) {
-    if (session.cardio || session.status === "planned") continue;
+    if (!countsForProgress(session)) continue;
     for (const ex of session.exercises) {
       for (const set of ex.sets) {
         if (!isHardSet(set) || set.loadKg == null || set.reps == null || set.loadKg <= 0) continue;
@@ -160,4 +165,22 @@ export function bestLoads(sessions: Session[]): BestLoad[] {
     }
   }
   return [...map.values()].sort((a, b) => b.loadKg - a.loadKg || (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+}
+
+/** Plus lourde série close, même au-delà de 10 répétitions, là où Epley ne trace rien. */
+export function heaviestSet(sessions: Session[], name: string): BestLoad | null {
+  let best: BestLoad | null = null;
+  for (const session of sessions) {
+    if (!countsForProgress(session)) continue;
+    for (const exercise of session.exercises) {
+      if (exercise.name !== name) continue;
+      for (const set of exercise.sets) {
+        if (!isHardSet(set) || set.loadKg == null || set.reps == null || set.loadKg <= 0) continue;
+        if (!best || set.loadKg > best.loadKg || (set.loadKg === best.loadKg && set.reps > best.reps)) {
+          best = { name, loadKg: set.loadKg, reps: set.reps, date: session.date, unit: set.unit ?? exercise.unit ?? null };
+        }
+      }
+    }
+  }
+  return best;
 }

@@ -169,7 +169,11 @@ export function parseEvents(xml: string): CalendarEvent[] {
 }
 
 export function resolveHref(base: string, href: string): string {
-  if (/^https?:\/\//i.test(href)) return href;
+  if (/^https?:\/\//i.test(href)) {
+    const absolute = new URL(href);
+    if (absolute.protocol !== "https:") throw new Error("Adresse de calendrier refusée.");
+    return absolute.toString();
+  }
   const url = new URL(base);
   if (href.startsWith("/")) return `${url.origin}${href}`;
   return new URL(href, base.endsWith("/") ? base : `${base}/`).toString();

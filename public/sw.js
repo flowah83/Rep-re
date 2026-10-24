@@ -1,5 +1,5 @@
 const BASE = /*__BASE__*/ "";
-const CACHE = `repere-v2${BASE}`;
+const CACHE = /*__CACHE__*/ "repere-dev";
 const INDEX = `${BASE}/index.html`;
 const PRECACHE = /*__PRECACHE__*/ [];
 
@@ -7,9 +7,12 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
-      .then((cache) => (PRECACHE.length ? cache.addAll(PRECACHE) : Promise.resolve()))
-      .then(() => self.skipWaiting()),
+      .then((cache) => (PRECACHE.length ? cache.addAll(PRECACHE) : Promise.resolve())),
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "repere-reload") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
