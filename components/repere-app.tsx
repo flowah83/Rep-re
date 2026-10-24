@@ -8,6 +8,7 @@ import { HistoryScreen } from "@/components/history-screen";
 import { ProgressScreen } from "@/components/progress-screen";
 import { SessionScreen } from "@/components/session-screen";
 import { CoachLayer } from "@/components/coach-panel";
+import { ScrollEdge } from "@/components/scroll-edge";
 import { Sheets } from "@/components/sheets";
 import { PreviewScreen } from "@/components/preview-screen";
 import { TodayScreen } from "@/components/today-screen";
@@ -84,6 +85,7 @@ function Shell() {
       {app.overlay?.kind === "preview" ? <PreviewScreen id={app.overlay.id} /> : null}
       <Sheets />
       <CoachLayer />
+      <ScrollEdge />
     </div>
   );
 }

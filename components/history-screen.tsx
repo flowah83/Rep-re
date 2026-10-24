@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useApp, type HistFilter } from "@/components/app-context";
 import { hardSetCount, tonnage } from "@/lib/calc";
 import { historyBucket } from "@/lib/display";
-import { cardioSummary, formatMinutes } from "@/lib/history";
+import { cardioSummary, formatMinutes, groupSessionsNewestWeekFirst } from "@/lib/history";
 import type { Session } from "@/lib/types";
 import { formatKg, mondayOf, parseISODate, stripAccents } from "@/lib/utils";
 
@@ -27,12 +27,7 @@ export function HistoryScreen() {
       const hay = stripAccents(`${session.title} ${session.exercises.map((exercise) => exercise.name).join(" ")}`);
       return hay.includes(needle);
     })
-    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.time ?? "").localeCompare(a.time ?? "")));
-  const weeks = new Map<string, Session[]>();
-  for (const session of list) {
-    const key = mondayOf(session.date);
-    weeks.set(key, [...(weeks.get(key) ?? []), session]);
-  }
+  const weeks = groupSessionsNewestWeekFirst(list);
 
   return (
     <div className="screen" data-screen="history">
@@ -62,7 +57,7 @@ export function HistoryScreen() {
       ) : list.length === 0 ? (
         <p className="quiet">Aucune séance dans ce filtre.</p>
       ) : (
-        [...weeks.entries()].map(([week, sessions]) => (
+        weeks.map(({ week, sessions }) => (
           <section key={week}>
             <div className="weeklabel">{week === mondayOf(app.today) ? "Cette semaine" : `Semaine du ${dayMonth(week)}`}</div>
             {sessions.map((session) => (

@@ -2,7 +2,7 @@ import { decodeImportToken } from "./codec";
 import { customFromMatch, normalizeExerciseKey, resolveExercise } from "./exercises";
 import { parsePlan } from "./plan";
 import type { CardioLog, CustomExercise, ExerciseLog, Session, SetLog } from "./types";
-import { finiteOrNull, formatLong, parseISODate, uid } from "./utils";
+import { finiteOrNull, formatLong, mondayOf, parseISODate, uid } from "./utils";
 
 export type HistoryDraft = {
   sessions: Session[];
@@ -382,6 +382,27 @@ export function formatMinutes(minutes: number): string {
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(value);
+}
+
+/** Plus récent d’abord. L’heure départage deux séances du même jour. */
+export function compareSessionsNewestFirst(a: { date: string; time?: string }, b: { date: string; time?: string }): number {
+  if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+  return (b.time ?? "").localeCompare(a.time ?? "");
+}
+
+/** Semaine la plus récente d’abord, et dans chaque semaine la séance la plus récente d’abord. */
+export function groupSessionsNewestWeekFirst<T extends { date: string; time?: string }>(sessions: T[]): { week: string; sessions: T[] }[] {
+  const sorted = [...sessions].sort(compareSessionsNewestFirst);
+  const weeks = new Map<string, T[]>();
+  for (const session of sorted) {
+    const key = mondayOf(session.date);
+    const list = weeks.get(key);
+    if (list) list.push(session);
+    else weeks.set(key, [session]);
+  }
+  return [...weeks.entries()]
+    .sort((a, b) => (a[0] < b[0] ? 1 : a[0] > b[0] ? -1 : 0))
+    .map(([week, items]) => ({ week, sessions: items }));
 }
 
 export async function textFromLocation(href: string): Promise<{ text: string | null; failed: boolean }> {

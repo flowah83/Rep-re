@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { decodeImportToken, encodeGzip, encodeText } from "./codec";
 import { bestLoads, muscleTotals, samplesForExercise, tonnage } from "./calc";
 import { explainMatch, resolveExercise } from "./exercises";
-import { historySignature, importSummary, parseImport, previewImport, withoutDuplicates } from "./history";
+import { compareSessionsNewestFirst, groupSessionsNewestWeekFirst, historySignature, importSummary, parseImport, previewImport, withoutDuplicates } from "./history";
 
 const historyFile = readFileSync(new URL("../fixtures/historique.json", import.meta.url), "utf8");
 const planFile = readFileSync(new URL("../fixtures/plan.json", import.meta.url), "utf8");
@@ -147,6 +147,26 @@ describe("lien gzip", () => {
     expect(parsed.sessions[0].exercises[0].name).toBe("Développé couché barre");
     expect(parsed.sessions[0].exercises[0].sets[0]).toMatchObject({ loadKg: 80, reps: 6, rpe: 8, done: true });
     expect(encodeText("ok")).not.toMatch(/[+/=]/);
+  });
+
+  it("met la séance et la semaine les plus récentes en tête du carnet", () => {
+    const rows = [
+      { date: "2026-07-06", time: "18:00" },
+      { date: "2026-10-24", time: "09:00" },
+      { date: "2026-10-22", time: "19:00" },
+      { date: "2026-10-24", time: "18:30" },
+      { date: "2026-09-02" },
+    ];
+    expect([...rows].sort(compareSessionsNewestFirst).map((row) => `${row.date} ${row.time ?? ""}`.trim())).toEqual([
+      "2026-10-24 18:30",
+      "2026-10-24 09:00",
+      "2026-10-22 19:00",
+      "2026-09-02",
+      "2026-07-06 18:00",
+    ]);
+    const groups = groupSessionsNewestWeekFirst(rows);
+    expect(groups.map((group) => group.week)).toEqual(["2026-10-19", "2026-08-31", "2026-07-06"]);
+    expect(groups[0].sessions.map((row) => row.date)).toEqual(["2026-10-24", "2026-10-24", "2026-10-22"]);
   });
 
   it("compresse le fichier réel et le relit", async () => {
