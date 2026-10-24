@@ -35,7 +35,15 @@ export function DialogContent({
       <DialogPrimitive.Content
         ref={content}
         className="sheet"
-        onOpenAutoFocus={(event) => event.preventDefault()}
+        onOpenAutoFocus={(event) => {
+          const root = event.currentTarget;
+          if (!(root instanceof HTMLElement)) return;
+          const title = root.querySelector("h2, h1");
+          if (!(title instanceof HTMLElement)) return;
+          event.preventDefault();
+          title.tabIndex = -1;
+          title.focus();
+        }}
         aria-describedby={undefined}
       >
         <div className="sheet-edge" ref={edge} aria-hidden="true">

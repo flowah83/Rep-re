@@ -193,6 +193,10 @@ describe("lien gzip", () => {
     expect(ahead[2].sessions.map((row) => row.id)).toEqual(["nov-6", "nov-6-late", "nov-8"]);
   });
 
+  it("refuse un lien d’import trop gros", async () => {
+    expect(await decodeImportToken(`gz.${"a".repeat(2_000_001)}`)).toBeNull();
+  });
+
   it("compresse le fichier réel et le relit", async () => {
     const token = await encodeGzip(historyFile);
     const back = await decodeImportToken(token);

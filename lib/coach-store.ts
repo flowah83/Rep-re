@@ -72,13 +72,15 @@ export async function testCoachConnection(
   const token = normalizeCoachToken(config.token);
   if (!token) return { ok: false, url, message: "Indiquez le code secret, puis réessayez." };
   try {
-    const response = await fetchImpl(url, {
+    const response = await fetchImpl(`${url.replace(/\/$/, "")}/health`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: "{}",
     });
     if (response.status === 401) return { ok: false, url, message: "Code refusé (401)." };
-    if (response.ok || response.status === 404) return { ok: true, url, message: "Connexion OK." };
+    if (response.status === 429) return { ok: false, url, message: "Trop d’essais. Réessayez dans un moment." };
+    if (response.ok) return { ok: true, url, message: "Connexion OK." };
+    if (response.status === 404) return { ok: false, url, message: "Cette adresse ne répond pas." };
     return { ok: false, url, message: `Le service a répondu ${response.status}.` };
   } catch {
     return { ok: false, url, message: `Serveur injoignable. Adresse utilisée : ${url}` };

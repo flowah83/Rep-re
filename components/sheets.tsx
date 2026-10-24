@@ -6,6 +6,8 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { DEFAULT_COACH_URL, loadCoachConfig, normalizeCoachToken, normalizeCoachUrl, saveCoachConfig, testCoachConnection } from "@/lib/coach-store";
+import { readProgressionRaw } from "@/lib/progression";
+import { exportPlanSnapshots } from "@/lib/snapshot";
 import { toCsv } from "@/lib/db";
 import { CATALOG, PATTERN_LABEL } from "@/lib/exercises";
 import { importSummary, type ImportPreview } from "@/lib/history";
@@ -13,7 +15,7 @@ import { exerciseFromPlan } from "@/lib/plan";
 import { platesPerSide } from "@/lib/calc";
 import type { BackupFile, Pattern, Session } from "@/lib/types";
 import { withBase } from "@/lib/base-path";
-import { formatKg, localDate, uid } from "@/lib/utils";
+import { formatKg, formatLong, localDate, uid } from "@/lib/utils";
 
 export function Sheets() {
   const app = useApp();
@@ -34,6 +36,8 @@ function SettingsSheet() {
   const app = useApp();
   const hasDemo = app.sessions.some((session) => session.source === "demo");
   const [askDemo, setAskDemo] = useState(false);
+  const [includeCoach, setIncludeCoach] = useState(false);
+  const [pendingBackup, setPendingBackup] = useState<BackupFile | null>(null);
   return (
     <>
       <DialogTitle asChild><h2>Réglages</h2></DialogTitle>
@@ -66,6 +70,12 @@ function SettingsSheet() {
       </div>
       <p className="fine">Barre actuelle : {formatKg(app.settings.barKg)} kg. Sert seulement au calcul des disques.</p>
       <h3 className="grouplabel">Données</h3>
+      <p className="fine" data-testid="backup-status">
+        Dernière copie : {app.settings.lastBackupAt ? formatLong(app.settings.lastBackupAt.slice(0, 10)) : "aucune"}.
+      </p>
+      <p className="fine">
+        Pour l’installer : dans Safari, touchez Partager, puis « Sur l’écran d’accueil ».
+      </p>
       <Button onClick={() => app.setSheet("import")}>Importer un plan</Button>
       <Button variant="ghost" onClick={() => { app.setEditId(null); app.setSheet("edit"); }}>
         Créer une séance
@@ -73,9 +83,14 @@ function SettingsSheet() {
       <Button variant="ghost" onClick={() => app.setSheet("library")}>
         Bibliothèque d’exercices
       </Button>
+      <label className="fine">
+        <input type="checkbox" checked={includeCoach} onChange={(event) => setIncludeCoach(event.target.checked)} /> Inclure le code du coach.
+        Il sera écrit en clair dans le fichier.
+      </label>
       <Button
         variant="ghost"
         onClick={() => {
+          const coach = loadCoachConfig();
           const backup: BackupFile = {
             app: "repere",
             version: 1,
@@ -83,13 +98,16 @@ function SettingsSheet() {
             settings: { ...app.settings, lastBackupAt: new Date().toISOString() },
             sessions: app.sessions,
             customExercises: app.customs,
+            progression: readProgressionRaw(),
+            planSnapshots: exportPlanSnapshots(),
+            coachToken: includeCoach && coach.token ? coach.token : null,
           };
           download(`repere-${localDate()}.json`, JSON.stringify(backup, null, 2), "application/json");
           void app.updateSettings({ lastBackupAt: backup.exportedAt });
-          app.flash("Fichier de sauvegarde téléchargé.");
+          app.flash("Copie enregistrée.");
         }}
       >
-        Exporter une sauvegarde
+        Enregistrer une copie
       </Button>
       <Button
         variant="ghost"
@@ -97,14 +115,16 @@ function SettingsSheet() {
           download(`repere-${localDate()}.csv`, toCsv(app.sessions), "text/csv");
         }}
       >
-        Exporter le tableau
+        Exporter pour un tableur
       </Button>
+      <p className="fine">Le tableau ne garde que les séries de barre déjà faites. La copie JSON est la vraie sauvegarde.</p>
       <label className="btn ghost" style={{ marginTop: 8 }}>
-        Importer une sauvegarde
+        Restaurer une copie
         <input
           type="file"
           accept="application/json,.json"
           hidden
+          data-testid="backup-file"
           onChange={(event) => {
             const file = event.target.files?.[0];
             event.target.value = "";
@@ -113,7 +133,12 @@ function SettingsSheet() {
               try {
                 const data = JSON.parse(text) as unknown;
                 if (isBackup(data)) {
-                  await app.restoreBackup(data);
+                  const problem = backupProblem(data);
+                  if (problem) {
+                    app.flash(problem);
+                    return;
+                  }
+                  setPendingBackup(data);
                   return;
                 }
               } catch {
@@ -126,6 +151,7 @@ function SettingsSheet() {
           }}
         />
       </label>
+      {pendingBackup ? <BackupPreview backup={pendingBackup} onCancel={() => setPendingBackup(null)} /> : null}
       <Button
         variant="ghost"
         onClick={async () => {
@@ -163,8 +189,7 @@ function SettingsSheet() {
         </Button>
       ) : null}
       <p className="fine">
-        Pour l’installer : dans Safari, touchez Partager, puis « Sur l’écran d’accueil », et ouvrez Repère comme une app. Le minuteur
-        peut garder l’écran allumé une fois l’app installée. Sur iPhone, le site ne peut pas vibrer. Le compte à rebours reste le signal fiable.
+        Le minuteur peut garder l’écran allumé une fois l’app installée. Sur iPhone, le site ne peut pas vibrer. Le compte à rebours reste le signal fiable.
       </p>
       <p className="fine">
         <a href={withBase("/LICENSES.md")}>Licences du corps 3D</a>
@@ -188,9 +213,12 @@ function CoachSettings() {
     <>
       <div className="fieldlabel">Adresse et code</div>
       <p className="fine">
-        Collez le code secret, une seule fois sur ce téléphone. L’adresse est déjà remplie. Sans le code, le coach reste éteint. Les
-        suggestions de charge marchent quand même.
+        Collez le code secret, une seule fois sur ce téléphone. Un code long se colle tel quel. L’adresse est déjà remplie. Sans le code, le coach reste éteint. Les
+        suggestions de charge marchent quand même. Le coach envoie les séances récentes et peut lire le calendrier.
       </p>
+      {token.trim().length > 0 && token.trim().length < 20 ? (
+        <p className="fine">Ce code est court. Un code long est plus difficile à deviner. Il se change dans le secret du service, pas ici tout seul.</p>
+      ) : null}
       <input
         className="field"
         data-testid="coach-url"
@@ -290,7 +318,15 @@ function ImportForm() {
           Collez un plan ou un historique, ou choisissez un fichier .json. Un lien #plan= ou #historique= s’ouvre ici avant d’être enregistré.
         </p>
       </DialogDescription>
-      <Textarea value={text} onChange={(event) => setText(event.target.value)} placeholder='{ "seances": [ … ] }' aria-label="Texte à importer" />
+      <Textarea
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        placeholder='{ "seances": [ … ] }'
+        aria-label="Texte à importer"
+        spellCheck={false}
+        autoCorrect="off"
+        autoCapitalize="off"
+      />
       {error ? <p className="err">{error}</p> : null}
       <Button
         onClick={async () => {
@@ -314,7 +350,12 @@ function ImportForm() {
               try {
                 const data = JSON.parse(raw) as unknown;
                 if (isBackup(data)) {
-                  await app.restoreBackup(data);
+                  const problem = backupProblem(data);
+                  if (problem) {
+                    setError(problem);
+                    return;
+                  }
+                  setError("Cette copie se restaure depuis Réglages, après un aperçu. Rien n’a été remplacé.");
                   return;
                 }
               } catch {
@@ -597,6 +638,47 @@ function LibrarySheet() {
       </Button>
     </>
   );
+}
+
+function BackupPreview({ backup, onCancel }: { backup: BackupFile; onCancel: () => void }) {
+  const app = useApp();
+  const dates = backup.sessions.map((session) => session.date).filter((date) => typeof date === "string").sort();
+  const from = dates[0];
+  const to = dates[dates.length - 1];
+  const done = backup.sessions.filter((session) => session.status === "done").length;
+  return (
+    <div className="holdnote" data-testid="backup-preview">
+      <p>
+        <b>Ceci remplace le carnet de ce téléphone.</b>
+      </p>
+      <p>
+        {backup.sessions.length} séance{backup.sessions.length > 1 ? "s" : ""}
+        {from && to ? `, du ${formatLong(from)} au ${formatLong(to)}` : ""}. {done} déjà notée{done > 1 ? "s" : ""}.
+      </p>
+      <p>
+        {backup.coachToken
+          ? "Le code du coach est dans ce fichier. Il remplacera celui de ce téléphone."
+          : "Le code du coach n’est pas dans ce fichier. Celui de ce téléphone est conservé."}
+      </p>
+      <Button
+        data-testid="backup-replace"
+        onClick={() => {
+          void app.restoreBackup(backup).then(onCancel);
+        }}
+      >
+        Remplacer le carnet
+      </Button>
+      <Button variant="ghost" onClick={onCancel}>
+        Annuler
+      </Button>
+    </div>
+  );
+}
+
+function backupProblem(data: BackupFile): string | null {
+  const broken = data.sessions.some((session) => !session || typeof session.id !== "string" || typeof session.date !== "string" || typeof session.title !== "string");
+  if (broken) return "Cette copie a des séances incomplètes. Rien n’a été remplacé.";
+  return null;
 }
 
 function isBackup(data: unknown): data is BackupFile {

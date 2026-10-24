@@ -6,6 +6,7 @@ workers_dev = true
 [vars]
 AI_PROVIDER = "gemini"
 CALDAV_HOST = "https://caldav.icloud.com"
-CALDAV_USER = "florian.lemen@icloud.com"
-CALENDAR_NAME = "Calendrier Flo"
 ALLOWED_ORIGIN = "https://flowah83.github.io"
+
+# Secrets, jamais dans ce fichier : APP_TOKEN, ICLOUD_APP_PASSWORD, GEMINI_API_KEY,
+# CALDAV_USER (adresse iCloud), CALENDAR_NAME.

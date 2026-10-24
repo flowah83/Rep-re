@@ -54,11 +54,13 @@ export async function handleRequest(request: Request, env: Env, fetchImpl: Fetch
   if (origin && origin !== allowed) return json({ error: "Origine refusée." }, 403);
   if (request.method === "OPTIONS") return cors(new Response(null, { status: 204 }), origin, allowed);
   if (request.method !== "POST") return cors(json({ error: "Méthode refusée." }, 405), origin, allowed);
-  if (!safeEqual(bearer(request), env.APP_TOKEN || "")) return cors(json({ error: "Accès refusé." }, 401), origin, allowed);
+  const denied = await authorize(request, env);
+  if (denied) return cors(denied, origin, allowed);
 
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "") || "/";
   try {
+    if (path.endsWith("/health")) return cors(json({ ok: true }, 200), origin, allowed);
     if (path.endsWith("/coach/stream")) return cors(await coachStream(request, env, fetchImpl), origin, allowed);
     if (path.endsWith("/coach")) return cors(await coach(request, env, fetchImpl), origin, allowed);
     if (path.endsWith("/calendar")) return cors(await calendar(request, env, fetchImpl), origin, allowed);
@@ -306,10 +308,16 @@ async function coach(request: Request, env: Env, fetchImpl: FetchLike): Promise<
 }
 
 async function calendar(request: Request, env: Env, fetchImpl: FetchLike): Promise<Response> {
-  if (!env.ICLOUD_APP_PASSWORD) return json({ error: "Le calendrier n’est pas encore activé." }, 503);
+  if (!env.ICLOUD_APP_PASSWORD || !env.CALDAV_USER || !env.CALENDAR_NAME) {
+    return json({ error: "Le calendrier n’est pas encore activé." }, 503);
+  }
   const body = await readJson(request);
   const action = typeof body.action === "string" ? body.action : "";
-  const auth = basicHeader(env.CALDAV_USER || "florian.lemen@icloud.com", env.ICLOUD_APP_PASSWORD);
+  const givenHref = text(body.href);
+  if (givenHref && /^https?:\/\//i.test(givenHref) && !isIcloudHost(givenHref)) {
+    return json({ error: "Adresse de calendrier refusée." }, 400);
+  }
+  const auth = basicHeader(env.CALDAV_USER, env.ICLOUD_APP_PASSWORD);
   const calendarUrl = await findCalendar(env, auth, fetchImpl);
   if (action === "list") {
     const start = typeof body.start === "string" ? body.start : "";
@@ -330,9 +338,12 @@ async function calendar(request: Request, env: Env, fetchImpl: FetchLike): Promi
     }
     const uid = action === "update" && text(body.uid) ? text(body.uid) : crypto.randomUUID();
     const href = text(body.href) || `${calendarUrl}${uid}.ics`;
+    const target = guardedHref(calendarUrl, href);
+    if (!target) return json({ error: "Adresse de calendrier refusée." }, 400);
     const ics = buildIcs({ uid, title, start, end, notes: text(body.notes) });
-    const call = putCall(resolveHref(calendarUrl, href), ics, auth, text(body.etag));
-    const response = await fetchImpl(call.url, { method: call.method, headers: call.headers, body: call.body });
+    const call = putCall(target, ics, auth, text(body.etag));
+    const response = await fetchImpl(call.url, { method: call.method, headers: call.headers, body: call.body, redirect: "manual" });
+    if (response.status >= 300 && response.status < 400) return json({ error: "Adresse de calendrier refusée." }, 400);
     if (!response.ok && response.status !== 201 && response.status !== 204) return json({ error: "Le calendrier a refusé l’événement." }, 502);
     return json({ ok: true, uid, href: call.url }, 200);
   }
@@ -340,8 +351,11 @@ async function calendar(request: Request, env: Env, fetchImpl: FetchLike): Promi
     const href = text(body.href);
     const uid = text(body.uid);
     if (!href && !uid) return json({ error: "Il manque l’événement." }, 400);
-    const call = deleteCall(resolveHref(calendarUrl, href || `${calendarUrl}${uid}.ics`), auth, text(body.etag));
-    const response = await fetchImpl(call.url, { method: call.method, headers: call.headers });
+    const target = guardedHref(calendarUrl, href || `${calendarUrl}${uid}.ics`);
+    if (!target) return json({ error: "Adresse de calendrier refusée." }, 400);
+    const call = deleteCall(target, auth, text(body.etag));
+    const response = await fetchImpl(call.url, { method: call.method, headers: call.headers, redirect: "manual" });
+    if (response.status >= 300 && response.status < 400) return json({ error: "Adresse de calendrier refusée." }, 400);
     if (!response.ok && response.status !== 204 && response.status !== 404) return json({ error: "Le calendrier n’a pas supprimé l’événement." }, 502);
     return json({ ok: true }, 200);
   }
@@ -351,6 +365,7 @@ async function calendar(request: Request, env: Env, fetchImpl: FetchLike): Promi
 async function findCalendar(env: Env, auth: string, fetchImpl: FetchLike): Promise<string> {
   if (cache.calendarUrl) return cache.calendarUrl;
   const host = (env.CALDAV_HOST || "https://caldav.icloud.com").replace(/\/+$/, "");
+  if (!isIcloudHost(host)) throw new Error("host");
   const principalXml = await send(propfindCall(`${host}/`, 0, "principal", auth), fetchImpl);
   const principal = extractHref(principalXml, "current-user-principal");
   if (!principal) throw new Error("principal");
@@ -359,16 +374,38 @@ async function findCalendar(env: Env, auth: string, fetchImpl: FetchLike): Promi
   if (!home) throw new Error("home");
   const homeUrl = resolveHref(host, home);
   const listXml = await send(propfindCall(homeUrl, 1, "list", auth), fetchImpl);
-  const wanted = (env.CALENDAR_NAME || "Calendrier Flo").trim();
+  const wanted = (env.CALENDAR_NAME || "").trim();
   const match = parseCalendarList(listXml).find((item) => item.name === wanted);
   if (!match) throw new Error("calendar");
-  cache.calendarUrl = resolveHref(homeUrl, match.href);
-  if (!cache.calendarUrl.endsWith("/")) cache.calendarUrl += "/";
+  const found = guardedHref(homeUrl, match.href);
+  if (!found) throw new Error("host");
+  cache.calendarUrl = found.endsWith("/") ? found : `${found}/`;
   return cache.calendarUrl;
 }
 
+function guardedHref(base: string, href: string): string | null {
+  try {
+    const resolved = resolveHref(base, href);
+    return isIcloudHost(resolved) ? resolved : null;
+  } catch {
+    return null;
+  }
+}
+
+function isIcloudHost(value: string): boolean {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:") return false;
+    const host = url.hostname.toLowerCase();
+    return host === "icloud.com" || host.endsWith(".icloud.com");
+  } catch {
+    return false;
+  }
+}
+
 async function send(call: HttpCall, fetchImpl: FetchLike): Promise<string> {
-  const response = await fetchImpl(call.url, { method: call.method, headers: call.headers, body: call.body });
+  const response = await fetchImpl(call.url, { method: call.method, headers: call.headers, body: call.body, redirect: "manual" });
+  if (response.status >= 300 && response.status < 400) throw new Error("redirect");
   if (!response.ok && response.status !== 207) throw new Error(String(response.status));
   return response.text();
 }
@@ -388,11 +425,35 @@ function bearer(request: Request): string {
   return header.startsWith("Bearer ") ? header.slice(7).trim() : "";
 }
 
-function safeEqual(left: string, right: string): boolean {
-  if (!left || !right || left.length !== right.length) return false;
-  let diff = 0;
-  for (let index = 0; index < left.length; index += 1) diff |= left.charCodeAt(index) ^ right.charCodeAt(index);
-  return diff === 0;
+const authFailures = new Map<string, { count: number; until: number }>();
+
+export function resetAuthGuard() {
+  authFailures.clear();
+}
+
+async function authorize(request: Request, env: Env): Promise<Response | null> {
+  const key = request.headers.get("CF-Connecting-IP") || request.headers.get("X-Forwarded-For") || "local";
+  const now = Date.now();
+  const row = authFailures.get(key);
+  if (row && row.until > now) return json({ error: "Trop d’essais. Réessayez dans un quart d’heure." }, 429);
+  const allowed = await safeEqual(bearer(request), env.APP_TOKEN || "");
+  if (allowed) {
+    authFailures.delete(key);
+    return null;
+  }
+  const count = (row && row.until > now ? row.count : row?.count ?? 0) + 1;
+  authFailures.set(key, { count, until: count >= 5 ? now + 15 * 60 * 1000 : 0 });
+  return json({ error: "Accès refusé." }, 401);
+}
+
+async function safeEqual(left: string, right: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const [a, b] = await Promise.all([crypto.subtle.digest("SHA-256", encoder.encode(left)), crypto.subtle.digest("SHA-256", encoder.encode(right))]);
+  const leftBytes = new Uint8Array(a);
+  const rightBytes = new Uint8Array(b);
+  let diff = leftBytes.length === rightBytes.length ? 0 : 1;
+  for (let index = 0; index < leftBytes.length; index += 1) diff |= leftBytes[index] ^ rightBytes[index];
+  return diff === 0 && Boolean(left) && Boolean(right);
 }
 
 function text(value: unknown): string {

@@ -11,6 +11,7 @@ import {
   saveProgression,
   setDelta,
   silenceProgression,
+  startOffer,
   startWithProgression,
   suggestForExercise,
   suggestionsForSession,
@@ -59,6 +60,20 @@ function doneSession(date: string, ex: ExerciseLog, extra: Partial<Session> = {}
 }
 
 describe("double progression", () => {
+  it("ne monte pas une séance prévue dure si l’effort n’a pas été noté", () => {
+    const history = [doneSession("2026-10-01", exercise({ sets: [set({ loadKg: 80, reps: 6 })] }))];
+    const suggestion = suggestForExercise(exercise(), history, "today");
+    expect(suggestion?.loadKg).toBe(80);
+    expect(suggestion?.reason).toMatch(/effort n’est pas noté/);
+  });
+
+  it("propose un seul choix de charge pour toute la séance", () => {
+    const history = [doneSession("2026-10-01", exercise({ sets: [set({ loadKg: 80, reps: 6, rpe: 8 })] }))];
+    const planned = doneSession("2026-10-24", exercise(), { id: "today", status: "planned" });
+    const offer = startOffer(planned, history);
+    expect(offer).toMatchObject({ kind: "choice", upLabel: "Commencer à 82,5 kg", keepLabel: "Garder 80 kg" });
+  });
+
   it("monte la charge quand toutes les séries atteignent l’objectif", () => {
     const history = [
       doneSession("2026-10-01", exercise({

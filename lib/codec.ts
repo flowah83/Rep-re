@@ -39,19 +39,28 @@ export async function encodeGzip(json: string): Promise<string> {
   return `gz.${bytesToBase64Url(new Uint8Array(await done))}`;
 }
 
+const MAX_IMPORT_CHARS = 2_000_000;
+const MAX_IMPORT_TEXT = 4_000_000;
+
 export async function decodeImportToken(token: string): Promise<string | null> {
   try {
+    if (token.length > MAX_IMPORT_CHARS) return null;
     const gzip = token.startsWith("gz.");
     const body = gzip ? token.slice(3) : token;
     if (!body) return null;
     const bytes = base64UrlToBytes(body);
-    if (!gzip) return new TextDecoder().decode(bytes);
+    if (bytes.byteLength > MAX_IMPORT_CHARS) return null;
+    if (!gzip) {
+      const text = new TextDecoder().decode(bytes);
+      return text.length > MAX_IMPORT_TEXT ? null : text;
+    }
     const stream = new DecompressionStream("gzip");
     const done = new Response(stream.readable).text();
     const writer = stream.writable.getWriter();
     await writer.write(copyBytes(bytes));
     await writer.close();
-    return await done;
+    const text = await done;
+    return text.length > MAX_IMPORT_TEXT ? null : text;
   } catch {
     return null;
   }

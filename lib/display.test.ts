@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bestLoads } from "./calc";
-import { describePlan, estimateMinutes, historyBucket, plateGlance, runFacts, seriesWord, unitPhrase } from "./display";
+import { describePlan, estimateMinutes, historyBucket, plateGlance, runFacts, seriesWord, unitOfExercise, unitPhrase } from "./display";
 import type { ExerciseLog, Session } from "./types";
 
 function exercise(partial: Partial<ExerciseLog> = {}): ExerciseLog {
@@ -84,6 +84,8 @@ describe("lignes de plan", () => {
   it("nomme l’haltère", () => {
     expect(unitPhrase("kg/main")).toBe("kg par haltère");
     expect(unitPhrase(null)).toBe("kg");
+    expect(unitOfExercise({ name: "Élévations latérales" })).toBe("kg/main");
+    expect(unitPhrase(unitOfExercise({ name: "Élévations latérales" }))).toBe("kg par haltère");
   });
 });
 

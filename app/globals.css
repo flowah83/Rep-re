@@ -88,7 +88,9 @@ body {
   font-feature-settings: "calt" 1, "kern" 1;
   touch-action: manipulation;
 }
-button, input, textarea, select { font-family: inherit; color: inherit; }
+@layer base {
+  button, input, textarea, select { font-family: inherit; color: inherit; }
+}
 button { cursor: pointer; }
 button:active { transform: scale(0.98); }
 :focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
@@ -102,7 +104,7 @@ button:active { transform: scale(0.98); }
   position: relative;
 }
 .screen {
-  padding: calc(14px + env(safe-area-inset-top)) 20px calc(156px + env(safe-area-inset-bottom));
+  padding: calc(14px + env(safe-area-inset-top)) 20px calc(196px + env(safe-area-inset-bottom));
 }
 .boot {
   min-height: 100dvh;
@@ -142,17 +144,19 @@ h1.title {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  min-height: 62px;
+  justify-content: center;
+  gap: 4px;
+  min-height: 44px;
+  min-width: 0;
   background: none;
   border: 0;
-  padding: 0;
+  padding: 4px 0;
 }
 .wd { font-size: 11px; font-weight: 560; color: var(--ink-soft); }
 .dn {
-  width: 32px;
-  height: 32px;
-  border-radius: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
   display: grid;
   place-items: center;
   font-size: 15px;
@@ -274,12 +278,14 @@ h1.title {
 }
 .tab {
   width: 88px;
+  min-height: 44px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 3px;
   color: var(--ink-soft);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: -0.01em;
   background: none;
@@ -650,8 +656,9 @@ h1.title {
   background: linear-gradient(90deg, var(--heat-0), #e0a67a 45%, #e08a4a 72%, #f0b27a);
 }
 .callout { margin: 8px 2px 0; font-size: 13.5px; line-height: 1.35; letter-spacing: -0.015em; }
-.prchips { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.prchips { display: flex; flex-direction: column; gap: 8px; }
 .prchips div, .prchips button {
+  width: 100%;
   background: var(--bg-elev);
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -788,7 +795,7 @@ h1.title {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(24px + env(safe-area-inset-bottom));
+  bottom: calc(84px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   width: min(calc(100% - 32px), 420px);
   background: var(--ink);
@@ -797,7 +804,9 @@ h1.title {
   padding: 12px 14px;
   font-size: 14px;
   font-weight: 560;
-  z-index: 40;
+  line-height: 1.35;
+  text-wrap: pretty;
+  z-index: 6;
   box-shadow: var(--shadow);
 }
 .onboard {
@@ -880,7 +889,7 @@ h1.title {
   position: fixed;
   z-index: 24;
   right: max(16px, calc(50% - 240px + 16px));
-  bottom: calc(86px + env(safe-area-inset-bottom));
+  bottom: calc(148px + env(safe-area-inset-bottom));
   width: 56px;
   height: 56px;
   border: 0;
@@ -1144,7 +1153,7 @@ h1.title {
 .weekrow { display: flex; align-items: center; gap: 0; }
 .weekrow .week { flex: 1; margin: 8px 0 12px; }
 .weeknav {
-  width: 44px;
+  width: 32px;
   height: 44px;
   border: 0;
   background: none;
@@ -1464,11 +1473,12 @@ h1.title {
   color: #f4f0e8;
 }
 .sport-mode .restband .pass { font-size: 18px; min-width: 76px; min-height: 60px; }
-.rperow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
-.rperow span { font-size: 13px; color: var(--rest-soft); margin-right: 2px; }
+.rperow { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; margin-top: 8px; overflow-x: auto; }
+.rperow span { font-size: 13px; color: var(--rest-soft); margin-right: 2px; flex: none; }
 .rperow button {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
+  flex: none;
   border-radius: 12px;
   border: 1px solid var(--rest-line);
   background: transparent;
@@ -1595,11 +1605,60 @@ html.dark .coach-fab .coach-face .eyes { stroke: #fbf8f3; }
   mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 32px), transparent 100%);
 }
 .coach-chips::-webkit-scrollbar { display: none; }
-body:has(.overlay) .toast {
-  top: calc(10px + env(safe-area-inset-top));
-  bottom: auto;
-  z-index: 45;
+body:has(.overlay) .toast,
+body:has(.sheet) .toast {
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 46;
 }
+.update-banner {
+  position: fixed;
+  z-index: 28;
+  left: 50%;
+  bottom: calc(148px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(calc(100% - 32px), 420px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--bg-elev);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.update-banner p { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.3; }
+.update-banner button {
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--btn-bg);
+  color: var(--btn-ink);
+  font-weight: 650;
+}
+.restpill {
+  width: 100%;
+  min-height: 44px;
+  margin: 0 0 10px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--rest-bg);
+  color: var(--rest-ink);
+  font-weight: 640;
+}
+.restpill span:last-child { color: var(--copper-bright); }
+.start-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 8px; }
+.start-actions .btn { align-self: stretch; }
+.holdnote .linkish + .linkish { margin-left: 14px; }
+.linkrow { display: flex; flex-wrap: wrap; gap: 12px 16px; }
 .coach-chips button {
   flex: none;
   min-height: 36px;

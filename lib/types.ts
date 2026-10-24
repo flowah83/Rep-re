@@ -126,4 +126,10 @@ export type BackupFile = {
   settings: Settings;
   sessions: Session[];
   customExercises: CustomExercise[];
+  /** Choix de charges déjà faits, pour ne pas les perdre au retour d’une copie. */
+  progression?: string | null;
+  /** Plans d’avant le départ, pour pouvoir encore annuler. */
+  planSnapshots?: Record<string, Session> | null;
+  /** Présent seulement si la copie a été enregistrée en l’incluant. */
+  coachToken?: string | null;
 };

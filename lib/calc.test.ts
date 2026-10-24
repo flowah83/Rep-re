@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bestLoads, e1rmSeries, epley, hardSetCount, muscleTotals, platesPerSide, tonnage } from "./calc";
+import { bestLoads, e1rmSeries, epley, hardSetCount, heaviestSet, muscleTotals, platesPerSide, samplesForExercise, tonnage } from "./calc";
 import { buildDemo } from "./demo";
 import { EXAMPLE_PLAN, decodePlan, encodePlan, parsePlan } from "./plan";
 import type { ExerciseLog, Session } from "./types";
@@ -149,5 +149,31 @@ describe("exemple fictif", () => {
     expect(Math.max(...series.map((p) => p.bestSoFar))).toBe(105);
     const loads = bestLoads(sessions).find((b) => b.name === "Squat barre");
     expect(loads?.loadKg).toBe(100);
+    expect(loads?.reps).toBeGreaterThan(0);
+  });
+
+  it("ignore une séance encore en cours pour les records et la courbe", () => {
+    const active = {
+      id: "live",
+      date: "2026-10-24",
+      title: "Poussée",
+      status: "active" as const,
+      source: "manual" as const,
+      exercises: [
+        {
+          id: "e",
+          name: "Développé couché barre",
+          pattern: "hpush" as const,
+          stepKg: 2.5,
+          cues: [],
+          muscles: ["pectoraux" as const],
+          planned: { sets: 1, reps: 6, loadKg: 82.5, restSec: 180, rpe: 8 },
+          sets: [{ id: "s", loadKg: 82.5, reps: 6, rpe: 8, warmup: false, done: true }],
+        },
+      ],
+    };
+    expect(bestLoads([active])).toEqual([]);
+    expect(samplesForExercise([active], "Développé couché barre")).toEqual([]);
+    expect(heaviestSet([active], "Développé couché barre")).toBeNull();
   });
 });

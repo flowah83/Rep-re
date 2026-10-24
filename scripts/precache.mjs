@@ -25,11 +25,13 @@ const swPath = path.join(outDir, "sw.js");
 let sw = readFileSync(swPath, "utf8");
 const withList = sw.replace("/*__PRECACHE__*/ []", `/*__PRECACHE__*/ ${JSON.stringify(urls)}`);
 const withBase = withList.replace("/*__BASE__*/ \"\"", `/*__BASE__*/ ${JSON.stringify(base)}`);
-if (withBase === sw) {
+const buildId = `repere-${hash(urls.join("\n"))}${base ? `-${base.replace(/\W+/g, "")}` : ""}`;
+const withCache = withBase.replace("/*__CACHE__*/ \"repere-dev\"", `/*__CACHE__*/ ${JSON.stringify(buildId)}`);
+if (withCache === sw) {
   console.error("Le service worker n’a pas les marqueurs de précache.");
   process.exit(1);
 }
-writeFileSync(swPath, withBase);
+writeFileSync(swPath, withCache);
 
 const manifestPath = path.join(outDir, "manifest.webmanifest");
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
@@ -45,6 +47,15 @@ writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 prefixCss(outDir, base);
 prefixHtml(outDir, base);
 console.log(`Précache : ${urls.length} fichiers. Base : ${root}`);
+
+function hash(value) {
+  let n = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    n ^= value.charCodeAt(i);
+    n = Math.imul(n, 16777619);
+  }
+  return (n >>> 0).toString(36);
+}
 
 function prefixPublic(src, prefix) {
   if (!prefix || typeof src !== "string" || !src.startsWith("/") || src.startsWith(`${prefix}/`)) return src;

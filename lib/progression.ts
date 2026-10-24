@@ -48,10 +48,12 @@ export function suggestForExercise(exercise: ExerciseLog, history: Session[], sk
   const hit = minReps >= target;
   const effort = effortOf(scored);
   const unit = exercise.unit ?? scored.find((set) => set.unit)?.unit ?? null;
+  const notedEffort = scored.some((set) => set.rpe != null || set.rir != null);
+  const plannedHard = (exercise.planned.rpe ?? 0) >= 8;
 
   let nextLoad = load;
   let reason: string;
-  if (hit && !effort.blocksIncrease) {
+  if (hit && !effort.blocksIncrease && !(plannedHard && !notedEffort)) {
     nextLoad = snap(load + step, step);
     const shown = formatLoad(nextLoad, unit);
     reason = effort.easy
@@ -61,6 +63,8 @@ export function suggestForExercise(exercise: ExerciseLog, history: Session[], sk
     nextLoad = snap(Math.max(0, load - step), step);
     if (nextLoad >= load - 0.01) nextLoad = snap(Math.max(0, load - step), step);
     reason = `Répétitions manquées et effort maximal. Suggestion : ${formatLoad(nextLoad, unit)} × ${target}.`;
+  } else if (hit && plannedHard && !notedEffort) {
+    reason = `Objectif atteint, mais l’effort n’est pas noté. On garde ${formatLoad(load, unit)} × ${target}.`;
   } else if (hit && effort.blocksIncrease) {
     reason = `Répétitions atteintes, mais l’effort était maximal. Gardez ${formatLoad(load, unit)} × ${target}.`;
   } else {
@@ -303,6 +307,55 @@ export function clearProgressionAsk(sessionId: string) {
   }
 }
 
+export type StartOffer =
+  | { kind: "plain" }
+  | { kind: "hold" }
+  | { kind: "choice"; upLabel: string; keepLabel: string; summary: string };
+
+/** Un seul choix pour toute la séance, avant que la charge change. */
+export function startOffer(session: Session, history: Session[]): StartOffer {
+  if (session.status !== "planned") return { kind: "plain" };
+  if (keepsCoachPlan(session)) return { kind: "hold" };
+  const existing = loadProgression(session.id);
+  if (existing && existing.choice !== "pending") return { kind: "plain" };
+  const items = buildAdjustments(session, history).filter(isIncrease);
+  if (!items.length) return { kind: "plain" };
+  const first = items[0];
+  if (items.length === 1 && first.fromLoadKg != null && first.toLoadKg != null) {
+    return {
+      kind: "choice",
+      upLabel: `Commencer à ${formatKg(first.toLoadKg)} kg`,
+      keepLabel: `Garder ${formatKg(first.fromLoadKg)} kg`,
+      summary: `${first.name} peut passer de ${formatKg(first.fromLoadKg)} à ${formatKg(first.toLoadKg)} kg. Un seul choix pour toute la séance.`,
+    };
+  }
+  return {
+    kind: "choice",
+    upLabel: "Commencer avec les hausses",
+    keepLabel: "Garder le plan",
+    summary: `${items.length} charges peuvent monter. Un seul choix pour toute la séance.`,
+  };
+}
+
+export function readProgressionRaw(): string | null {
+  try {
+    return localStorage.getItem(PROGRESSION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function writeProgressionRaw(raw: unknown) {
+  if (typeof raw !== "string" || !raw) return;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
+    localStorage.setItem(PROGRESSION_KEY, JSON.stringify(parsed));
+  } catch {
+    /* stockage privé */
+  }
+}
+
 export function silenceProgression(record: ProgressionRecord): ProgressionRecord {
   if (record.choice !== "pending") return record;
   return { ...record, choice: record.mode === "hold" ? "ignored" : "kept" };
@@ -367,7 +420,7 @@ function pack(exercise: ExerciseLog, loadKg: number | null, reps: number | null,
 function latestPerformance(name: string, history: Session[], skipSessionId?: string): ExerciseLog | null {
   const key = normalizeExerciseKey(name);
   const sessions = history
-    .filter((session) => session.id !== skipSessionId && !session.cardio && session.status !== "planned")
+    .filter((session) => session.id !== skipSessionId && !session.cardio && session.status === "done")
     .filter((session) => session.exercises.some((exercise) => normalizeExerciseKey(exercise.name) === key && exercise.sets.some(isHardSet)))
     .sort((a, b) => {
       if (a.date !== b.date) return a.date < b.date ? 1 : -1;

@@ -4,6 +4,7 @@ import { Fragment } from "react";
 import { useApp } from "@/components/app-context";
 import { estimateMinutes, runFacts, seriesWord, unitOfExercise, unitPhrase } from "@/lib/display";
 import { cardioSummary } from "@/lib/history";
+import { StartActions } from "@/components/start-actions";
 import { buildAdjustments, keepsCoachPlan, loadProgression, type Adjustment } from "@/lib/progression";
 import type { ExerciseLog, Session } from "@/lib/types";
 import { formatKg, formatLong, formatRestLabel } from "@/lib/utils";
@@ -19,8 +20,7 @@ export function PreviewScreen({ id }: { id: string }) {
     session.exercises.length > 0 &&
     session.exercises.every((exercise) => exercise.planned.loadKg == null && exercise.planned.reps == null && exercise.planned.restSec === 0);
   const willApply =
-    !held && session.exercises.some((exercise) => suggestionLoad(exercise.planned.loadKg, adjustments.get(exercise.id)) != null);
-  const startLabel = session.status === "active" ? "Reprendre la séance" : session.status === "done" ? "Fermer" : "Commencer la séance";
+    !held && session.status === "planned" && session.exercises.some((exercise) => suggestionLoad(exercise.planned.loadKg, adjustments.get(exercise.id)) != null);
 
   return (
     <div className="overlay">
@@ -48,7 +48,7 @@ export function PreviewScreen({ id }: { id: string }) {
             </div>
           ) : null}
           <p className="fine">Vous lisez le plan. Rien n’est modifié tant que vous ne commencez pas.</p>
-          {willApply ? <p className="fine">En commençant, ces suggestions remplacent les charges du plan.</p> : null}
+          {willApply ? <p className="fine">Le choix se fait en bas : une charge pour toute la séance, ou le plan.</p> : null}
           {session.cardio || runLike ? (
             <section className="preview-ex">
               <h2>{session.cardio?.sport ?? session.exercises[0]?.name ?? "Course"}</h2>
@@ -70,25 +70,7 @@ export function PreviewScreen({ id }: { id: string }) {
               ))}
         </div>
         <div className="preview-foot">
-          <button
-            type="button"
-            className="btn"
-            data-testid="preview-start"
-            onClick={() => {
-              if (session.status === "done") {
-                app.closeOverlay();
-                return;
-              }
-              if (session.status === "active") {
-                app.openSession(session.id);
-                return;
-              }
-              app.setSelectedDate(session.date);
-              void app.beginSession(session);
-            }}
-          >
-            {startLabel}
-          </button>
+          <StartActions session={session} place="preview" primary />
         </div>
       </div>
     </div>

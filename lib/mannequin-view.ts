@@ -1516,7 +1516,7 @@ totalEmissiveRadiance += uCopper * (primE * uPrimGlow + secE * uSecGlow);`,
       audit.frozenK = k;
     },
   };
-  window.__audit = audit;
+  if (process.env.NODE_ENV !== "production") window.__audit = audit;
 
   function onLost(event: Event) {
     event.preventDefault();

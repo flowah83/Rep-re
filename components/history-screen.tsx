@@ -10,9 +10,9 @@ import { formatKg, mondayOf, parseISODate, stripAccents } from "@/lib/utils";
 
 const FILTERS: { id: HistFilter; label: string }[] = [
   { id: "all", label: "Tout" },
-  { id: "upper", label: "Upper" },
-  { id: "lower", label: "Lower" },
-  { id: "cardio", label: "Course" },
+  { id: "upper", label: "Haut du corps" },
+  { id: "lower", label: "Jambes" },
+  { id: "cardio", label: "Cardio" },
   { id: "other", label: "Autre" },
 ];
 
@@ -41,11 +41,12 @@ export function HistoryScreen() {
         data-testid="history-search"
         value={query}
         placeholder="Chercher une séance ou un geste"
+        aria-label="Chercher une séance ou un geste"
         onChange={(event) => setQuery(event.target.value)}
       />
       <div className="chips">
         {FILTERS.map((item) => (
-          <button key={item.id} type="button" className={app.filter === item.id ? "on" : ""} data-testid={`filter-${item.id}`} onClick={() => app.setFilter(item.id)}>
+          <button key={item.id} type="button" className={app.filter === item.id ? "on" : ""} aria-pressed={app.filter === item.id} data-testid={`filter-${item.id}`} onClick={() => app.setFilter(item.id)}>
             {item.label}
           </button>
         ))}
@@ -113,10 +114,7 @@ function WeekBlock({ week, today, sessions }: { week: string; today: string; ses
               onClick={() => {
                 if (session.status === "done") app.openBilan(session.id);
                 else if (session.status === "active") app.openSession(session.id);
-                else {
-                  app.setSelectedDate(session.date);
-                  app.setTab("today");
-                }
+                else app.openPreview(session.id);
               }}
             >
               <div className="sdate">
