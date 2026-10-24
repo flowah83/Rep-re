@@ -390,9 +390,31 @@ export function compareSessionsNewestFirst(a: { date: string; time?: string }, b
   return (b.time ?? "").localeCompare(a.time ?? "");
 }
 
-/** Semaine la plus récente d’abord, et dans chaque semaine la séance la plus récente d’abord. */
-export function groupSessionsNewestWeekFirst<T extends { date: string; time?: string }>(sessions: T[]): { week: string; sessions: T[] }[] {
-  const sorted = [...sessions].sort(compareSessionsNewestFirst);
+/** La prochaine d’abord. L’heure la plus tôt départage deux séances du même jour. */
+export function compareSessionsSoonestFirst(a: { date: string; time?: string }, b: { date: string; time?: string }): number {
+  if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+  return (a.time ?? "").localeCompare(b.time ?? "");
+}
+
+/** Prévue, ou datée après aujourd’hui : elle ne va pas dans la liste principale. */
+export function isUpcomingSession(session: { status: string; date: string }, today: string): boolean {
+  return session.status === "planned" || session.date > today;
+}
+
+/** Passé : plus récent d’abord. À venir : la plus proche d’abord. */
+export function splitCarnet<T extends { date: string; time?: string; status: string }>(sessions: T[], today: string): { past: T[]; upcoming: T[] } {
+  const past: T[] = [];
+  const upcoming: T[] = [];
+  for (const session of sessions) {
+    if (isUpcomingSession(session, today)) upcoming.push(session);
+    else past.push(session);
+  }
+  past.sort(compareSessionsNewestFirst);
+  upcoming.sort(compareSessionsSoonestFirst);
+  return { past, upcoming };
+}
+
+function groupByWeek<T extends { date: string; time?: string }>(sorted: T[]): { week: string; sessions: T[] }[] {
   const weeks = new Map<string, T[]>();
   for (const session of sorted) {
     const key = mondayOf(session.date);
@@ -400,9 +422,17 @@ export function groupSessionsNewestWeekFirst<T extends { date: string; time?: st
     if (list) list.push(session);
     else weeks.set(key, [session]);
   }
-  return [...weeks.entries()]
-    .sort((a, b) => (a[0] < b[0] ? 1 : a[0] > b[0] ? -1 : 0))
-    .map(([week, items]) => ({ week, sessions: items }));
+  return [...weeks.entries()].map(([week, items]) => ({ week, sessions: items }));
+}
+
+/** Semaine la plus récente d’abord, et dans chaque semaine la séance la plus récente d’abord. */
+export function groupSessionsNewestWeekFirst<T extends { date: string; time?: string }>(sessions: T[]): { week: string; sessions: T[] }[] {
+  return groupByWeek([...sessions].sort(compareSessionsNewestFirst)).sort((a, b) => (a.week < b.week ? 1 : a.week > b.week ? -1 : 0));
+}
+
+/** Semaine la plus proche d’abord, et dans chaque semaine la séance la plus proche d’abord. */
+export function groupSessionsSoonestWeekFirst<T extends { date: string; time?: string }>(sessions: T[]): { week: string; sessions: T[] }[] {
+  return groupByWeek([...sessions].sort(compareSessionsSoonestFirst));
 }
 
 export async function textFromLocation(href: string): Promise<{ text: string | null; failed: boolean }> {
