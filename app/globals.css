@@ -883,6 +883,7 @@ h1.title {
 .app:has([data-screen="session"]) .coach-fab,
 .app:has([data-screen="gesture"]) .coach-fab,
 .app:has([data-screen="bilan"]) .coach-fab,
+.app:has([data-screen="preview"]) .coach-fab,
 .app:has([data-testid="rest-timer"]) .coach-fab {
   display: none;
 }
@@ -1222,5 +1223,49 @@ h1.title {
   color: var(--ink-soft);
 }
 .onboard h1 { text-wrap: balance; }
+
+.preview-screen {
+  height: 100dvh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: calc(8px + env(safe-area-inset-top)) 20px calc(12px + env(safe-area-inset-bottom));
+}
+.preview-screen h1 {
+  margin: 4px 0 0;
+  font-size: 32px;
+  letter-spacing: -0.038em;
+  font-weight: 640;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+.preview-top { flex: none; }
+.app:has([data-screen="preview"]) .overlay-in.preview-screen { padding-right: 20px; }
+.preview-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 12px;
+}
+.preview-ex { padding: 14px 0; border-top: 1px solid var(--line); }
+.preview-ex h2 { margin: 0 0 6px; font-size: 18px; letter-spacing: -0.03em; font-weight: 640; line-height: 1.25; }
+.preview-ex p { margin: 3px 0; font-size: 15.5px; line-height: 1.35; }
+.preview-k { color: var(--ink-soft); font-weight: 600; margin-right: 6px; }
+.preview-warn {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--copper) 12%, var(--bg));
+  color: var(--ink);
+}
+.preview-foot {
+  flex: none;
+  margin-top: 4px;
+  padding-top: 12px;
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
+.preview-foot .btn { margin-top: 0; }
 .session-screen { position: relative; }
 .navline { min-height: 44px; }

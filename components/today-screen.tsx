@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useApp } from "@/components/app-context";
 import { cardioSummary } from "@/lib/history";
-import { describePlan } from "@/lib/display";
+import { describePlan, estimateMinutes } from "@/lib/display";
 import { buildAdjustments, keepsCoachPlan, loadProgression, revertAdjustment, saveProgression, type Adjustment } from "@/lib/progression";
 import type { Session } from "@/lib/types";
 import { addDays, formatKg, mondayOf, parseISODate, weekdayLetter } from "@/lib/utils";
@@ -123,7 +123,7 @@ export function TodayScreen() {
 
 function SessionCard({ session, primary, upcoming = false }: { session: Session; primary: boolean; upcoming?: boolean }) {
   const app = useApp();
-  const minutes = Math.round(session.exercises.reduce((sum, exercise) => sum + (exercise.sets.length * exercise.planned.restSec) / 60, 0));
+  const minutes = estimateMinutes(session);
   const action = session.status === "done" ? "Voir le bilan" : session.status === "active" ? "Reprendre" : "Commencer";
   const shown = session.exercises.slice(0, 2);
   const rest = session.exercises.slice(2);
@@ -140,7 +140,7 @@ function SessionCard({ session, primary, upcoming = false }: { session: Session;
       <p className="meta">
         {session.cardio
           ? cardioSummary(session.cardio)
-          : `${session.intention ? `${capitalize(session.intention)} · ` : ""}environ ${Math.max(session.cardio ? 20 : 30, minutes || session.durationMin || 30)} min · ${session.exercises.length} exercice${session.exercises.length > 1 ? "s" : ""}`}
+          : `${session.intention ? `${capitalize(session.intention)} · ` : ""}environ ${minutes} min · ${session.exercises.length} exercice${session.exercises.length > 1 ? "s" : ""}`}
       </p>
       <HoldNote session={session} />
       <RiseNote session={session} />
@@ -164,6 +164,16 @@ function SessionCard({ session, primary, upcoming = false }: { session: Session;
           ))}
         </>
       )}
+      {session.status !== "done" ? (
+        <button
+          type="button"
+          className="btn ghost"
+          data-testid={primary ? "open-preview" : undefined}
+          onClick={() => app.openPreview(session.id)}
+        >
+          Voir la séance
+        </button>
+      ) : null}
       <button
         type="button"
         className="btn"

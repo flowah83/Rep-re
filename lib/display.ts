@@ -46,6 +46,61 @@ export function historyBucket(session: Pick<Session, "title" | "cardio">): HistF
   return "other";
 }
 
+/** Durée estimée : le temps de chaque série, plus les repos entre elles. Une course garde sa durée. */
+export function estimateMinutes(session: Session): number {
+  if (session.cardio?.durationMin != null && isMostlyCardio(session)) return Math.max(1, Math.round(session.cardio.durationMin));
+  const noted = isMostlyCardio(session) || enduranceShaped(session) ? minutesMentioned(session) : null;
+  if (noted != null) return noted;
+  let seconds = 0;
+  for (const exercise of session.exercises) {
+    const count = exercise.sets.length > 0 ? exercise.sets.length : Math.max(0, exercise.planned.sets);
+    if (count <= 0) continue;
+    const rest = Math.max(0, exercise.planned.restSec);
+    seconds += count * 45 + Math.max(0, count - 1) * rest;
+  }
+  if (session.cardio?.durationMin != null) seconds += session.cardio.durationMin * 60;
+  if (seconds <= 0 && session.durationMin != null) return Math.max(1, Math.round(session.durationMin));
+  return Math.max(1, Math.round(seconds / 60));
+}
+
+/** Ce que l’on peut dire d’une course : champs notés, sinon une durée écrite dans la note. */
+export function runFacts(session: Session): { duration: string | null; distance: string | null; pace: string | null } {
+  const cardio = session.cardio;
+  if (cardio && (cardio.durationMin != null || cardio.distanceKm != null || cardio.pace)) {
+    return {
+      duration: cardio.durationMin != null ? formatMinutes(cardio.durationMin) : null,
+      distance: cardio.distanceKm != null ? `${formatKg(cardio.distanceKm)} km` : null,
+      pace: cardio.pace,
+    };
+  }
+  const text = [session.coachNote, ...session.exercises.map((exercise) => exercise.note)].filter(Boolean).join(" ");
+  const range = text.match(/(\d+)\s*[–-]\s*(\d+)\s*min/);
+  const one = text.match(/(\d+)\s*min/);
+  return {
+    duration: range ? `${range[1]}–${range[2]} min` : one ? `${one[1]} min` : null,
+    distance: null,
+    pace: null,
+  };
+}
+
+function minutesMentioned(session: Session): number | null {
+  const facts = runFacts(session);
+  if (!facts.duration) return null;
+  const range = facts.duration.match(/(\d+)\s*[–-]\s*(\d+)/);
+  if (range) return Math.round((Number(range[1]) + Number(range[2])) / 2);
+  const one = facts.duration.match(/(\d+)/);
+  return one ? Number(one[1]) : null;
+}
+
+function isMostlyCardio(session: Session): boolean {
+  return session.exercises.every((exercise) => exercise.planned.loadKg == null && exercise.planned.restSec === 0);
+}
+
+/** Course, nage ou lignes droites : aucune charge, aucune répétition comptée. */
+function enduranceShaped(session: Session): boolean {
+  return session.exercises.length > 0 && session.exercises.every((exercise) => exercise.planned.loadKg == null && exercise.planned.reps == null);
+}
+
 export function coachErrorText(message: string): string {
   if (/souffle/i.test(message) || /pas encore activé/i.test(message)) return message;
   if (/https?:|joignable|401|refus|illisible|adresse utilisée/i.test(message)) {

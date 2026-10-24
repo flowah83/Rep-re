@@ -26,7 +26,8 @@ export type Overlay =
   | null
   | { kind: "session"; id: string }
   | { kind: "gesture"; sessionId: string; exerciseId: string }
-  | { kind: "bilan"; id: string; fresh?: boolean };
+  | { kind: "bilan"; id: string; fresh?: boolean }
+  | { kind: "preview"; id: string };
 export type SheetName = null | "settings" | "import" | "edit" | "plates" | "library";
 
 type Api = {
@@ -42,6 +43,7 @@ type Api = {
   openSession: (id: string) => void;
   openGesture: (sessionId: string, exerciseId: string) => void;
   openBilan: (id: string, fresh?: boolean) => void;
+  openPreview: (id: string) => void;
   closeOverlay: () => void;
   sheet: SheetName;
   setSheet: (sheet: SheetName) => void;
@@ -218,6 +220,7 @@ export function AppProvider({
       openSession: (id) => setOverlay({ kind: "session", id }),
       openGesture: (sessionId, exerciseId) => setOverlay({ kind: "gesture", sessionId, exerciseId }),
       openBilan: (id, fresh = false) => setOverlay({ kind: "bilan", id, fresh }),
+      openPreview: (id) => setOverlay({ kind: "preview", id }),
       closeOverlay: () => setOverlay(null),
       sheet,
       setSheet,

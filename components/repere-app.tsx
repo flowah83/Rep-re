@@ -9,6 +9,7 @@ import { ProgressScreen } from "@/components/progress-screen";
 import { SessionScreen } from "@/components/session-screen";
 import { CoachLayer } from "@/components/coach-panel";
 import { Sheets } from "@/components/sheets";
+import { PreviewScreen } from "@/components/preview-screen";
 import { TodayScreen } from "@/components/today-screen";
 import { ImportSummary } from "@/components/sheets";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ function Shell() {
       {app.overlay?.kind === "session" ? <SessionScreen key={app.overlay.id} id={app.overlay.id} /> : null}
       {app.overlay?.kind === "gesture" ? <GestureScreen sessionId={app.overlay.sessionId} exerciseId={app.overlay.exerciseId} /> : null}
       {app.overlay?.kind === "bilan" ? <BilanScreen id={app.overlay.id} /> : null}
+      {app.overlay?.kind === "preview" ? <PreviewScreen id={app.overlay.id} /> : null}
       <Sheets />
       <CoachLayer />
     </div>

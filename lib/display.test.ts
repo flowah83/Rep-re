@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bestLoads } from "./calc";
-import { describePlan, historyBucket, seriesWord, unitPhrase } from "./display";
+import { describePlan, estimateMinutes, historyBucket, runFacts, seriesWord, unitPhrase } from "./display";
 import type { ExerciseLog, Session } from "./types";
 
 function exercise(partial: Partial<ExerciseLog> = {}): ExerciseLog {
@@ -39,6 +39,40 @@ describe("lignes de plan", () => {
     expect(historyBucket({ title: "Lower A" })).toBe("lower");
     expect(historyBucket({ title: "Footing", cardio: { sport: "Course", durationMin: 20, distanceKm: null, rpe: null, pace: null, hrAvg: null, hrMax: null, elevationM: null, kcal: null } })).toBe("cardio");
     expect(historyBucket({ title: "Mobilité" })).toBe("other");
+  });
+
+  it("estime la durée avec les repos, et garde celle d’une course", () => {
+    const strength = session("Développé couché", 20, "2026-10-25");
+    strength.exercises[0].planned.restSec = 120;
+    strength.exercises[0].planned.sets = 3;
+    strength.exercises[0].sets = [
+      { id: "a", loadKg: 20, reps: null, rpe: null, warmup: false, done: false },
+      { id: "b", loadKg: 20, reps: null, rpe: null, warmup: false, done: false },
+      { id: "c", loadKg: 20, reps: null, rpe: null, warmup: false, done: false },
+    ];
+    expect(estimateMinutes(strength)).toBe(6);
+    const run = {
+      ...strength,
+      cardio: { sport: "Course", durationMin: 32, distanceKm: 5, rpe: null, pace: "6:24", hrAvg: null, hrMax: null, elevationM: null, kcal: null },
+      exercises: [{ ...strength.exercises[0], planned: { ...strength.exercises[0].planned, loadKg: null, restSec: 0, sets: 1 }, sets: [] }],
+    };
+    expect(estimateMinutes(run)).toBe(32);
+    const plannedRun = {
+      ...strength,
+      cardio: undefined,
+      coachNote: "Restez à l’aise.",
+      exercises: [
+        {
+          ...strength.exercises[0],
+          note: "45–50 min facile. Notez la distance et l’allure.",
+          planned: { sets: 1, reps: null, loadKg: null, restSec: 0, rpe: 4 },
+          sets: [],
+        },
+      ],
+    };
+    expect(estimateMinutes(plannedRun)).toBe(48);
+    expect(runFacts(plannedRun).duration).toBe("45–50 min");
+    expect(runFacts(plannedRun).distance).toBeNull();
   });
 
   it("nomme l’haltère", () => {
