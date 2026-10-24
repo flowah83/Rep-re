@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { CoachFace } from "@/components/coach-face";
 import { coachErrorText } from "@/lib/display";
 import { useApp } from "@/components/app-context";
@@ -56,12 +56,14 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
   const [online, setOnline] = useState(true);
   const [muted, setMuted] = useState(false);
   const [slow, setSlow] = useState(false);
-  const [tall, setTall] = useState(false);
   const [drag, setDrag] = useState(0);
   const [closing, setClosing] = useState(false);
   const [detail, setDetail] = useState(false);
+  const [stuck, setStuck] = useState(true);
+  const [logEdge, setLogEdge] = useState(0);
   const scroller = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDivElement>(null);
+  const scrim = useRef<HTMLButtonElement>(null);
   const field = useRef<HTMLTextAreaElement>(null);
   const turnsRef = useRef(turns);
   const partialRef = useRef("");
@@ -79,23 +81,78 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
   }, []);
 
   useEffect(() => {
+    if (!stuck) return;
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight });
-  }, [turns, error, busy, partial]);
+  }, [turns, error, busy, partial, stuck]);
 
   useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
+    const y = window.scrollY;
+    const html = document.documentElement;
+    const body = document.body;
+    const previous = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+    };
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${y}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    return () => {
+      html.style.overflow = previous.htmlOverflow;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.position = previous.position;
+      body.style.top = previous.top;
+      body.style.left = previous.left;
+      body.style.right = previous.right;
+      body.style.width = previous.width;
+      window.scrollTo(0, y);
+    };
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const readInset = (edge: "top" | "bottom") => {
+      const probe = document.createElement("div");
+      probe.style.cssText = `position:fixed;${edge}:0;height:env(safe-area-inset-${edge});pointer-events:none;visibility:hidden;`;
+      document.body.appendChild(probe);
+      const size = probe.offsetHeight;
+      probe.remove();
+      return size;
+    };
+    const topInset = readInset("top");
+    const bottomInset = readInset("bottom");
     const apply = () => {
-      const gap = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
-      document.documentElement.style.setProperty("--keyboard", `${gap}px`);
+      const viewport = window.visualViewport;
+      const visibleTop = viewport?.offsetTop ?? 0;
+      const visibleHeight = viewport?.height ?? window.innerHeight;
+      const keyboard = Math.max(0, window.innerHeight - visibleHeight - visibleTop) > 80;
+      const top = keyboard ? visibleTop + 6 : Math.max(visibleTop + 8, topInset + 8);
+      const bottomPad = keyboard ? 0 : bottomInset;
+      const height = Math.max(240, visibleTop + visibleHeight - top - bottomPad);
+      root.style.setProperty("--sheet-top", `${top}px`);
+      root.style.setProperty("--sheet-height", `${height}px`);
+      root.style.setProperty("--compose-safe", keyboard ? "0px" : `${bottomInset}px`);
     };
     apply();
-    viewport.addEventListener("resize", apply);
-    viewport.addEventListener("scroll", apply);
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", apply);
+    viewport?.addEventListener("scroll", apply);
+    window.addEventListener("resize", apply);
     return () => {
-      viewport.removeEventListener("resize", apply);
-      viewport.removeEventListener("scroll", apply);
-      document.documentElement.style.removeProperty("--keyboard");
+      viewport?.removeEventListener("resize", apply);
+      viewport?.removeEventListener("scroll", apply);
+      window.removeEventListener("resize", apply);
+      root.style.removeProperty("--sheet-top");
+      root.style.removeProperty("--sheet-height");
+      root.style.removeProperty("--compose-safe");
     };
   }, []);
 
@@ -284,6 +341,55 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const closeRef = useRef(close);
+  closeRef.current = close;
+
+  useEffect(() => {
+    const el = scroller.current;
+    const veil = scrim.current;
+    if (!el) return;
+    let startY = 0;
+    let pulling = false;
+    let pulled = 0;
+    const onStart = (event: TouchEvent) => {
+      startY = event.touches[0]?.clientY ?? 0;
+      pulling = el.scrollTop <= 1;
+    };
+    const onMove = (event: TouchEvent) => {
+      if (!pulling) return;
+      const dy = (event.touches[0]?.clientY ?? startY) - startY;
+      if (dy > 0 && el.scrollTop <= 1) {
+        event.preventDefault();
+        pulled = dy;
+        setDrag(dy);
+      } else {
+        pulling = false;
+        setDrag(0);
+      }
+    };
+    const onEnd = () => {
+      if (!pulling && pulled === 0) return;
+      const dy = pulled;
+      pulling = false;
+      pulled = 0;
+      setDrag(0);
+      if (dy > 120) closeRef.current();
+    };
+    const block = (event: TouchEvent) => event.preventDefault();
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onEnd);
+    veil?.addEventListener("touchmove", block, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+      veil?.removeEventListener("touchmove", block);
+    };
+  }, []);
+
   const onPointerDown = (event: ReactPointerEvent) => {
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     dragRef.current = { y: event.clientY, t: performance.now(), dy: 0 };
@@ -293,7 +399,6 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
     const dy = event.clientY - dragRef.current.y;
     dragRef.current.dy = dy;
     if (dy > 0) setDrag(dy);
-    else if (dy < -48) setTall(true);
   };
   const onPointerUp = () => {
     if (!dragRef.current) return;
@@ -304,19 +409,27 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
       close();
       return;
     }
-    if (tall && dy > 48) setTall(false);
     setDrag(0);
+  };
+
+  const onLogScroll = () => {
+    const node = scroller.current;
+    if (!node) return;
+    setStuck(node.scrollHeight - node.scrollTop - node.clientHeight < 80);
+    setLogEdge(Math.max(0, Math.min(1, node.scrollTop / 16)));
   };
 
   const chips = chipList(app.overlay, app.sessions);
   const visible = turns.filter((turn) => turn.role !== "tool");
   const lastId = visible.at(-1)?.id;
+  const trailing = Boolean(partial) || (busy && !partial);
+  const status = !online ? "Hors ligne" : busy ? "Écrit…" : "En ligne";
 
   return (
     <>
-      <button type="button" className={`coach-scrim${closing ? " out" : ""}`} data-testid="coach-scrim" aria-label="Fermer le coach" onClick={close} />
+      <button ref={scrim} type="button" className={`coach-scrim${closing ? " out" : ""}`} data-testid="coach-scrim" aria-label="Fermer le coach" onClick={close} />
       <div
-        className={`coach-bubble${tall ? " tall" : ""}${closing ? " out" : ""}`}
+        className={`coach-bubble${drag > 0 ? " drag" : ""}${closing ? " out" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-label="Coach"
@@ -330,93 +443,128 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
         </div>
         <header className="coach-head">
           <CoachFace state={face} />
-          <strong>Coach</strong>
-          <button type="button" className="navline" onClick={close}>
-            Fermer
+          <div className="coach-id">
+            <strong>Coach</strong>
+            <span>{status}</span>
+          </div>
+          <button type="button" className="coach-close" data-testid="coach-close" aria-label="Fermer" onClick={close}>
+            <CloseMark />
           </button>
         </header>
-        <div className="coach-log" ref={scroller}>
-          {!ready ? (
-            <div className="coach-note" data-testid="coach-inactive">
-              <h2>Le coach n’est pas encore activé.</h2>
-              <p>
-                Dans Réglages, indiquez le code secret. L’adresse est déjà remplie. Tant que le code n’est pas enregistré, vous continuez à
-                noter vos séances normalement. Les suggestions de charge, avant une séance, marchent sans le coach.
-              </p>
-            </div>
-          ) : null}
-          {visible.map((turn) => (
-            <div key={turn.id} className={`coach-msg ${turn.role}`}>
-              {turn.role === "assistant" ? <CoachFace state="idle" /> : null}
-              <div className="coach-stack">
-                {turn.content ? <p aria-live={turn.id === lastId ? "polite" : undefined}>{turn.content}</p> : null}
-                {turn.pending && turn.toolCalls?.length ? (
-                  <ConfirmCard
-                    turn={turn}
-                    busy={busy}
-                    open={detail}
-                    onToggle={() => setDetail((value) => !value)}
-                    onApply={() => void resolve(turn, true)}
-                    onCancel={() => void resolve(turn, false)}
-                  />
-                ) : null}
+        <div className="coach-log-wrap">
+          <div className="coach-fade" aria-hidden="true" style={{ opacity: logEdge }} />
+          <div className="coach-log" ref={scroller} onScroll={onLogScroll}>
+            {!ready ? (
+              <div className="coach-note" data-testid="coach-inactive">
+                <h2>Le coach n’est pas encore activé.</h2>
+                <p>
+                  Dans Réglages, indiquez le code secret. L’adresse est déjà remplie. Tant que le code n’est pas enregistré, vous continuez à
+                  noter vos séances normalement. Les suggestions de charge, avant une séance, marchent sans le coach.
+                </p>
               </div>
-            </div>
-          ))}
-          {busy && !partial ? (
-            <div className="coach-msg assistant" aria-live="polite">
-              <CoachFace state="thinking" />
-              <p className="coach-dots" aria-label="Le coach réfléchit">
-                <i /><i /><i />
+            ) : null}
+            {visible.map((turn, index) => {
+              const prev = visible[index - 1];
+              const next = visible[index + 1];
+              const withPrev = prev?.role === turn.role;
+              const withNext = next?.role === turn.role || (turn.role === "assistant" && trailing && index === visible.length - 1);
+              const showFace = turn.role === "assistant" && !withNext;
+              return (
+                <div key={turn.id} className={`coach-msg ${turn.role}${withPrev ? " cont" : ""}${withNext ? " more" : ""}`}>
+                  {turn.role === "assistant" ? <span className="coach-gutter">{showFace ? <CoachFace state="idle" /> : null}</span> : null}
+                  <div className="coach-stack">
+                    {turn.content ? (
+                      <div className="coach-copy" aria-live={turn.id === lastId ? "polite" : undefined}>
+                        <RichText text={turn.content} />
+                      </div>
+                    ) : null}
+                    {turn.pending && turn.toolCalls?.length ? (
+                      <ConfirmCard
+                        turn={turn}
+                        busy={busy}
+                        open={detail}
+                        onToggle={() => setDetail((value) => !value)}
+                        onApply={() => void resolve(turn, true)}
+                        onCancel={() => void resolve(turn, false)}
+                      />
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+            {busy && !partial ? (
+              <div className={`coach-msg assistant${visible.at(-1)?.role === "assistant" ? " cont" : ""}`} aria-live="polite">
+                <span className="coach-gutter">
+                  <CoachFace state="thinking" />
+                </span>
+                <p className="coach-dots" aria-label="Le coach réfléchit">
+                  <i /><i /><i />
+                </p>
+              </div>
+            ) : null}
+            {partial ? (
+              <div className={`coach-msg assistant${visible.at(-1)?.role === "assistant" ? " cont" : ""}`}>
+                <span className="coach-gutter">
+                  <CoachFace state="speaking" />
+                </span>
+                <div className="coach-copy" aria-live="polite">
+                  <RichText text={partial} />
+                </div>
+              </div>
+            ) : null}
+            {slow && busy ? (
+              <p className="coach-wait">
+                Ça prend trop de temps.{" "}
+                <button
+                  type="button"
+                  className="linkish"
+                  onClick={() => {
+                    abortRef.current?.abort();
+                    const history = lastHistory.current;
+                    if (history) void complete(history);
+                  }}
+                >
+                  Réessayer
+                </button>
               </p>
-            </div>
-          ) : null}
-          {partial ? (
-            <div className="coach-msg assistant">
-              <CoachFace state="speaking" />
-              <p aria-live="polite">{partial}</p>
-            </div>
-          ) : null}
-          {slow && busy ? (
-            <p className="coach-wait">
-              Ça prend trop de temps.{" "}
-              <button
-                type="button"
-                className="linkish"
-                onClick={() => {
-                  abortRef.current?.abort();
-                  const history = lastHistory.current;
-                  if (history) void complete(history);
-                }}
-              >
-                Réessayer
-              </button>
-            </p>
-          ) : null}
-          {error ? (
-            <p className="err">
-              {error}{" "}
-              <button
-                type="button"
-                className="linkish"
-                onClick={() => {
-                  close();
-                  app.setSheet("settings");
-                }}
-              >
-                Ouvrir les réglages
-              </button>
-            </p>
-          ) : null}
+            ) : null}
+            {error ? (
+              <p className="err">
+                {error}{" "}
+                <button
+                  type="button"
+                  className="linkish"
+                  onClick={() => {
+                    close();
+                    app.setSheet("settings");
+                  }}
+                >
+                  Ouvrir les réglages
+                </button>
+              </p>
+            ) : null}
+          </div>
+          {stuck ? null : (
+            <button
+              type="button"
+              className="coach-jump"
+              aria-label="Aller en bas"
+              onClick={() => scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" })}
+            >
+              <Arrow />
+            </button>
+          )}
         </div>
         {!online ? <p className="coach-offline" data-testid="coach-offline">{OFFLINE}</p> : null}
         {ready && chips.length ? (
-          <div className="coach-chips">
-            {chips.map((chip) => (
-              <button key={chip} type="button" data-testid="coach-chip" disabled={busy || muted} onClick={() => void sendText(chip)}>
-                {chip}
-              </button>
-            ))}
+          <div className="coach-chips-wrap">
+            <div className="coach-chips">
+              {chips.map((chip) => (
+                <button key={chip} type="button" data-testid="coach-chip" disabled={busy || muted} onClick={() => void sendText(chip)}>
+                  {chip}
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
         <form
@@ -441,7 +589,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
               setDraft(event.target.value);
               const node = event.target;
               node.style.height = "auto";
-              node.style.height = `${Math.min(node.scrollHeight, 84)}px`;
+              node.style.height = `${Math.min(node.scrollHeight, 128)}px`;
             }}
           />
           {busy ? (
@@ -564,6 +712,71 @@ function toApi(turns: StoredTurn[]) {
     }
     return { role: turn.role, content: turn.content };
   });
+}
+
+function RichText({ text }: { text: string }) {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const listLike = lines.some((line) => /^\s*(?:[-*]|\d+[.)])\s+\S/.test(line));
+  if (!listLike) return <>{inlineNodes(text)}</>;
+  const blocks: ReactNode[] = [];
+  let list: { ordered: boolean; items: string[] } | null = null;
+  const flush = () => {
+    if (!list) return;
+    const items = list.items;
+    const ordered = list.ordered;
+    list = null;
+    const Tag = ordered ? "ol" : "ul";
+    blocks.push(
+      <Tag key={blocks.length}>
+        {items.map((item, index) => (
+          <li key={index}>{inlineNodes(item)}</li>
+        ))}
+      </Tag>,
+    );
+  };
+  for (const line of lines) {
+    const bullet = /^\s*[-*]\s+(.*)/.exec(line);
+    const ordered = /^\s*\d+[.)]\s+(.*)/.exec(line);
+    if (bullet || ordered) {
+      const nextOrdered = Boolean(ordered);
+      if (!list || list.ordered !== nextOrdered) flush();
+      list = list ?? { ordered: nextOrdered, items: [] };
+      list.items.push((bullet ?? ordered)?.[1] ?? "");
+      continue;
+    }
+    flush();
+    if (!line) {
+      blocks.push(<br key={blocks.length} />);
+      continue;
+    }
+    blocks.push(<span key={blocks.length}>{inlineNodes(line)}</span>);
+    blocks.push(<br key={`b-${blocks.length}`} />);
+  }
+  flush();
+  return <>{blocks}</>;
+}
+
+function inlineNodes(text: string): ReactNode[] {
+  const out: React.ReactNode[] = [];
+  const pattern = /\*\*([^*]+)\*\*|__([^_]+)__/g;
+  let last = 0;
+  let match: RegExpExecArray | null;
+  let index = 0;
+  while ((match = pattern.exec(text))) {
+    if (match.index > last) out.push(text.slice(last, match.index));
+    out.push(<strong key={index++}>{match[1] || match[2]}</strong>);
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
+function CloseMark() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
 }
 
 function Arrow() {
