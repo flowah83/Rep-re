@@ -474,9 +474,9 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
                   {turn.role === "assistant" ? <span className="coach-gutter">{showFace ? <CoachFace state="idle" /> : null}</span> : null}
                   <div className="coach-stack">
                     {turn.content ? (
-                      <p aria-live={turn.id === lastId ? "polite" : undefined}>
+                      <div className="coach-copy" aria-live={turn.id === lastId ? "polite" : undefined}>
                         <RichText text={turn.content} />
-                      </p>
+                      </div>
                     ) : null}
                     {turn.pending && turn.toolCalls?.length ? (
                       <ConfirmCard
@@ -507,9 +507,9 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
                 <span className="coach-gutter">
                   <CoachFace state="speaking" />
                 </span>
-                <p aria-live="polite">
+                <div className="coach-copy" aria-live="polite">
                   <RichText text={partial} />
-                </p>
+                </div>
               </div>
             ) : null}
             {slow && busy ? (
@@ -557,12 +557,14 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
         </div>
         {!online ? <p className="coach-offline" data-testid="coach-offline">{OFFLINE}</p> : null}
         {ready && chips.length ? (
-          <div className="coach-chips">
-            {chips.map((chip) => (
-              <button key={chip} type="button" data-testid="coach-chip" disabled={busy || muted} onClick={() => void sendText(chip)}>
-                {chip}
-              </button>
-            ))}
+          <div className="coach-chips-wrap">
+            <div className="coach-chips">
+              {chips.map((chip) => (
+                <button key={chip} type="button" data-testid="coach-chip" disabled={busy || muted} onClick={() => void sendText(chip)}>
+                  {chip}
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
         <form
