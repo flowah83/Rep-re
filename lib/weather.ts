@@ -69,16 +69,6 @@ export function weatherCondition(code: number): string {
   return "Variable";
 }
 
-export type WeatherVariant = "tile" | "line" | "widget";
-
-/** Variante d’affichage, pour comparer les maquettes. Sans paramètre, la tuile. */
-export function weatherVariantFromSearch(search: string): WeatherVariant {
-  const value = new URLSearchParams(search).get("meteo");
-  if (value === "ligne" || value === "b") return "line";
-  if (value === "widget" || value === "c") return "widget";
-  return "tile";
-}
-
 export function weatherFresh(snapshot: WeatherSnapshot, now: number): boolean {
   return now - snapshot.at < WEATHER_TTL_MS && now >= snapshot.at;
 }

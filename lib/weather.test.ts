@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { WEATHER_KEY, WEATHER_TTL_MS, loadWeather, parseWeather, readWeather, weatherCondition, weatherVariantFromSearch, type WeatherStore } from "./weather";
+import { WEATHER_KEY, WEATHER_TTL_MS, loadWeather, parseWeather, readWeather, weatherCondition, type WeatherStore } from "./weather";
 
 function memory(initial?: string): WeatherStore & { raw: Map<string, string> } {
   const raw = new Map<string, string>();
@@ -19,13 +19,14 @@ const body = {
 };
 
 describe("météo de Toulon", () => {
-  it("nomme le temps et choisit la variante", () => {
+  it("nomme le temps qu’il fait", () => {
     expect(weatherCondition(0)).toBe("Ensoleillé");
+    expect(weatherCondition(1)).toBe("Plutôt clair");
+    expect(weatherCondition(3)).toBe("Couvert");
     expect(weatherCondition(61)).toBe("Pluie");
     expect(weatherCondition(95)).toBe("Orage");
-    expect(weatherVariantFromSearch("")).toBe("tile");
-    expect(weatherVariantFromSearch("?meteo=b")).toBe("line");
-    expect(weatherVariantFromSearch("?meteo=widget")).toBe("widget");
+    expect(weatherCondition(99)).toBe("Orage");
+    expect(weatherCondition(4)).toBe("Variable");
   });
 
   it("lit une réponse Open-Meteo", () => {
