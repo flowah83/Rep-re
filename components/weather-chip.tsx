@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loadWeather, readWeather, type WeatherSnapshot } from "@/lib/weather";
+import { loadWeather, readWeather, weatherCondition, type WeatherSnapshot } from "@/lib/weather";
 
 export function WeatherChip() {
   const [snap, setSnap] = useState<WeatherSnapshot | null>(null);
@@ -32,27 +32,28 @@ export function WeatherChip() {
 
   const label = snap ? weatherLabel(snap, stale) : undefined;
   return (
-    <div className="weather-chip" data-testid="weather-toulon" aria-label={label} role={snap ? "img" : undefined}>
-      {snap ? (
-        <>
-          <WeatherIcon code={snap.code} />
-          <span>
-            <b className="num">{snap.temp}°</b>
-            <small className="num">{stale ? clock(snap.at) : rangeText(snap)}</small>
-          </span>
-        </>
-      ) : null}
+    <div className={`meteo meteo-line${snap ? "" : " is-empty"}`} data-testid="weather-toulon" aria-label={label} role={snap ? "img" : undefined}>
+      {snap ? <WeatherFace snap={snap} stale={stale} /> : null}
     </div>
+  );
+}
+
+function WeatherFace({ snap, stale }: { snap: WeatherSnapshot; stale: boolean }) {
+  const condition = weatherCondition(snap.code);
+  const hasRange = snap.min != null && snap.max != null;
+  return (
+    <>
+      <WeatherIcon code={snap.code} />
+      <b className="num">{snap.temp}°</b>
+      <span className="place">Toulon</span>
+      <span className="cond">{condition}</span>
+      {stale ? <span className="num range">{clock(snap.at)}</span> : hasRange ? <span className="num range">{snap.min}° / {snap.max}°</span> : null}
+    </>
   );
 }
 
 function fresh(snap: WeatherSnapshot): boolean {
   return Date.now() - snap.at < 30 * 60 * 1000;
-}
-
-function rangeText(snap: WeatherSnapshot): string {
-  if (snap.min == null || snap.max == null) return "Toulon";
-  return `${snap.min}° ${snap.max}°`;
 }
 
 function clock(at: number): string {

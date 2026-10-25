@@ -364,6 +364,7 @@ function heatOf(sessions: Session[], monday: string, today: string) {
     });
     rows.push(cells);
   }
+  if (sessions.length === 0) return { streak: 0, rows, aria: "Aucune semaine tenue." };
   const earliest = sessions.reduce((min, session) => (session.date < min ? session.date : min), today);
   let streak = 0;
   for (let week = 0; week < 52; week += 1) {

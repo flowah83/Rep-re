@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { useApp } from "@/components/app-context";
 import { CoachFace } from "@/components/coach-face";
+import { SettingsButton } from "@/components/settings-button";
 import { WeatherChip } from "@/components/weather-chip";
 import { factForDate } from "@/lib/facts";
 import { buildHome, type DayMark, type HomeModel, type LiftView } from "@/lib/home";
@@ -23,23 +24,10 @@ export function HomeScreen() {
           <div className="eyebrow">{formatLong(app.today)}</div>
           <h1 className="title">Accueil</h1>
         </div>
-        <div className="home-tools">
-          <WeatherChip />
-          <button type="button" className="iconbtn" aria-label="Réglages" data-testid="open-settings" onClick={() => app.setSheet("settings")}>
-            <Gear />
-          </button>
-        </div>
+        <SettingsButton />
       </div>
-      <div className="week home-week" aria-label="Semaine">
-        {model.days.map((day) => (
-          <button type="button" key={day.iso} className={dayClass(day)} aria-label={dayAria(day)} onClick={() => openDay(day.iso)}>
-            <span className="wd">{day.letter}</span>
-            <span className="dn num">{day.number}</span>
-            <i className="mark" />
-          </button>
-        ))}
-      </div>
-      {model.empty ? <EmptyHome /> : <Dashboard model={model} onDay={openDay} />}
+      <WeatherChip />
+      {model.empty ? <EmptyHome days={model.days} onDay={openDay} /> : <Dashboard model={model} onDay={openDay} />}
       <FactTile today={app.today} />
     </div>
   );
@@ -55,23 +43,7 @@ function Dashboard({ model, onDay }: { model: HomeModel; onDay: (iso: string) =>
   return (
     <div className="home-grid">
       {model.record ? <RecordCard record={model.record} onOpen={() => openLift(model.record?.name ?? "")} /> : null}
-      {model.cycle && !model.record ? <CycleCard cycle={model.cycle} /> : null}
-      <article className="home-card span2 rings-card" aria-label={`${model.sessions.aria} ${model.volume.aria}`}>
-        <div className="ringwrap">
-          <Rings outer={model.sessions.ratio} inner={model.volume.ratio} />
-        </div>
-        <div className="ring-copy">
-          <p className="home-k">Séances</p>
-          <p className="home-num">
-            {model.sessions.total > 0 ? model.sessions.done : model.sessions.extra}
-            {model.sessions.total > 0 ? <small>/{model.sessions.total}</small> : null}
-          </p>
-          <p className="home-k">Volume</p>
-          <p className="home-num">{model.volume.text}</p>
-          {model.volume.baselineText ? <p className="home-sub">{model.volume.baselineText}</p> : null}
-        </div>
-      </article>
-      {model.cycle && model.record ? <CycleCard cycle={model.cycle} /> : null}
+      <HeldCard model={model} onDay={onDay} />
       {lifts.map((lift) => (
         <button type="button" key={lift.name} className={`home-card lift${lifts.length === 1 ? " span2" : ""}`} aria-label={lift.aria} onClick={() => openLift(lift.name)}>
           <p className="home-k">{lift.short}</p>
@@ -101,21 +73,6 @@ function Dashboard({ model, onDay }: { model: HomeModel; onDay: (iso: string) =>
         </article>
       ) : null}
       {model.balance ? <BalanceCard balance={model.balance} /> : null}
-      <article className="home-card span2 heat-card" aria-label={model.heat.aria}>
-        <div>
-          <p className="home-k">Tenues</p>
-          <p className="home-num">{model.heat.streak}<small> sem.</small></p>
-        </div>
-        <div className="heat" aria-hidden="true">
-          {model.heat.rows.map((row, index) => (
-            <div className="heat-row" key={index}>
-              {row.map((cell, day) => (
-                <i key={day} className={`l${cell.kind === "done" ? cell.level : 0}${cell.kind === "missed" ? " miss" : ""}${cell.kind === "planned" ? " plan" : ""}${cell.today ? " today" : ""}`} />
-              ))}
-            </div>
-          ))}
-        </div>
-      </article>
       <button type="button" className="home-card span2 insight" data-testid="home-insight" onClick={() => app.setCoachOpen(true)}>
         <CoachFace />
         <span>{model.insight}</span>
@@ -129,18 +86,95 @@ function Dashboard({ model, onDay }: { model: HomeModel; onDay: (iso: string) =>
   );
 }
 
-function EmptyHome() {
+function EmptyHome({ days, onDay }: { days: DayMark[]; onDay: (iso: string) => void }) {
   const app = useApp();
   return (
     <article className="card home-empty">
-      <div className="ringwrap" aria-hidden="true">
-        <Rings outer={0} inner={null} />
+      <div className="ringwrap hero" aria-hidden="true">
+        <HeroRing ratio={0} />
       </div>
       <h2>Déposez le plan pour voir la semaine.</h2>
+      <WeekStrip days={days} onDay={onDay} />
       <button type="button" className="btn" onClick={() => app.setSheet("import")}>
         Déposer le plan
       </button>
     </article>
+  );
+}
+
+function HeldCard({ model, onDay }: { model: HomeModel; onDay: (iso: string) => void }) {
+  const held = model.sessions.total > 0 ? model.sessions.done : model.sessions.extra;
+  const total = model.sessions.total;
+  return (
+    <article className="home-card span2 held-card" aria-label={`${model.sessions.aria} ${model.heat.aria}`}>
+      <div className="held-top">
+        <div className="ringwrap hero">
+          <HeroRing ratio={model.sessions.ratio} />
+        </div>
+        <div className="ring-copy">
+          <p className="home-k">Séances tenues</p>
+          <p className="held-num">
+            {held}
+            {total > 0 ? <small>/{total}</small> : null}
+          </p>
+          <p className="home-sub">{total > 0 ? "cette semaine" : "hors du plan"}</p>
+        </div>
+      </div>
+      <WeekStrip days={model.days} onDay={onDay} />
+      <div className="held-foot">
+        <div>
+          <p className="home-num">{model.heat.streak}<small> sem.</small></p>
+          <p className="home-sub">d’affilée</p>
+        </div>
+        <div className="heat" aria-hidden="true">
+          {model.heat.rows.map((row, index) => (
+            <div className="heat-row" key={index}>
+              {row.map((cell, day) => (
+                <i key={day} className={`l${cell.kind === "done" ? cell.level : 0}${cell.kind === "missed" ? " miss" : ""}${cell.kind === "planned" ? " plan" : ""}${cell.today ? " today" : ""}`} />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function WeekStrip({ days, onDay }: { days: DayMark[]; onDay: (iso: string) => void }) {
+  return (
+    <div className="week home-week" aria-label="Semaine">
+      {days.map((day) => (
+        <button type="button" key={day.iso} className={dayClass(day)} aria-label={dayAria(day)} onClick={() => onDay(day.iso)}>
+          <span className="wd">{day.letter}</span>
+          <span className="dn num">{day.number}</span>
+          <i className="mark" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function HeroRing({ ratio }: { ratio: number }) {
+  const r = 42;
+  const turn = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(1, ratio));
+  return (
+    <svg className="ringsvg" viewBox="0 0 120 120" aria-hidden="true">
+      <circle cx="60" cy="60" r={r} fill="none" stroke="var(--copper)" strokeOpacity="0.16" strokeWidth="13" />
+      {clamped > 0 ? (
+        <circle
+          cx="60"
+          cy="60"
+          r={r}
+          fill="none"
+          stroke="var(--copper)"
+          strokeWidth="13"
+          strokeLinecap={clamped > 0.985 ? "butt" : "round"}
+          strokeDasharray={`${turn * clamped} ${turn}`}
+          transform="rotate(-90 60 60)"
+        />
+      ) : null}
+    </svg>
   );
 }
 
@@ -169,25 +203,6 @@ function RecordCard({ record, onOpen }: { record: NonNullable<HomeModel["record"
   );
 }
 
-function CycleCard({ cycle }: { cycle: NonNullable<HomeModel["cycle"]> }) {
-  return (
-    <article className="home-card span2" aria-label={cycle.aria}>
-      <p className="home-k">Cycle</p>
-      <div className="pips" aria-hidden="true">
-        {cycle.pips.map((pip, index) => (
-          <span key={index} className={`pip ${pip}`} />
-        ))}
-      </div>
-      <div className="pip-labels" aria-hidden="true">
-        {cycle.pips.map((pip, index) => (
-          <span key={index}>{pip === "light" ? "légère" : ""}</span>
-        ))}
-      </div>
-      <p className="home-sub">{cycle.line}</p>
-    </article>
-  );
-}
-
 function BalanceCard({ balance }: { balance: NonNullable<HomeModel["balance"]> }) {
   return (
     <article className="home-card span2" aria-label={`Poussée ${balance.push} séries, tirage ${balance.pull}. Haut du corps ${balance.upper}, jambes ${balance.lower}.`}>
@@ -213,38 +228,6 @@ function Pair({ left, right, a, b, sage = false }: { left: string; right: string
         <i className={sage ? "" : "sage"} style={{ width: b === 0 ? "0%" : `${Math.max(8, (b / max) * 100)}%` }} />
       </div>
     </div>
-  );
-}
-
-function Rings({ outer, inner }: { outer: number; inner: number | null }) {
-  return (
-    <svg className="ringsvg" viewBox="0 0 120 120" aria-hidden="true">
-      <Ring r={46} ratio={outer} color="var(--copper)" />
-      <Ring r={32} ratio={inner ?? 0} color="var(--sage)" ghost={inner == null} />
-    </svg>
-  );
-}
-
-function Ring({ r, ratio, color, ghost = false }: { r: number; ratio: number; color: string; ghost?: boolean }) {
-  const turn = 2 * Math.PI * r;
-  const clamped = Math.max(0, Math.min(1, ratio));
-  return (
-    <>
-      <circle cx="60" cy="60" r={r} fill="none" stroke={color} strokeOpacity={ghost ? 0.14 : 0.18} strokeWidth="10" />
-      {clamped > 0 && !ghost ? (
-        <circle
-          cx="60"
-          cy="60"
-          r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth="10"
-          strokeLinecap={clamped > 0.985 ? "butt" : "round"}
-          strokeDasharray={`${turn * clamped} ${turn}`}
-          transform="rotate(-90 60 60)"
-        />
-      ) : null}
-    </>
   );
 }
 
@@ -319,15 +302,4 @@ function dayClass(day: DayMark): string {
 function dayAria(day: DayMark): string {
   const state = day.kind === "done" ? "faite" : day.kind === "missed" ? "manquée" : day.kind === "planned" ? "prévue" : day.kind === "active" ? "en cours" : "repos";
   return `${formatLong(day.iso)}, ${state}. Ouvre Aujourd’hui.`;
-}
-
-function Gear() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <path d="M3 5.5h12M3 9h12M3 12.5h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <circle cx="6.5" cy="5.5" r="1.5" fill="var(--bg-elev)" stroke="currentColor" strokeWidth="1.4" />
-      <circle cx="11.5" cy="9" r="1.5" fill="var(--bg-elev)" stroke="currentColor" strokeWidth="1.4" />
-      <circle cx="7.5" cy="12.5" r="1.5" fill="var(--bg-elev)" stroke="currentColor" strokeWidth="1.4" />
-    </svg>
-  );
 }

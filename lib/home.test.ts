@@ -213,4 +213,16 @@ describe("données d’accueil", () => {
     expect(home.volume.baselineText).not.toMatch(/moy\./);
     expect(home.insight).not.toMatch(/Quatre|quatre/);
   });
+
+  it("n’invente pas de série pour un carnet vide", () => {
+    const home = buildHome([], TODAY);
+    expect(home.empty).toBe(true);
+    expect(home.sessions).toMatchObject({ done: 0, total: 0, extra: 0, ratio: 0 });
+    expect(home.heat.rows).toHaveLength(8);
+    expect(home.heat.streak).toBe(0);
+    expect(home.heat.aria).toBe("Aucune semaine tenue.");
+    expect(home.record).toBeNull();
+    expect(home.balance).toBeNull();
+    expect(home.next).toBeNull();
+  });
 });

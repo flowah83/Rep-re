@@ -1,6 +1,7 @@
 "use client";
 
 import { useApp, type RangeKey } from "@/components/app-context";
+import { SettingsButton } from "@/components/settings-button";
 import { BodyMap, E1Chart, heatFill } from "@/components/chart";
 import { bestLoads, e1rmSeries, heaviestSet, isHardSet, muscleTotals, samplesForExercise, type E1Point } from "@/lib/calc";
 import { cardioSummary } from "@/lib/history";
@@ -47,8 +48,13 @@ export function ProgressScreen() {
 
   return (
     <div className="screen" data-screen="progress">
-      <div className="eyebrow">Record estimé</div>
-      <h1 className="title">Progrès</h1>
+      <div className="toprow">
+        <div>
+          <div className="eyebrow">Record estimé</div>
+          <h1 className="title">Progrès</h1>
+        </div>
+        <SettingsButton />
+      </div>
       {names.length === 0 ? (
         <article className="card">
           <div className="empty">
