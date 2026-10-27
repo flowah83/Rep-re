@@ -10,6 +10,29 @@ export type CoachConfig = { url: string; token: string };
 
 export type CoachProbe = { ok: boolean; message: string; url: string };
 
+function isLocalDevHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1";
+}
+
+/** Une adresse http publique n’est pas enregistrée. localhost reste l’exception de développement. */
+export function coachUrlIssue(raw: string | null | undefined): string | null {
+  const compact = (raw ?? "").replace(/\s+/g, "");
+  if (!compact) return null;
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(compact) ? compact : "";
+  if (!withScheme) return null;
+  let url: URL;
+  try {
+    url = new URL(withScheme);
+  } catch {
+    return null;
+  }
+  if (url.protocol === "http:" && !isLocalDevHost(url.hostname)) {
+    return "Cette adresse n’est pas en https. Elle n’est pas enregistrée. Une adresse locale n’est acceptée qu’en développement.";
+  }
+  return null;
+}
+
 export function normalizeCoachUrl(raw: string | null | undefined): string {
   const compact = (raw ?? "").replace(/\s+/g, "");
   if (!compact) return DEFAULT_COACH_URL;
@@ -20,9 +43,25 @@ export function normalizeCoachUrl(raw: string | null | undefined): string {
   } catch {
     return DEFAULT_COACH_URL;
   }
-  if ((url.protocol !== "http:" && url.protocol !== "https:") || !url.hostname) return DEFAULT_COACH_URL;
+  const localHttp = url.protocol === "http:" && isLocalDevHost(url.hostname);
+  if ((url.protocol !== "https:" && !localHttp) || !url.hostname) return DEFAULT_COACH_URL;
   const path = url.pathname.replace(/\/+$/, "");
-  return `${url.protocol}//${url.host}${path}${url.search}${url.hash}`;
+  return `${url.protocol}//${url.host}${path}`;
+}
+
+export function maskSecret(token: string | null | undefined): string {
+  const clean = (token ?? "").trim();
+  if (!clean) return "";
+  return `•••• ${clean.slice(-4)}`;
+}
+
+export type CoachPhase = "non-configure" | "pret" | "en-cours" | "indisponible";
+
+export function coachPhase(input: { configured: boolean; busy: boolean; down: boolean }): { phase: CoachPhase; label: string } {
+  if (!input.configured) return { phase: "non-configure", label: "Non configuré" };
+  if (input.busy) return { phase: "en-cours", label: "Réponse en cours" };
+  if (input.down) return { phase: "indisponible", label: "Indisponible" };
+  return { phase: "pret", label: "Prêt" };
 }
 
 export function normalizeCoachToken(raw: string | null | undefined): string {
@@ -36,6 +75,9 @@ export type StoredTurn = {
   toolCalls?: { id: string; name: string; arguments: string; thoughtSignature?: string }[];
   toolCallId?: string;
   pending?: boolean;
+  omitted?: string;
+  card?: "partial" | "conflict";
+  retryCalls?: { id: string; name: string; arguments: string; thoughtSignature?: string }[];
 };
 
 type Notice = { id: string; line: string; sent: boolean };
@@ -114,7 +156,12 @@ export async function requestCoach(
   } catch {
     throw new Error("La réponse du coach est illisible.");
   }
-  if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "Le coach n’a pas pu répondre.");
+  if (!response.ok) {
+    const message = typeof data.error === "string" ? data.error : "Le coach n’a pas pu répondre.";
+    const error = new Error(message) as Error & { conflict?: boolean };
+    if (data.conflict === true) error.conflict = true;
+    throw error;
+  }
   return data;
 }
 

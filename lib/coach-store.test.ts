@@ -37,7 +37,9 @@ describe("normalizeCoachUrl", () => {
     expect(normalizeCoachUrl("   ")).toBe(DEFAULT_COACH_URL);
     expect(normalizeCoachUrl("https://")).toBe(DEFAULT_COACH_URL);
     expect(normalizeCoachUrl("javascript:alert(1)")).toBe(DEFAULT_COACH_URL);
-    expect(normalizeCoachUrl("http://Example.com/Chemin/")).toBe("http://example.com/Chemin");
+    expect(normalizeCoachUrl("http://Example.com/Chemin/")).toBe(DEFAULT_COACH_URL);
+    expect(normalizeCoachUrl("http://localhost:8787/coach")).toBe("http://localhost:8787/coach");
+    expect(normalizeCoachUrl("https://coach.exemple.fr/chemin?token=secret#x")).toBe("https://coach.exemple.fr/chemin");
   });
 });
 

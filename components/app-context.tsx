@@ -32,7 +32,7 @@ export type Overlay =
   | { kind: "gesture"; sessionId: string; exerciseId: string }
   | { kind: "bilan"; id: string; fresh?: boolean }
   | { kind: "preview"; id: string };
-export type SheetName = null | "settings" | "import" | "edit" | "plates" | "library";
+export type SheetName = null | "settings" | "import" | "edit" | "plates" | "library" | "partage" | "calendrier" | "diagnostic";
 
 type Api = {
   settings: Settings;

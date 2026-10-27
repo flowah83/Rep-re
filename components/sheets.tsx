@@ -5,7 +5,8 @@ import { useApp } from "@/components/app-context";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
-import { DEFAULT_COACH_URL, loadCoachConfig, normalizeCoachToken, normalizeCoachUrl, saveCoachConfig, testCoachConnection } from "@/lib/coach-store";
+import { CALENDAR_NAME } from "@/lib/coach";
+import { DEFAULT_COACH_URL, coachUrlIssue, loadCoachConfig, maskSecret, normalizeCoachToken, normalizeCoachUrl, saveCoachConfig, testCoachConnection } from "@/lib/coach-store";
 import { readProgressionRaw } from "@/lib/progression";
 import { exportPlanSnapshots } from "@/lib/snapshot";
 import { toCsv } from "@/lib/db";
@@ -26,6 +27,9 @@ export function Sheets() {
     <Dialog open={app.sheet !== null} onOpenChange={(open) => { if (!open) app.setSheet(null); }}>
       <DialogContent onClose={() => app.setSheet(null)}>
         {app.sheet === "settings" ? <SettingsSheet /> : null}
+        {app.sheet === "partage" ? <PartageSheet /> : null}
+        {app.sheet === "calendrier" ? <CalendarSheet /> : null}
+        {app.sheet === "diagnostic" ? <DiagnosticSheet /> : null}
         {app.sheet === "import" ? <ImportSheet /> : null}
         {app.sheet === "edit" ? <EditSheet /> : null}
         {app.sheet === "plates" ? <PlatesSheet /> : null}
@@ -45,8 +49,25 @@ function SettingsSheet() {
     <>
       <DialogTitle asChild><h2>Réglages</h2></DialogTitle>
       <DialogDescription asChild>
-        <p className="lead">Le carnet est sur ce téléphone. Rien ne change sans votre accord.</p>
+        <p className="lead">Le carnet reste sur ce téléphone. La météo, si elle est affichée, et le coach, si vous lui écrivez, utilisent un service à part. Rien ne change sans votre accord.</p>
       </DialogDescription>
+      <h3 className="grouplabel">Ce qui peut partir</h3>
+      <div className="rowline">
+        <b>Météo</b>
+        <small>Lieu approximatif seulement. Aucune séance n’est jointe.</small>
+      </div>
+      <button type="button" className="rowline" data-testid="open-partage" onClick={() => app.setSheet("partage")}>
+        <b>Coach</b>
+        <small>Un contexte choisi, seulement quand vous écrivez.</small>
+      </button>
+      <button type="button" className="rowline" data-testid="open-calendrier" onClick={() => app.setSheet("calendrier")}>
+        <b>{CALENDAR_NAME}</b>
+        <small>Uniquement ce calendrier. Pas les autres.</small>
+      </button>
+      <button type="button" className="rowline" data-testid="open-diagnostic" onClick={() => app.setSheet("diagnostic")}>
+        <b>Diagnostic</b>
+        <small>Aucun score. Aucune séance n’est envoyée.</small>
+      </button>
       <h3 className="grouplabel">Préférences</h3>
       <div className="fieldlabel">Thème</div>
       <div className="segment">
@@ -226,8 +247,8 @@ function CoachSettings() {
     <>
       <div className="fieldlabel">Adresse et code</div>
       <p className="fine">
-        Collez le code secret, une seule fois sur ce téléphone. Un code long se colle tel quel. L’adresse est déjà remplie. Sans le code, le coach reste éteint. Les
-        suggestions de charge marchent quand même. Le coach envoie les séances récentes et peut lire le calendrier.
+        L’adresse doit être en https. Le code reste sur ce téléphone. Il n’entre ni dans l’adresse, ni dans une copie, sauf si vous cochez vous-même de l’inclure. Sans le
+        code, le coach reste éteint. Les suggestions de charge marchent quand même.
       </p>
       {token.trim().length > 0 && token.trim().length < 20 ? (
         <p className="fine">Ce code est court. Un code long est plus difficile à deviner. Il se change dans le secret du service, pas ici tout seul.</p>
@@ -241,8 +262,14 @@ function CoachSettings() {
         autoCorrect="off"
         spellCheck={false}
         autoComplete="off"
-        onChange={(event) => setUrl(event.target.value)}
+        onChange={(event) => {
+          setUrl(event.target.value);
+          setProbe(null);
+        }}
       />
+      {coachUrlIssue(url) ? (
+        <p className="err" data-testid="coach-url-issue">{coachUrlIssue(url)}</p>
+      ) : null}
       <input
         className="field"
         data-testid="coach-token"
@@ -257,6 +284,7 @@ function CoachSettings() {
       />
       <Button
         onClick={() => {
+          if (coachUrlIssue(url)) return;
           const cleaned = { url: normalizeCoachUrl(url), token: normalizeCoachToken(token) };
           saveCoachConfig(cleaned);
           setUrl(cleaned.url);
@@ -285,6 +313,100 @@ function CoachSettings() {
           {probe.message}
         </p>
       ) : null}
+    </>
+  );
+}
+
+function PartageSheet() {
+  const app = useApp();
+  const coach = loadCoachConfig();
+  const mask = maskSecret(coach.token);
+  return (
+    <>
+      <button type="button" className="navline" onClick={() => app.setSheet("settings")}>‹ Réglages</button>
+      <DialogTitle asChild><h2>Ce qui peut partir</h2></DialogTitle>
+      <DialogDescription asChild>
+        <p className="lead">Seulement si le coach est activé, et seulement quand vous lui écrivez.</p>
+      </DialogDescription>
+      <div className="card flat">
+        <h3>Envoyé</h3>
+        <ul>
+          <li>Dernières séances utiles : titre, exercices, charges, répétitions.</li>
+          <li>Séances encore prévues.</li>
+          <li>Exercice en cours, s’il y en a un.</li>
+          <li>Préférences de barre et de repos.</li>
+          <li>Mémoire que vous avez autorisée.</li>
+        </ul>
+      </div>
+      <div className="card flat">
+        <h3>Jamais envoyé</h3>
+        <ul>
+          <li>Notes pour vous.</li>
+          <li>Code secret.{mask ? ` Ici il reste ${mask}.` : ""}</li>
+          <li>Séances d’exemple.</li>
+          <li>Anciennes séances manquées, qui ne sont plus à venir.</li>
+        </ul>
+      </div>
+      <p className="fine">La météo n’emporte rien de cette liste. Désactivé, le coach n’envoie plus rien. Le carnet continue.</p>
+      <Button
+        variant="ghost"
+        data-testid="disable-coach"
+        onClick={() => {
+          saveCoachConfig({ url: coach.url, token: "" });
+          app.flash("Coach désactivé. Le carnet continue. Les suggestions de charge aussi.");
+          app.setSheet("settings");
+        }}
+      >
+        Désactiver le coach
+      </Button>
+    </>
+  );
+}
+
+function CalendarSheet() {
+  const app = useApp();
+  return (
+    <>
+      <button type="button" className="navline" onClick={() => app.setSheet("settings")}>‹ Réglages</button>
+      <DialogTitle asChild><h2>Calendrier</h2></DialogTitle>
+      <DialogDescription asChild>
+        <p className="lead">Un seul calendrier est lu et modifié. Les autres restent dehors.</p>
+      </DialogDescription>
+      <div className="card flat">
+        <h3>{CALENDAR_NAME}</h3>
+        <p>C’est le calendrier nommé pour Repère. Les gardes et le travail qui sont ailleurs ne sont pas lus.</p>
+      </div>
+      <div className="card flat">
+        <h3>Créneaux</h3>
+        <p>Si les répétitions n’ont pas toutes été lues, aucun créneau n’est annoncé libre. Un délai ne crée pas un deuxième événement.</p>
+      </div>
+      <p className="fine">Les événements 🏋️, 🏃 et 🏊 ne sont ni déplacés ni supprimés. L’adresse du calendrier ne contient pas le code.</p>
+    </>
+  );
+}
+
+function DiagnosticSheet() {
+  const app = useApp();
+  const copy = app.settings.lastDownloadAt ? formatLong(app.settings.lastDownloadAt.slice(0, 10)) : null;
+  return (
+    <>
+      <button type="button" className="navline" onClick={() => app.setSheet("settings")}>‹ Réglages</button>
+      <DialogTitle asChild><h2>Diagnostic</h2></DialogTitle>
+      <DialogDescription asChild>
+        <p className="lead">Aucun score. Aucune séance n’est envoyée depuis cet écran.</p>
+      </DialogDescription>
+      <div className="rowline"><b>Application</b><small>Repère, sur ce téléphone.</small></div>
+      <div className="rowline"><b>Dernière copie</b><small>{copy ? `${copy}, téléchargée ici.` : "Aucune copie téléchargée depuis ce téléphone."}</small></div>
+      <div className="rowline">
+        <b>Conservation</b>
+        <small>
+          {app.settings.storagePersistent === true
+            ? "Le navigateur a accepté de garder les données plus longtemps. Ce n’est pas une garantie."
+            : "Ce navigateur peut effacer les données peu utilisées. Une copie téléchargée reste le seul filet."}
+        </small>
+      </div>
+      <div className="rowline"><b>Notes et charges</b><small>Absentes de cet écran. Elles ne partent pas.</small></div>
+      <p className="fine">La fluidité se mesure sur l’iPhone, pas ici.</p>
     </>
   );
 }

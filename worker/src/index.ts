@@ -14,18 +14,23 @@ import {
   type AiEnv,
   type StreamFold,
 } from "./ai";
+import { calendarObjectName } from "../../lib/calendar-apply";
+import { isChefSportTitle } from "../../lib/coach";
 import {
   basicHeader,
   buildIcs,
   deleteCall,
   extractHref,
+  listRecurrenceIncomplete,
   parisDayToUtc,
   parseCalendarList,
   parseEvents,
+  patchIcs,
   propfindCall,
   putCall,
   reportCall,
   resolveHref,
+  summaryOf,
   type HttpCall,
 } from "./caldav";
 
@@ -327,7 +332,7 @@ async function calendar(request: Request, env: Env, fetchImpl: FetchLike): Promi
     }
     const report = reportCall(calendarUrl, parisDayToUtc(start), parisDayToUtc(end, true), auth);
     const xml = await send(report, fetchImpl);
-    return json({ events: parseEvents(xml) }, 200);
+    return json({ events: parseEvents(xml), recurrenceIncomplete: listRecurrenceIncomplete(xml), calendar: (env.CALENDAR_NAME || "").trim() }, 200);
   }
   if (action === "create" || action === "update") {
     const title = text(body.title);
@@ -336,12 +341,30 @@ async function calendar(request: Request, env: Env, fetchImpl: FetchLike): Promi
     if (!title || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(end)) {
       return json({ error: "L’événement est incomplet." }, 400);
     }
-    const uid = action === "update" && text(body.uid) ? text(body.uid) : crypto.randomUUID();
-    const href = text(body.href) || `${calendarUrl}${uid}.ics`;
+    const uid = action === "update" && text(body.uid) ? text(body.uid) : calendarObjectName(text(body.idempotencyKey) || crypto.randomUUID());
+    const href = action === "create" ? `${calendarUrl}${uid}.ics` : text(body.href) || `${calendarUrl}${uid}.ics`;
     const target = guardedHref(calendarUrl, href);
     if (!target) return json({ error: "Adresse de calendrier refusée." }, 400);
+    if (action === "update") {
+      const current = await readEvent(target, auth, fetchImpl);
+      if (!current.ok) return current.response;
+      const blocked = chefBlocked(text(body.title), text(body.previousTitle), current.summary);
+      if (blocked) return blocked;
+      const clientEtag = normalizeEtag(text(body.etag));
+      const remoteEtag = normalizeEtag(current.etag);
+      if (body.refresh !== true && clientEtag && remoteEtag && clientEtag !== remoteEtag) {
+        return json({ error: "Le calendrier a changé entre-temps. Rien n’a été écrasé.", conflict: true }, 409);
+      }
+      const ics = patchIcs(current.ics, { title, start, end, notes: text(body.notes) });
+      const call = putCall(target, ics, auth, body.refresh === true ? current.etag : text(body.etag) || current.etag);
+      const response = await fetchImpl(call.url, { method: call.method, headers: call.headers, body: call.body, redirect: "manual" });
+      if (response.status >= 300 && response.status < 400) return json({ error: "Adresse de calendrier refusée." }, 400);
+      if (response.status === 412) return json({ error: "Le calendrier a changé entre-temps. Rien n’a été écrasé.", conflict: true }, 409);
+      if (!response.ok && response.status !== 201 && response.status !== 204) return json({ error: "Le calendrier a refusé l’événement." }, 502);
+      return json({ ok: true, uid, href: call.url }, 200);
+    }
     const ics = buildIcs({ uid, title, start, end, notes: text(body.notes) });
-    const call = putCall(target, ics, auth, text(body.etag));
+    const call = putCall(target, ics, auth, "");
     const response = await fetchImpl(call.url, { method: call.method, headers: call.headers, body: call.body, redirect: "manual" });
     if (response.status >= 300 && response.status < 400) return json({ error: "Adresse de calendrier refusée." }, 400);
     if (!response.ok && response.status !== 201 && response.status !== 204) return json({ error: "Le calendrier a refusé l’événement." }, 502);
@@ -353,13 +376,51 @@ async function calendar(request: Request, env: Env, fetchImpl: FetchLike): Promi
     if (!href && !uid) return json({ error: "Il manque l’événement." }, 400);
     const target = guardedHref(calendarUrl, href || `${calendarUrl}${uid}.ics`);
     if (!target) return json({ error: "Adresse de calendrier refusée." }, 400);
-    const call = deleteCall(target, auth, text(body.etag));
+    const current = await readEvent(target, auth, fetchImpl);
+    if (!current.ok) {
+      if (current.missing) return json({ ok: true }, 200);
+      return current.response;
+    }
+    const blocked = chefBlocked(text(body.title), text(body.previousTitle), current.summary);
+    if (blocked) return blocked;
+    const call = deleteCall(target, auth, text(body.etag) || current.etag);
     const response = await fetchImpl(call.url, { method: call.method, headers: call.headers, redirect: "manual" });
     if (response.status >= 300 && response.status < 400) return json({ error: "Adresse de calendrier refusée." }, 400);
+    if (response.status === 412) return json({ error: "Le calendrier a changé entre-temps. Rien n’a été écrasé.", conflict: true }, 409);
     if (!response.ok && response.status !== 204 && response.status !== 404) return json({ error: "Le calendrier n’a pas supprimé l’événement." }, 502);
     return json({ ok: true }, 200);
   }
   return json({ error: "Action de calendrier inconnue." }, 400);
+}
+
+function chefBlocked(title: string, previous: string, summary: string): Response | null {
+  if (isChefSportTitle(title) || isChefSportTitle(previous) || isChefSportTitle(summary)) {
+    return json({ error: "Les événements 🏋️, 🏃 et 🏊 ne sont ni déplacés ni supprimés." }, 403);
+  }
+  return null;
+}
+
+function normalizeEtag(value: string): string {
+  return value.trim().replace(/^W\//, "").replace(/^"|"$/g, "");
+}
+
+async function readEvent(
+  target: string,
+  auth: string,
+  fetchImpl: FetchLike,
+): Promise<{ ok: true; ics: string; etag: string; summary: string } | { ok: false; missing: boolean; response: Response }> {
+  const response = await fetchImpl(target, { method: "GET", headers: { Authorization: auth }, redirect: "manual" });
+  if (response.status >= 300 && response.status < 400) {
+    return { ok: false, missing: false, response: json({ error: "Adresse de calendrier refusée." }, 400) };
+  }
+  if (response.status === 404) {
+    return { ok: false, missing: true, response: json({ error: "L’événement n’est plus dans le calendrier. Rien n’a été écrit." }, 404) };
+  }
+  if (!response.ok) {
+    return { ok: false, missing: false, response: json({ error: "Le calendrier n’a pas pu être relu. Rien n’a été écrasé." }, 502) };
+  }
+  const ics = await response.text();
+  return { ok: true, ics, etag: response.headers.get("ETag") ?? "", summary: summaryOf(ics) };
 }
 
 async function findCalendar(env: Env, auth: string, fetchImpl: FetchLike): Promise<string> {
@@ -386,7 +447,9 @@ async function findCalendar(env: Env, auth: string, fetchImpl: FetchLike): Promi
 function guardedHref(base: string, href: string): string | null {
   try {
     const resolved = resolveHref(base, href);
-    return isIcloudHost(resolved) ? resolved : null;
+    if (!isIcloudHost(resolved)) return null;
+    const root = base.endsWith("/") ? base : `${base}/`;
+    return resolved.startsWith(root) ? resolved : null;
   } catch {
     return null;
   }
