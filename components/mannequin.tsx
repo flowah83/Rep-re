@@ -230,7 +230,7 @@ export function Mannequin({ name, pattern, muscles }: { name: string; pattern: P
       </div>
       <p className="caption">
         {svg
-          ? "Le dessin remplace le corps 3D sur cet appareil. Le cuivre marque les muscles du geste."
+          ? "Le dessin remplace le corps 3D sur cet appareil. Le cuivre marque les muscles de l’exercice. Il ne valide pas la technique."
           : reduced
             ? "Mouvement réduit : la pose utile reste en place. Glissez pour tourner."
             : "Glissez pour tourner. Le cuivre marque les muscles qui travaillent."}

@@ -5,7 +5,8 @@ import { useApp } from "@/components/app-context";
 import { CoachFace } from "@/components/coach-face";
 import { SettingsButton } from "@/components/settings-button";
 import { WeatherChip } from "@/components/weather-chip";
-import { factForDate } from "@/lib/facts";
+import { factBody, factForDate, factKind, FACT_LABEL } from "@/lib/facts";
+import { unitPhrase } from "@/lib/display";
 import { buildHome, type DayMark, type HomeModel, type LiftView } from "@/lib/home";
 import { formatKg, formatLong } from "@/lib/utils";
 
@@ -181,10 +182,11 @@ function HeroRing({ ratio }: { ratio: number }) {
 function FactTile({ today }: { today: string }) {
   const [shift, setShift] = useState(0);
   const fact = factForDate(today, shift);
+  const kind = factKind(fact);
   return (
-    <button type="button" className="fact" data-testid="home-fact" aria-label={`Le saviez-vous ? ${fact} Toucher pour le fait suivant.`} onClick={() => setShift((value) => value + 1)}>
-      <span className="home-k">Le saviez-vous ?</span>
-      <span>{fact}</span>
+    <button type="button" className="fact" data-testid="home-fact" aria-label={`${FACT_LABEL[kind]}. ${factBody(fact)} Toucher pour le fait suivant.`} onClick={() => setShift((value) => value + 1)}>
+      <span className="home-k">{FACT_LABEL[kind]}</span>
+      <span>{factBody(fact)}</span>
     </button>
   );
 }
@@ -193,11 +195,12 @@ function RecordCard({ record, onOpen }: { record: NonNullable<HomeModel["record"
   return (
     <button type="button" className="home-card span2 record" aria-label={record.aria} onClick={onOpen}>
       <p className="home-k">Record</p>
+      <p className="home-record-name">{record.name}</p>
       <p className="home-num sage">
         {formatKg(record.loadKg)}
         <small> × {record.reps}</small>
       </p>
-      {record.e1rm != null ? <p className="home-sub">{formatKg(record.e1rm)} kg estimés</p> : null}
+      {record.e1rm != null ? <p className="home-sub">{formatKg(Math.round(record.e1rm))} kg estimés{record.unit && record.unit !== "kg" ? ` · ${unitPhrase(record.unit)}` : ""}</p> : null}
       {record.points.length >= 3 ? <Sparkline values={record.points} tone="sage" /> : <LevelMark />}
     </button>
   );

@@ -45,9 +45,9 @@ function SettingsSheet() {
     <>
       <DialogTitle asChild><h2>Réglages</h2></DialogTitle>
       <DialogDescription asChild>
-        <p className="lead">Tout reste sur ce téléphone. Il n’y a pas de compte.</p>
+        <p className="lead">Le carnet est sur ce téléphone. Rien ne change sans votre accord.</p>
       </DialogDescription>
-      <h3 className="grouplabel">Apparence</h3>
+      <h3 className="grouplabel">Préférences</h3>
       <div className="fieldlabel">Thème</div>
       <div className="segment">
         {(["system", "light", "dark"] as const).map((theme) => (
@@ -72,6 +72,20 @@ function SettingsSheet() {
         </Button>
       </div>
       <p className="fine">Barre actuelle : {formatKg(app.settings.barKg)} kg. Sert seulement au calcul des disques.</p>
+      <Button
+        variant="ghost"
+        onClick={async () => {
+          if (typeof Notification === "undefined") {
+            app.flash("Ce navigateur ne propose pas d’alerte à la fin du repos. Le minuteur reste visible.");
+            return;
+          }
+          const permission = await Notification.requestPermission();
+          app.flash(permission === "granted" ? "Alerte activée pour la fin du repos." : "Alerte refusée. Le minuteur à l’écran suffit.");
+        }}
+      >
+        Alerte de fin de repos
+      </Button>
+      <p className="fine">Pour l’installer : dans Safari, touchez Partager, puis « Sur l’écran d’accueil ».</p>
       <h3 className="grouplabel">Données</h3>
       <p className="fine" data-testid="backup-status">
         {backupReminder(app.settings).text}
@@ -81,9 +95,6 @@ function SettingsSheet() {
       ) : app.settings.storagePersistent === true ? (
         <p className="fine">Ce navigateur a accepté de garder les données plus longtemps. Ce n’est pas une garantie.</p>
       ) : null}
-      <p className="fine">
-        Pour l’installer : dans Safari, touchez Partager, puis « Sur l’écran d’accueil ».
-      </p>
       <Button onClick={() => app.setSheet("import")}>Importer un plan</Button>
       <Button variant="ghost" onClick={() => { app.setEditId(null); app.setSheet("edit"); }}>
         Créer une séance
@@ -167,21 +178,6 @@ function SettingsSheet() {
         />
       </label>
       {pendingBackup ? <BackupPreview backup={pendingBackup} onCancel={() => setPendingBackup(null)} /> : null}
-      <Button
-        variant="ghost"
-        onClick={async () => {
-          if (typeof Notification === "undefined") {
-            app.flash("Ce navigateur ne propose pas d’alerte à la fin du repos. Le minuteur reste visible.");
-            return;
-          }
-          const permission = await Notification.requestPermission();
-          app.flash(permission === "granted" ? "Alerte activée pour la fin du repos." : "Alerte refusée. Le minuteur à l’écran suffit.");
-        }}
-      >
-        Alerte de fin de repos
-      </Button>
-      <h3 className="grouplabel">Coach</h3>
-      <CoachSettings />
       <h3 className="grouplabel">Exemple</h3>
       {askDemo ? (
         <>
@@ -206,6 +202,8 @@ function SettingsSheet() {
       <p className="fine">
         Le minuteur peut garder l’écran allumé une fois l’app installée. Sur iPhone, le site ne peut pas vibrer. Le compte à rebours reste le signal fiable.
       </p>
+      <h3 className="grouplabel">Connexions</h3>
+      <CoachSettings />
       <p className="fine">
         <a href={withBase("/LICENSES.md")}>Licences du corps 3D</a>
       </p>
@@ -330,7 +328,7 @@ function ImportForm() {
       <DialogTitle asChild><h2>Importer</h2></DialogTitle>
       <DialogDescription asChild>
         <p className="lead">
-          Collez un plan ou un historique, ou choisissez un fichier .json. Un lien #plan= ou #historique= s’ouvre ici avant d’être enregistré.
+          Le collage attend un JSON. Un aperçu s’affiche avant l’enregistrement. Un lien #plan= ou #historique= s’ouvre ici, et rien n’est gardé sans votre accord.
         </p>
       </DialogDescription>
       <Textarea
@@ -483,7 +481,7 @@ function EditSheet() {
               Retirer
             </button>
           </div>
-          <Input list="catalogue" value={row.name} placeholder="Nom du geste" onChange={(event) => update(index, { name: event.target.value })} />
+          <Input list="catalogue" value={row.name} placeholder="Nom de l’exercice" onChange={(event) => update(index, { name: event.target.value })} />
           <div className="row2">
             <Num label="Séries" integer value={row.sets} onChange={(sets) => update(index, { sets })} />
             <Num label="Répétitions" integer value={row.reps} onChange={(reps) => update(index, { reps })} />
@@ -624,7 +622,7 @@ function LibrarySheet() {
     <>
       <DialogTitle asChild><h2>Exercices</h2></DialogTitle>
       <DialogDescription asChild>
-        <p className="lead">Les gestes de base sont déjà là. Vous pouvez en ajouter un, avec vos repères.</p>
+        <p className="lead">Les exercices de base sont déjà là. Vous pouvez en ajouter un, avec vos repères.</p>
       </DialogDescription>
       <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher" aria-label="Rechercher un exercice" />
       <div style={{ maxHeight: 220, overflow: "auto", marginTop: 8 }}>

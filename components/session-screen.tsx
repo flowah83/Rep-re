@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/app-context";
 import { CoachFace } from "@/components/coach-face";
 import { plateGlance, unitOfExercise, unitPhrase } from "@/lib/display";
+import { resolvedUnit } from "@/lib/unit";
 import { playChime, unlockChime } from "@/lib/chime";
 import {
   loadProgression,
@@ -109,11 +110,9 @@ export function SessionScreen({ id }: { id: string }) {
   const shownLoad = exercise && current ? (editing === "load" && draft !== "" ? readNumber(draft) : (current.loadKg ?? exercise.planned.loadKg)) : null;
   const shownReps = exercise && current ? (editing === "reps" && draft !== "" ? readNumber(draft) : (current.reps ?? exercise.planned.reps)) : null;
 
-  const commit = () => {
+  const commitValues = (loadKg: number | null, reps: number | null) => {
     if (!exercise || !current) return;
     unlockChime();
-    const loadKg = shownLoad;
-    const reps = shownReps;
     if (current.done) {
       change((item) => patchSet(item, exercise.id, current.id, { loadKg, reps }));
       return;
@@ -124,6 +123,14 @@ export function SessionScreen({ id }: { id: string }) {
     setEditing(null);
     setExerciseId(null);
     setReview(false);
+  };
+
+  const commit = () => commitValues(shownLoad, shownReps);
+
+  const asPlanned = () => {
+    if (!exercise) return;
+    setEditing(null);
+    commitValues(exercise.planned.loadKg, exercise.planned.reps);
   };
 
   const undo = (set: SetLog) => {
@@ -290,7 +297,8 @@ export function SessionScreen({ id }: { id: string }) {
             correcting={correcting}
             lastDone={[...exercise.sets].reverse().find((set) => set.done)}
             delta={setDelta(record?.items.find((item) => item.exerciseId === exercise.id), current)}
-            previous={lastPerformance(app.sessions, exercise.name, session.id)}
+            previous={lastPerformance(app.sessions, exercise.name, session.id, resolvedUnit({ unit: exercise.unit }, exercise))}
+            onAsPlanned={asPlanned}
             onReapply={() => {
               if (!record) return;
               const item = record.items.find((entry) => entry.exerciseId === exercise.id && !entry.active);
@@ -307,7 +315,7 @@ export function SessionScreen({ id }: { id: string }) {
             <div className="grab" />
             <h2>Abandonner cette séance ?</h2>
             <p>{logged}</p>
-            <p className="fine">Rien ne part vers Chef sport.</p>
+            <p className="fine">Ce texte reste ici. Il part seulement si vous l’envoyez depuis le bilan.</p>
             <button type="button" className="btn" data-testid="abandon-continue" onClick={() => setAbandon(false)}>
               Continuer la séance
             </button>
@@ -366,6 +374,7 @@ function ActiveSet({
   onDraft,
   onStep,
   onCommit,
+  onAsPlanned,
   onUndo,
   onRevertExercise,
   onRevertPlan,
@@ -405,6 +414,7 @@ function ActiveSet({
   onDraft: (value: string) => void;
   onStep: (direction: number) => void;
   onCommit: () => void;
+  onAsPlanned: () => void;
   onUndo: (set: SetLog) => void;
   onRevertExercise: () => void;
   onRevertPlan: () => void;
@@ -455,7 +465,12 @@ function ActiveSet({
         </button>
       </div>
       {exercise.planned.rpe != null ? <p className="last num">RPE visé {formatKg(exercise.planned.rpe)}</p> : null}
-      <p className="last num">{previous ? `La dernière fois · ${previous}` : "Pas encore d’historique pour ce geste."}</p>
+      <p className="last num">
+        {exercise.planned.loadKg != null || exercise.planned.reps != null
+          ? `Cible · ${exercise.planned.loadKg != null ? `${formatKg(exercise.planned.loadKg)} ${unitPhrase(unitOfExercise(exercise))}` : "sans charge"} × ${exercise.planned.reps ?? "—"}`
+          : "Pas de cible écrite."}
+      </p>
+      <p className="last num">{previous ? `La dernière fois · ${previous}` : "Pas encore d’historique pour cet exercice."}</p>
       {exercise.note ? <p className="exnote">{exercise.note}</p> : null}
       {list ? (
         <div className="menu listmenu" role="menu" data-testid="exercise-list">
@@ -483,7 +498,7 @@ function ActiveSet({
             Calculer les disques
           </button>
           <button type="button" role="menuitem" data-testid="open-gesture" onClick={onGesture}>
-            Le geste
+            L’exercice
           </button>
           {correcting ? null : (
             <button type="button" role="menuitem" onClick={onCloseAsk}>
@@ -528,6 +543,11 @@ function ActiveSet({
               +
             </button>
           </div>
+        ) : null}
+        {!current.done && exercise.planned.loadKg != null && exercise.planned.reps != null ? (
+          <button type="button" className="btn ghost as-planned" data-testid="as-planned" onClick={onAsPlanned}>
+            Comme prévu
+          </button>
         ) : null}
         <button type="button" className="btn" data-testid="complete-set" onClick={onCommit}>
           {current.done ? "Enregistrer" : "C’est fait"}

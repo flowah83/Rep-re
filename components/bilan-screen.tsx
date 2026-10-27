@@ -4,9 +4,8 @@ import { useState } from "react";
 import { useApp } from "@/components/app-context";
 import { appendCoachNotices } from "@/lib/coach";
 import { markCoachNoticesSent, pendingCoachNoticeLines } from "@/lib/coach-store";
-import { hardSetCount } from "@/lib/calc";
 import { cardioSummary } from "@/lib/history";
-import { compareExercise, formatPerformedSet, reportJson, summaryText, type CompareKind } from "@/lib/session";
+import { compareExercise, formatPerformedSet, reportJson, sessionEffort, summaryText, versus, type CompareKind } from "@/lib/session";
 import { formatDuration, formatLong } from "@/lib/utils";
 
 export function BilanScreen({ id }: { id: string }) {
@@ -16,17 +15,10 @@ export function BilanScreen({ id }: { id: string }) {
   const fresh = app.overlay?.kind === "bilan" && app.overlay.fresh === true;
   if (!session) return null;
   const prior = app.sessions.filter((item) => item.id !== session.id && item.status === "done" && item.date <= session.date);
-  const rows = session.exercises
-    .map((exercise) => ({ exercise, ...compareExercise(exercise, prior) }))
-    .filter((row) => row.kind !== "vide");
-  const notable = rows.filter((row) => row.kind !== "tenu");
-  const held = rows.filter((row) => row.kind === "tenu");
-  const showPlan = Boolean(session.startedAt) && session.source === "coach" && rows.length > 0;
-  const shown = notable.length ? notable : held.slice(0, 1);
-  const extraHeld = notable.length ? held.length : Math.max(0, held.length - 1);
+  const rows = session.exercises.map((exercise) => ({ exercise, ...compareExercise(exercise, prior) }));
   const text = appendCoachNotices(summaryText(session, prior), pendingCoachNoticeLines());
-  const minutes =
-    session.startedAt && session.endedAt ? formatDuration(Date.parse(session.endedAt) - Date.parse(session.startedAt)) : "—";
+  const effort = sessionEffort(session);
+  const minutes = effort.minutes != null ? formatDuration(effort.minutes * 60000) : "—";
 
   const share = async () => {
     const fresh = appendCoachNotices(summaryText(session, prior), pendingCoachNoticeLines());
@@ -70,14 +62,23 @@ export function BilanScreen({ id }: { id: string }) {
           {formatLong(session.date)}
           {fresh ? ` · ${session.title}` : ""}
         </p>
+        {effort.partial ? (
+          <p className="partial" data-testid="bilan-partial">
+            Séance partielle. Elle n’est pas comptée comme une séance complète.
+          </p>
+        ) : null}
         <div className="stats">
           <div className="stat">
             <b className="num">{minutes}</b>
             <span>durée</span>
           </div>
           <div className="stat">
-            <b className="num">{hardSetCount(session.exercises)}</b>
-            <span>{hardSetCount(session.exercises) <= 1 ? "série dure" : "séries dures"}</span>
+            <b className="num">{effort.done}</b>
+            <span>{effort.done <= 1 ? "série dure" : "séries dures"}</span>
+          </div>
+          <div className="stat">
+            <b className="num">{effort.left}</b>
+            <span>{effort.left <= 1 ? "laissée" : "laissées"}</span>
           </div>
         </div>
         {session.cardio ? (
@@ -106,19 +107,32 @@ export function BilanScreen({ id }: { id: string }) {
             ) : null}
           </div>
         ) : null}
-        {session.cardio || !showPlan ? null : (
-        <div className="compare">
-          <h3>{session.closed === "partial" ? "Ce qui est noté" : "Par rapport au plan"}</h3>
-          {shown.map((row) => (
-            <div className="cmp" key={row.exercise.id}>
-              <div className="r1">
-                <b>{row.exercise.name}</b>
-                <Badge kind={row.kind} />
+        {session.cardio || rows.length === 0 ? null : (
+        <div className="compare" data-testid="bilan-versus">
+          <h3>Prévu et réalisé</h3>
+          {rows.map((row) => {
+            const sides = versus(row.exercise);
+            return (
+              <div className="cmp" key={row.exercise.id}>
+                <div className="r1">
+                  <b>{row.exercise.name}</b>
+                  <Badge kind={row.kind} />
+                </div>
+                <div className="vs">
+                  <div>
+                    <div className="k">Prévu</div>
+                    <div className="v num">{sides.plannedLoad}</div>
+                    <div className="s">{sides.plannedSets}</div>
+                  </div>
+                  <div>
+                    <div className="k">Réalisé</div>
+                    <div className="v num">{sides.doneLoad}</div>
+                    <div className="s">{sides.doneDetail}</div>
+                  </div>
+                </div>
               </div>
-              <p>{row.line}</p>
-            </div>
-          ))}
-          {extraHeld > 0 ? <p className="more">{extraHeld === 1 ? "1 autre exercice tenu." : `${extraHeld} autres exercices tenus.`}</p> : null}
+            );
+          })}
         </div>
         )}
         <label className="fieldlabel" htmlFor="coach-note">
@@ -169,7 +183,7 @@ function Badge({ kind }: { kind: CompareKind }) {
     "au-dessus": ["mid", "Au-dessus"],
     "charge-inedite": ["pr", "Charge inédite"],
     "en-dessous": ["mid", "En dessous"],
-    vide: ["mid", "Vide"],
+    vide: ["mid", "Pas fait"],
   };
   const [tone, label] = map[kind];
   return <span className={`badge ${tone}`}>{label}</span>;

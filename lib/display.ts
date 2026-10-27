@@ -129,8 +129,8 @@ function enduranceShaped(session: Session): boolean {
 export function coachErrorText(message: string): string {
   if (/souffle/i.test(message) || /pas encore activé/i.test(message)) return message;
   if (/https?:|joignable|401|refus|illisible|adresse utilisée/i.test(message)) {
-    return "L’adresse ou le code ne répond pas. Ouvrez Réglages, rubrique Coach.";
+    return "L’adresse ou le code ne répond pas. Ouvrez Réglages, rubrique Connexions.";
   }
   const stripped = message.replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim();
-  return stripped || "Le coach n’a pas pu répondre. Ouvrez Réglages, rubrique Coach.";
+  return stripped || "Le coach n’a pas pu répondre. Ouvrez Réglages, rubrique Connexions.";
 }

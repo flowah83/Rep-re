@@ -1,4 +1,6 @@
 import { countsForProgress, e1rmSeries, epley, hardSetCount, isHardSet, muscleTotals, samplesForExercise, tonnage } from "./calc";
+import { unitOfExercise } from "./display";
+import { canonicalUnit, recordKey, resolvedUnit } from "./unit";
 import { MUSCLE_LABEL } from "./exercises";
 import { keepsCoachPlan, movementCycle, programPreview } from "./progression";
 import type { ExerciseLog, Muscle, Session } from "./types";
@@ -34,6 +36,7 @@ export type RecordView = {
   reps: number;
   e1rm: number | null;
   date: string;
+  unit: string;
   points: number[];
   aria: string;
 };
@@ -228,7 +231,7 @@ function liftView(sessions: Session[], today: string, match: (name: string) => b
     if (!countsForProgress(session)) continue;
     if (session.exercises.some((exercise) => match(exercise.name) && exercise.sets.some(isHardSet))) dates.add(session.date);
   }
-  const series = e1rmSeries(samplesForExercise(sessions, name));
+  const series = e1rmSeries(samplesForExercise(sessions, name, canonicalUnit(unitOfExercise({ name }) ?? "kg")));
   const kg = series.length ? series[series.length - 1].bestSoFar : null;
   const curve = series.length >= 3;
   const cutoff = addDays(today, -28);
@@ -273,9 +276,9 @@ function exerciseName(sessions: Session[], match: (name: string) => boolean): st
   return null;
 }
 
-type RecordHit = { name: string; loadKg: number; reps: number; date: string };
+type RecordHit = { name: string; loadKg: number; reps: number; date: string; unit: string };
 
-/** Un record exige une charge plus lourde, ou plus de répétitions à charge égale. La date ne suffit pas. */
+/** Un record exige une charge plus lourde, ou plus de répétitions à charge égale, dans la même unité. */
 export function trueRecords(sessions: Session[]): RecordHit[] {
   const best = new Map<string, { loadKg: number; reps: number }>();
   const hits: RecordHit[] = [];
@@ -284,19 +287,21 @@ export function trueRecords(sessions: Session[]): RecordHit[] {
     for (const exercise of session.exercises) {
       for (const set of exercise.sets) {
         if (!isHardSet(set) || set.loadKg == null || set.reps == null || set.loadKg <= 0) continue;
-        const prev = best.get(exercise.name);
+        const unit = resolvedUnit(set, exercise);
+        const key = recordKey(exercise.name, unit);
+        const prev = best.get(key);
         const heavier = !prev || set.loadKg > prev.loadKg + 0.01;
         const moreReps = Boolean(prev) && Math.abs(set.loadKg - (prev?.loadKg ?? 0)) <= 0.01 && set.reps > (prev?.reps ?? 0);
         if (!prev) {
-          best.set(exercise.name, { loadKg: set.loadKg, reps: set.reps });
+          best.set(key, { loadKg: set.loadKg, reps: set.reps });
           continue;
         }
         if (heavier) {
-          best.set(exercise.name, { loadKg: set.loadKg, reps: set.reps });
-          hits.push({ name: exercise.name, loadKg: set.loadKg, reps: set.reps, date: session.date });
+          best.set(key, { loadKg: set.loadKg, reps: set.reps });
+          hits.push({ name: exercise.name, loadKg: set.loadKg, reps: set.reps, date: session.date, unit });
         } else if (moreReps) {
-          best.set(exercise.name, { loadKg: set.loadKg, reps: set.reps });
-          hits.push({ name: exercise.name, loadKg: set.loadKg, reps: set.reps, date: session.date });
+          best.set(key, { loadKg: set.loadKg, reps: set.reps });
+          hits.push({ name: exercise.name, loadKg: set.loadKg, reps: set.reps, date: session.date, unit });
         }
       }
     }
@@ -310,7 +315,7 @@ function recentRecord(sessions: Session[], today: string): RecordView | null {
   if (!hits.length) return null;
   hits.sort((a, b) => b.date.localeCompare(a.date) || Number(isBench(b.name)) - Number(isBench(a.name)) || b.loadKg - a.loadKg);
   const hit = hits[0];
-  const series = e1rmSeries(samplesForExercise(sessions, hit.name));
+  const series = e1rmSeries(samplesForExercise(sessions, hit.name, hit.unit));
   const point = [...series].reverse().find((item) => item.date <= hit.date);
   const e1rm = epley(hit.loadKg, hit.reps) ?? point?.bestSoFar ?? null;
   const short = shortLift(hit.name, hit.name);

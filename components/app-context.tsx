@@ -20,6 +20,7 @@ import { importPlanSnapshots, rememberPlan } from "@/lib/snapshot";
 import { saveCoachConfig, loadCoachConfig } from "@/lib/coach-store";
 import type { BackupFile, CustomExercise, Session, Settings } from "@/lib/types";
 import { publicBase } from "@/lib/base-path";
+import { duplicateAsPlan } from "@/lib/session";
 import { localDate } from "@/lib/utils";
 
 export type Tab = "home" | "today" | "progress" | "history";
@@ -76,7 +77,8 @@ type Api = {
   loadDemo: () => Promise<void>;
   clearDemo: () => Promise<void>;
   addCustom: (exercise: CustomExercise) => Promise<void>;
-  finishOnboarding: () => Promise<void>;
+  finishOnboarding: (entry?: "create" | "import" | "demo") => Promise<void>;
+  duplicateSession: (id: string) => Promise<void>;
   pendingPlan: boolean;
   beginSession: (session: Session, applySuggestion?: boolean) => Promise<void>;
   coachOpen: boolean;
@@ -430,6 +432,16 @@ export function AppProvider({
         setSheet(null);
         flash("Exemple fictif ajouté. Vous pouvez l’effacer dans les réglages.");
       },
+      duplicateSession: async (id) => {
+        const source = sessionsRef.current.find((session) => session.id === id);
+        if (!source) return;
+        const copy = duplicateAsPlan(source, localDate());
+        await putSession(copy);
+        sessionsRef.current = [...sessionsRef.current, copy];
+        setSessions(sessionsRef.current);
+        setTab("history");
+        flash("Plan repris pour aujourd’hui. Les séries déjà faites n’ont pas été copiées.");
+      },
       clearDemo: async () => {
         const kept = sessionsRef.current.filter((session) => session.source !== "demo");
         for (const session of sessionsRef.current) {
@@ -443,11 +455,30 @@ export function AppProvider({
         await saveCustom(exercise);
         flash("Exercice ajouté à votre bibliothèque.");
       },
-      finishOnboarding: async () => {
+      finishOnboarding: async (entry = "import") => {
         const next = { ...settingsRef.current, onboarded: true };
         await saveSettings(next);
         setSettings(next);
         setPendingPlan(false);
+        if (entry === "create") {
+          setEditId(null);
+          setSheet("edit");
+          return;
+        }
+        if (entry === "demo") {
+          setSheet(null);
+          const demo = buildDemo();
+          const kept = sessionsRef.current.filter((session) => session.source !== "demo");
+          for (const session of sessionsRef.current) {
+            if (session.source === "demo") await deleteSession(session.id);
+          }
+          for (const session of demo) await putSession(session);
+          setSessions([...kept, ...demo]);
+          setSelectedDate(localDate());
+          setTab("today");
+          flash("Exemple fictif ajouté. Il reste à part, et vous pouvez l’effacer dans les réglages.");
+          return;
+        }
         setSheet("import");
       },
       pendingPlan,

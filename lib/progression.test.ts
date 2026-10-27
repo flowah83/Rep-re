@@ -413,7 +413,8 @@ describe("suite sur plusieurs séances", () => {
     const history = [bench("2026-10-01", 80, 6)];
     const planned = doneSession("2026-10-24", exercise(), { id: "today", status: "planned" });
     const preview = programPreview(planned.exercises[0], history, { skipSessionId: "today" });
-    expect(preview?.sentence).toBe("On monte la charge, puis les répétitions dans la fourchette, avec un allègement après deux échecs ou trois réussites.");
+    expect(preview?.sentence).toMatch(/Règle de Repère/);
+    expect(preview?.sentence).toMatch(/pas une obligation/);
     expect(preview?.upcoming.map((step) => step.label)).toEqual(["82,5 kg × 6", "82,5 kg × 7", "82,5 kg × 8"]);
     expect(startOffer(planned, history)).toMatchObject({
       kind: "choice",
@@ -434,7 +435,7 @@ describe("suite sur plusieurs séances", () => {
       keepLabel: "Garder 80 kg",
     });
     const preview = programPreview(planned.exercises[0], history, { skipSessionId: "today" });
-    expect(preview?.sentence).toMatch(/on allège une fois/);
+    expect(preview?.sentence).toMatch(/charge plus légère est proposée une fois/);
     expect(preview?.upcoming[0].label).toBe("72,5 kg × 6");
     expect(preview?.upcoming[1].label).toBe("80 kg × 6");
   });

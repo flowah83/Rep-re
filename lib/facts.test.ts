@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { FACTS, factForDate } from "./facts";
+import { FACTS, factBody, factForDate, factKind } from "./facts";
 import { addDays } from "./utils";
 
 describe("le saviez-vous", () => {
   it("propose au moins 60 faits distincts", () => {
     expect(FACTS.length).toBeGreaterThanOrEqual(60);
     expect(new Set(FACTS).size).toBe(FACTS.length);
+    expect(FACTS.some((fact) => factKind(fact) === "regle")).toBe(true);
+    expect(FACTS.some((fact) => factKind(fact) === "source")).toBe(true);
+    expect(FACTS.some((fact) => factKind(fact) === "proposition")).toBe(true);
+    expect(factBody(FACTS.find((fact) => fact.includes("trois séances")) ?? "")).not.toMatch(/obligatoire pour tous|loi/);
     for (const fact of FACTS) {
       expect(fact.length).toBeGreaterThan(20);
       expect(fact).not.toMatch(/vous devriez|consultez|médicament|diagnos/i);

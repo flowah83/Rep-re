@@ -5,6 +5,7 @@ import { Mannequin } from "@/components/mannequin";
 import { isHardSet } from "@/lib/calc";
 import { MUSCLE_LABEL } from "@/lib/exercises";
 import { bestE1rmLabel, formatPerformedSet } from "@/lib/session";
+import { resolvedUnit } from "@/lib/unit";
 import { sessionsForHome } from "@/lib/home";
 import { formatKg, formatLong } from "@/lib/utils";
 
@@ -14,13 +15,14 @@ export function GestureScreen({ sessionId, exerciseId }: { sessionId: string; ex
   const exercise = session?.exercises.find((item) => item.id === exerciseId);
   if (!session || !exercise) return null;
   const stats = sessionsForHome(app.sessions);
-  const best = bestE1rmLabel(stats, exercise.name);
+  const unit = resolvedUnit({ unit: exercise.unit }, exercise);
+  const best = bestE1rmLabel(stats, exercise.name, unit);
   const recent = stats
     .filter((item) => !item.cardio && item.status === "done" && item.id !== session.id)
     .flatMap((item) => {
       const match = item.exercises.find((entry) => entry.name === exercise.name);
       if (!match) return [];
-      const work = match.sets.filter(isHardSet);
+      const work = match.sets.filter((set) => isHardSet(set) && resolvedUnit(set, match) === unit);
       if (!work.length) return [];
       return [{ date: item.date, line: work.map((set) => formatPerformedSet(set, match.unit)).join(", ") }];
     })
@@ -38,7 +40,7 @@ export function GestureScreen({ sessionId, exerciseId }: { sessionId: string; ex
           <p>
             {best ? (
               <span className="num">
-                Record estimé {formatKg(best.kg)} kg · {best.detail}
+                Estimation {formatKg(Math.round(best.kg))} kg · {best.detail}. Pas une garantie.
               </span>
             ) : (
               "Pas encore de record estimé. Il se calcule entre 1 et 10 répétitions."
@@ -53,6 +55,7 @@ export function GestureScreen({ sessionId, exerciseId }: { sessionId: string; ex
               <span key={muscle}>{index === 0 ? <strong>{MUSCLE_LABEL[muscle]}</strong> : MUSCLE_LABEL[muscle]}</span>
             ))}
           </div>
+          <p className="fine">Le premier nom est le muscle principal noté pour cet exercice. Les suivants sont secondaires. Ce n’est pas une mesure.</p>
         </section>
         <section className="block">
           <h3>À garder en tête</h3>
