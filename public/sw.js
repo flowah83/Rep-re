@@ -3,11 +3,31 @@ const CACHE = /*__CACHE__*/ "repere-dev";
 const INDEX = `${BASE}/index.html`;
 const PRECACHE = /*__PRECACHE__*/ [];
 
+function isOptional(url) {
+  return String(url).endsWith(".glb") || String(url).includes("/models/");
+}
+
+function shouldStore(response) {
+  return Boolean(response) && response.ok === true && response.status >= 200 && response.status < 300;
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) => (PRECACHE.length ? cache.addAll(PRECACHE) : Promise.resolve())),
+    (async () => {
+      const cache = await caches.open(CACHE);
+      const required = PRECACHE.filter((url) => !isOptional(url));
+      const optional = PRECACHE.filter((url) => isOptional(url));
+      if (required.length) await cache.addAll(required);
+      await Promise.all(
+        optional.map(async (url) => {
+          try {
+            await cache.add(url);
+          } catch {
+            /* un modèle manquant n’empêche pas l’installation */
+          }
+        }),
+      );
+    })(),
   );
 });
 
@@ -19,7 +39,8 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith("repere-") && key !== CACHE).map((key) => caches.delete(key))))
+      // Les caches dont le nom ne commence pas par repere- sont laissés en place.
       .then(() => self.clients.claim()),
   );
 });
@@ -33,17 +54,16 @@ self.addEventListener("fetch", (event) => {
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const forIndex = response.clone();
-          const forRequest = response.clone();
-          caches.open(CACHE).then((cache) => {
-            cache.put(INDEX, forIndex);
-            cache.put(request, forRequest);
-          });
+      (async () => {
+        try {
+          const response = await fetch(request);
+          if (shouldStore(response)) {
+            const cache = await caches.open(CACHE);
+            await cache.put(INDEX, response.clone());
+            await cache.put(request, response.clone());
+          }
           return response;
-        })
-        .catch(async () => {
+        } catch {
           const cache = await caches.open(CACHE);
           const hit =
             (await cache.match(request)) ||
@@ -51,23 +71,23 @@ self.addEventListener("fetch", (event) => {
             (await cache.match(`${BASE}/`)) ||
             (await cache.match(BASE || "/"));
           return hit || new Response("Hors ligne", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } });
-        }),
+        }
+      })(),
     );
     return;
   }
 
   event.respondWith(
     caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE).then((cache) => cache.put(request, copy));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
+      if (cached) return cached;
+      return fetch(request).then(async (response) => {
+        if (shouldStore(response)) {
+          const copy = response.clone();
+          const cache = await caches.open(CACHE);
+          await cache.put(request, copy);
+        }
+        return response;
+      });
     }),
   );
 });

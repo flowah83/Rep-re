@@ -147,15 +147,17 @@ describe("double progression", () => {
     expect(suggestion?.reps).toBe(10);
   });
 
-  it("ne transforme pas une charge inconnue en zéro et ajoute une répétition au poids du corps", () => {
+  it("ne transforme pas une charge inconnue en poids du corps", () => {
     const history = [doneSession("2026-10-01", exercise({
       sets: [set({ loadKg: null, reps: 8, rpe: 7 })],
     }))];
     const planned = exercise({ planned: { sets: 3, reps: 8, loadKg: null, restSec: 90, rpe: null } });
     const suggestion = suggestForExercise(planned, history);
     expect(suggestion?.loadKg).toBeNull();
-    expect(suggestion?.reps).toBe(9);
-    expect(suggestion?.reason).toMatch(/Poids du corps/);
+    expect(suggestion?.reps).toBe(8);
+    expect(suggestion?.changesPlan).toBe(false);
+    expect(suggestion?.reason).toMatch(/Charge inconnue/);
+    expect(suggestion?.reason).not.toMatch(/Poids du corps/);
     expect(suggestion?.reason).not.toMatch(/\b0\b/);
   });
 

@@ -302,17 +302,18 @@ export function calendarBodyForTool(call: ToolCall): { ok: true; body: Record<st
 export type CoachFocus = { sessionId: string; exerciseId?: string | null; setId?: string | null };
 
 export function buildCoachContext(sessions: Session[], today: string, extra?: { focus?: CoachFocus | null; memoire?: string }) {
-  const done = sessions
-    .filter((session) => session.status !== "planned" && !session.cardio)
+  const own = sessions.filter((session) => session.source !== "demo");
+  const done = own
+    .filter((session) => session.status === "done" && !session.cardio)
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  const planned = sessions
+  const planned = own
     .filter((session) => session.status === "planned" || session.status === "active")
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.time ?? "").localeCompare(b.time ?? "")));
   const names = [...new Set(done.flatMap((session) => session.exercises.map((exercise) => exercise.name)))];
   const records = names
     .map((name) => {
-      const best = bestE1rmLabel(sessions, name);
-      const unit = sessions.flatMap((item) => item.exercises).find((item) => item.name === name)?.unit ?? null;
+      const best = bestE1rmLabel(own, name);
+      const unit = own.flatMap((item) => item.exercises).find((item) => item.name === name)?.unit ?? null;
       return best ? { exercice: name, max_estime_kg: best.kg, detail: best.detail, unite: unit } : null;
     })
     .filter((item): item is { exercice: string; max_estime_kg: number; detail: string; unite: string | null } => item != null)
@@ -324,8 +325,8 @@ export function buildCoachContext(sessions: Session[], today: string, extra?: { 
     records,
     plan: planned.slice(0, 16).map(compactPlan),
     seances_recentes: done.slice(0, 8).map(compactDone),
-    cardio_recent: sessions
-      .filter((session) => session.cardio && session.status !== "planned")
+    cardio_recent: own
+      .filter((session) => session.cardio && session.status === "done")
       .sort((a, b) => (a.date < b.date ? 1 : -1))
       .slice(0, 6)
       .map((session) => ({
@@ -336,7 +337,7 @@ export function buildCoachContext(sessions: Session[], today: string, extra?: { 
         minutes: session.cardio?.durationMin ?? null,
         km: session.cardio?.distanceKm ?? null,
       })),
-    seance_en_cours: focusNow(sessions, extra?.focus),
+    seance_en_cours: focusNow(own, extra?.focus),
     memoire: (extra?.memoire ?? "").trim().slice(0, 800) || null,
   };
 }
@@ -621,7 +622,7 @@ function compactDone(session: Session) {
     id: session.id,
     date: session.date,
     titre: session.title,
-    note: session.noteForCoach ?? session.noteForMe ?? null,
+    note: session.noteForCoach?.trim() ? session.noteForCoach : null,
     exercices: session.exercises.slice(0, 8).map((exercise) => ({
       nom: exercise.name,
       note: exercise.note ?? null,

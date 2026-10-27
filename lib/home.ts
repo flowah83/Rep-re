@@ -1,5 +1,4 @@
 import { countsForProgress, e1rmSeries, epley, hardSetCount, isHardSet, muscleTotals, samplesForExercise, tonnage } from "./calc";
-import { historyBucket } from "./display";
 import { MUSCLE_LABEL } from "./exercises";
 import { keepsCoachPlan, movementCycle, programPreview } from "./progression";
 import type { ExerciseLog, Muscle, Session } from "./types";
@@ -125,6 +124,8 @@ function weekDays(sessions: Session[], monday: string, today: string): DayMark[]
 }
 
 function isExtra(session: Session): boolean {
+  if (session.scheduled === true) return false;
+  if (session.scheduled === false) return true;
   return session.source === "manual" && session.status === "done";
 }
 
@@ -331,16 +332,16 @@ function balanceOf(sessions: Session[], monday: string, sunday: string) {
   let pull = 0;
   let upper = 0;
   let lower = 0;
+    const lowerPatterns = new Set(["squat", "hinge", "lunge", "calf"]);
+  const upperPatterns = new Set(["hpush", "hpull", "vpush", "vpull", "curl", "tricep", "lateral"]);
   for (const session of sessions) {
     if (!countsForProgress(session) || session.date < monday || session.date > sunday) continue;
-    const bucket = historyBucket(session);
-    const sets = hardSetCount(session.exercises);
-    if (bucket === "upper") upper += sets;
-    else if (bucket === "lower") lower += sets;
     for (const exercise of session.exercises) {
       const count = exercise.sets.filter(isHardSet).length;
       if (exercise.pattern === "hpush" || exercise.pattern === "vpush") push += count;
       if (exercise.pattern === "hpull" || exercise.pattern === "vpull") pull += count;
+      if (lowerPatterns.has(exercise.pattern)) lower += count;
+      else if (upperPatterns.has(exercise.pattern)) upper += count;
     }
   }
   if (push + pull + upper + lower === 0) return null;
@@ -372,9 +373,11 @@ function heatOf(sessions: Session[], monday: string, today: string) {
     const end = addDays(start, 6);
     if (end < earliest) break;
     const missed = sessions.some((session) => session.status === "planned" && session.date >= start && session.date <= end && session.date < today);
-    if (missed) break;
+    const finished = sessions.some((session) => session.status === "done" && session.date >= start && session.date <= end);
+    if (missed || !finished) break;
     streak += 1;
   }
+  if (streak === 0) return { streak: 0, rows, aria: "Aucune semaine tenue." };
   return { streak, rows, aria: `${streak} semaine${streak > 1 ? "s" : ""} tenue${streak > 1 ? "s" : ""}.` };
 }
 

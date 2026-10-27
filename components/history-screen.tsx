@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useApp, type HistFilter } from "@/components/app-context";
 import { SettingsButton } from "@/components/settings-button";
-import { hardSetCount, tonnage } from "@/lib/calc";
+import { hardSetCount } from "@/lib/calc";
 import { historyBucket } from "@/lib/display";
 import { cardioSummary, formatMinutes, groupSessionsNewestWeekFirst, groupSessionsSoonestWeekFirst, splitCarnet } from "@/lib/history";
 import type { Session } from "@/lib/types";
-import { formatKg, mondayOf, parseISODate, stripAccents } from "@/lib/utils";
+import { mondayOf, parseISODate, stripAccents } from "@/lib/utils";
 
 const FILTERS: { id: HistFilter; label: string }[] = [
   { id: "all", label: "Tout" },
@@ -166,7 +166,7 @@ function volumeLine(session: Session) {
   }
   if (count === 0 && unknown) return "séries non détaillées";
   if (count === 0) return "durée non notée";
-  const line = `${count <= 1 ? "1 série" : `${count} séries`} · ${formatKg(tonnage(session.exercises))} kg`;
+  const line = count <= 1 ? "1 série" : `${count} séries`;
   return unknown ? `${line} · séries non détaillées` : line;
 }
 

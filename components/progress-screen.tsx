@@ -9,6 +9,7 @@ import { unitPhrase } from "@/lib/display";
 import { MUSCLE_LABEL } from "@/lib/exercises";
 import { bestE1rmLabel } from "@/lib/session";
 import type { Muscle, Session } from "@/lib/types";
+import { sessionsForHome } from "@/lib/home";
 import { addDays, formatKg, formatLong, parseISODate } from "@/lib/utils";
 
 const RANGES: { id: RangeKey; label: string }[] = [
@@ -19,7 +20,8 @@ const RANGES: { id: RangeKey; label: string }[] = [
 
 export function ProgressScreen() {
   const app = useApp();
-  const names = [...new Set(app.sessions.flatMap((session) => session.exercises.map((exercise) => exercise.name)))].sort((a, b) =>
+  const sessions = sessionsForHome(app.sessions);
+  const names = [...new Set(sessions.flatMap((session) => session.exercises.map((exercise) => exercise.name)))].sort((a, b) =>
     a.localeCompare(b, "fr"),
   );
   const name = app.progressName && names.includes(app.progressName)
@@ -27,24 +29,24 @@ export function ProgressScreen() {
     : names.includes("Développé couché barre")
       ? "Développé couché barre"
       : (names[0] ?? "");
-  const series = e1rmSeries(samplesForExercise(app.sessions, name));
+  const series = e1rmSeries(samplesForExercise(sessions, name));
   const from = addDays(app.today, -app.range);
   const plotted = plot(series, from, app.today);
-  const best = name ? bestE1rmLabel(app.sessions, name) : null;
+  const best = name ? bestE1rmLabel(sessions, name) : null;
   const prior = [...series].reverse().find((point) => point.date < from);
   const inside = series.filter((point) => point.date >= from && point.date <= app.today);
   const start = prior?.bestSoFar ?? inside[0]?.bestSoFar ?? null;
   const end = inside.length ? inside[inside.length - 1].bestSoFar : (prior?.bestSoFar ?? null);
   const delta = start != null && end != null ? Math.round((end - start) * 10) / 10 : null;
-  const totals = muscleTotals(app.sessions, addDays(app.today, -6), app.today);
+  const totals = muscleTotals(sessions, addDays(app.today, -6), app.today);
   const fill = (muscle: Muscle) => heatFill(totals[muscle]);
-  const records = bestLoads(app.sessions).slice(0, 3);
-  const held = name ? heaviestSet(app.sessions, name) : null;
-  const lastRun = [...app.sessions]
+  const records = bestLoads(sessions).slice(0, 3);
+  const held = name ? heaviestSet(sessions, name) : null;
+  const lastRun = [...sessions]
     .filter((session) => session.status === "done" && session.cardio)
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))[0];
-  const sentence = recordSentence(app.sessions, app.today);
-  const lastGym = lastStrengthDate(app.sessions);
+  const sentence = recordSentence(sessions, app.today);
+  const lastGym = lastStrengthDate(sessions);
 
   return (
     <div className="screen" data-screen="progress">
@@ -55,6 +57,9 @@ export function ProgressScreen() {
         </div>
         <SettingsButton />
       </div>
+      {sessions.some((session) => session.source === "demo") ? (
+        <p className="quiet" data-testid="demo-stats">Ces chiffres viennent de la démonstration.</p>
+      ) : null}
       {names.length === 0 ? (
         <article className="card">
           <div className="empty">
