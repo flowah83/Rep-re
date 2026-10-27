@@ -1016,6 +1016,23 @@ h1.title {
 .coach-id { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .coach-id strong { font-size: 1.0625rem; letter-spacing: -0.03em; line-height: 1.15; }
 .coach-id span { font-size: 0.75rem; color: var(--ink-soft); font-weight: 560; }
+.coach-id span.sage { color: var(--sage); }
+.coach-id span.copper { color: var(--copper); }
+.coach-bubble .banner, .banner {
+  margin: 0 16px 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+}
+.banner b { display: block; font-size: 0.9375rem; letter-spacing: -0.02em; }
+.banner span { display: block; margin-top: 3px; color: var(--ink-soft); font-size: 0.8125rem; line-height: 1.35; }
+.omit { margin: 10px 0 0; color: var(--ink-soft); font-size: 0.8125rem; line-height: 1.4; }
+.outcome-split { display: flex; gap: 8px; margin-top: 8px; }
+.outcome-split > div { flex: 1; background: var(--bg); border-radius: 14px; padding: 10px; }
+.outcome-split .k2 { font-size: 0.6875rem; font-weight: 750; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); }
+.outcome-split b { display: block; margin-top: 4px; font-size: 0.9375rem; }
+.outcome-split span { display: block; margin-top: 2px; color: var(--ink-soft); font-size: 0.75rem; line-height: 1.3; }
 .coach-log-wrap {
   position: relative;
   flex: 1;
@@ -1331,6 +1348,24 @@ h1.title {
 }
 .exnames span { display: block; font-size: 0.875rem; color: var(--ink); line-height: 1.35; font-weight: 500; }
 .correct { position: absolute; right: 4px; bottom: 2px; }
+.rowline {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+  color: inherit;
+  min-height: 52px;
+}
+.rowline b { display: block; font-size: 0.975rem; font-weight: 640; letter-spacing: -0.02em; }
+.rowline small { display: block; margin-top: 2px; color: var(--ink-soft); font-size: 0.8125rem; line-height: 1.35; font-weight: 500; }
+.card.flat { background: var(--bg); border-radius: 18px; padding: 14px; margin-top: 12px; }
+.card.flat h3 { margin: 0 0 6px; font-size: 1.0625rem; letter-spacing: -0.03em; }
+.card.flat p, .card.flat li { margin: 0; color: var(--ink-soft); font-size: 0.9375rem; line-height: 1.4; }
+.card.flat ul { margin: 0; padding-left: 18px; }
+.card.flat li + li { margin-top: 6px; }
 .grouplabel {
   margin: 18px 0 4px;
   font-size: 0.75rem;

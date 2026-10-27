@@ -384,6 +384,91 @@ describe("worker", () => {
     expect(text).toContain('"error"');
   });
 
+  it("signale des répétitions incomplètes sans annoncer un créneau libre", async () => {
+    const fetchImpl = caldavMock({
+      report: `<D:response><D:href>/123/calendars/flo/cours.ics</D:href><C:calendar-data>BEGIN:VEVENT\nUID:cours-1\nSUMMARY:Cours\nDTSTART;TZID=Europe/Paris:20261102T180000\nDTEND;TZID=Europe/Paris:20261102T190000\nRRULE:FREQ=WEEKLY\nEND:VEVENT</C:calendar-data></D:response>`,
+    });
+    const response = await handleRequest(post("/calendar", { action: "list", start: "2026-11-02", end: "2026-11-08" }), env, fetchImpl);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { recurrenceIncomplete: boolean; events: { title: string }[] };
+    expect(body.recurrenceIncomplete).toBe(true);
+    expect(body.events[0].title).toBe("Cours");
+  });
+
+  it("ne déplace pas un événement 🏋️ et n’écrase pas un conflit", async () => {
+    const puts: { body: string; match: string | null }[] = [];
+    const rich = [
+      "BEGIN:VCALENDAR",
+      "BEGIN:VEVENT",
+      "UID:poussee-1",
+      "SUMMARY:Poussée",
+      "DTSTART;TZID=Europe/Paris:20261027T180000",
+      "DTEND;TZID=Europe/Paris:20261027T190000",
+      "RRULE:FREQ=WEEKLY",
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      "END:VALARM",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+    const conflictFetch = caldavMock({
+      get: { body: rich, etag: '"new"' },
+      onPut: (body, match) => puts.push({ body, match }),
+    });
+    const blocked = await handleRequest(
+      post("/calendar", { action: "update", uid: "poussee-1", href: "/123/calendars/flo/poussee.ics", etag: '"new"', title: "🏋️ Poussée", start: "2026-10-29T18:00", end: "2026-10-29T19:00", previousTitle: "🏋️ Poussée" }),
+      env,
+      conflictFetch,
+    );
+    expect(blocked.status).toBe(403);
+    expect(puts).toHaveLength(0);
+
+    puts.length = 0;
+    const stale = await handleRequest(
+      post("/calendar", { action: "update", uid: "poussee-1", href: "/123/calendars/flo/poussee.ics", etag: '"old"', title: "Poussée", start: "2026-10-29T18:00", end: "2026-10-29T19:00" }),
+      env,
+      conflictFetch,
+    );
+    expect(stale.status).toBe(409);
+    const staleBody = (await stale.json()) as { conflict: boolean };
+    expect(staleBody.conflict).toBe(true);
+    expect(puts).toHaveLength(0);
+
+    const resumed = await handleRequest(
+      post("/calendar", { action: "update", uid: "poussee-1", href: "/123/calendars/flo/poussee.ics", etag: '"old"', refresh: true, title: "Poussée", start: "2026-10-29T18:00", end: "2026-10-29T19:00" }),
+      env,
+      conflictFetch,
+    );
+    expect(resumed.status).toBe(200);
+    expect(puts).toHaveLength(1);
+    expect(puts[0].match).toBe('"new"');
+    expect(puts[0].body).toContain("RRULE:FREQ=WEEKLY");
+    expect(puts[0].body).toContain("BEGIN:VALARM");
+    expect(puts[0].body).toContain("SUMMARY:Poussée");
+    expect(puts[0].body).toContain("20261029T180000");
+
+    const removed = await handleRequest(
+      post("/calendar", { action: "delete", uid: "poussee-1", href: "/123/calendars/flo/poussee.ics", previousTitle: "🏋️ Poussée" }),
+      env,
+      conflictFetch,
+    );
+    expect(removed.status).toBe(403);
+    expect(conflictFetch.mock.calls.some((call) => (call[1] as RequestInit | undefined)?.method === "DELETE")).toBe(false);
+  });
+
+  it("réessaie une création sur le même fichier", async () => {
+    const urls: string[] = [];
+    const fetchImpl = caldavMock({ onPut: (_body, _match, url) => urls.push(url) });
+    const body = { action: "create", title: "Poussée", start: "2026-10-29T18:00", end: "2026-10-29T19:00", idempotencyKey: "seance-jeudi" };
+    const first = await handleRequest(post("/calendar", body), env, fetchImpl);
+    const second = await handleRequest(post("/calendar", body), env, fetchImpl);
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(urls).toHaveLength(2);
+    expect(urls[0]).toBe(urls[1]);
+    expect(urls[0]).toContain("seance-jeudi.ics");
+  });
+
   it("construit un événement et relit l’heure de Paris", () => {
     const ics = buildIcs({ uid: "abc", title: "🏋️ Poussée", start: "2026-10-25T18:15", end: "2026-10-25T19:30" });
     expect(ics).toContain("SUMMARY:🏋️ Poussée");
@@ -392,6 +477,35 @@ describe("worker", () => {
     expect(parsed[0].title).toBe("🏋️ Poussée");
   });
 });
+
+function caldavMock(handlers: {
+  report?: string;
+  get?: { body: string; etag: string };
+  onPut?: (body: string, match: string | null, url: string) => void;
+}) {
+  return vi.fn(async (url: string, init?: RequestInit) => {
+    const method = init?.method || "GET";
+    if (method === "PROPFIND" && String(url) === "https://caldav.icloud.com/") {
+      return xml(207, `<D:response><D:current-user-principal><D:href>/123/principal/</D:href></D:current-user-principal></D:response>`);
+    }
+    if (method === "PROPFIND" && String(url).includes("/principal")) {
+      return xml(207, `<D:calendar-home-set><D:href>/123/calendars/</D:href></D:calendar-home-set>`);
+    }
+    if (method === "PROPFIND") {
+      return xml(207, `<D:response><D:href>/123/calendars/flo/</D:href><D:displayname>Entraînement</D:displayname></D:response>`);
+    }
+    if (method === "REPORT") return xml(207, handlers.report ?? "");
+    if (method === "GET") {
+      return new Response(handlers.get?.body ?? "", { status: 200, headers: handlers.get?.etag ? { ETag: handlers.get.etag } : {} });
+    }
+    if (method === "PUT") {
+      handlers.onPut?.(String(init?.body ?? ""), new Headers(init?.headers).get("If-Match"), String(url));
+      return new Response(null, { status: 204 });
+    }
+    if (method === "DELETE") return new Response(null, { status: 204 });
+    return new Response("no", { status: 500 });
+  });
+}
 
 function xml(status: number, body: string) {
   return new Response(body, { status, headers: { "Content-Type": "application/xml" } });

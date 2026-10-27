@@ -146,6 +146,79 @@ export function extractHref(xml: string, parentLocal: string): string | null {
   return href ? decodeXml(href).trim() : null;
 }
 
+export function eventRecurrenceOpen(ics: string): boolean {
+  const unfolded = unfold(ics);
+  return unfolded.split("BEGIN:VEVENT").slice(1).some((event) => /^RRULE[:;]/m.test(event.split("END:VEVENT")[0] ?? ""));
+}
+
+export function listRecurrenceIncomplete(xml: string): boolean {
+  return xml.split(/<\/[^>]*response>/i).some((part) => {
+    const data = matchTag(part, "calendar-data");
+    if (!data) return false;
+    const ics = unfold(decodeXml(data.replace(/<!\[CDATA\[|\]\]>/g, "")));
+    return eventRecurrenceOpen(ics);
+  });
+}
+
+export function summaryOf(ics: string): string {
+  const unfolded = unfold(ics);
+  const event = unfolded.split("BEGIN:VEVENT").pop()?.split("END:VEVENT")[0] ?? "";
+  return icsField(event, "SUMMARY");
+}
+
+/** Remplace seulement le titre, les horaires et la note. Alarmes, répétition et fuseau restent. */
+export function patchIcs(existing: string, event: { title: string; start: string; end: string; notes?: string }): string {
+  const lines = unfold(existing).split(/\r?\n/);
+  let inEvent = false;
+  let sawSummary = false;
+  let sawStart = false;
+  let sawEnd = false;
+  let sawDesc = false;
+  const next: string[] = [];
+  for (const line of lines) {
+    if (line === "BEGIN:VEVENT") {
+      inEvent = true;
+      next.push(line);
+      continue;
+    }
+    if (line === "END:VEVENT") {
+      if (!sawSummary) next.push(`SUMMARY:${escapeIcs(event.title)}`);
+      if (!sawStart) next.push(`DTSTART;TZID=Europe/Paris:${toIcsLocal(event.start)}`);
+      if (!sawEnd) next.push(`DTEND;TZID=Europe/Paris:${toIcsLocal(event.end)}`);
+      if (event.notes && !sawDesc) next.push(`DESCRIPTION:${escapeIcs(event.notes)}`);
+      inEvent = false;
+      next.push(line);
+      continue;
+    }
+    if (!inEvent) {
+      next.push(line);
+      continue;
+    }
+    if (line.startsWith("SUMMARY")) {
+      next.push(`SUMMARY:${escapeIcs(event.title)}`);
+      sawSummary = true;
+      continue;
+    }
+    if (line.startsWith("DTSTART")) {
+      next.push(`DTSTART;TZID=Europe/Paris:${toIcsLocal(event.start)}`);
+      sawStart = true;
+      continue;
+    }
+    if (line.startsWith("DTEND")) {
+      next.push(`DTEND;TZID=Europe/Paris:${toIcsLocal(event.end)}`);
+      sawEnd = true;
+      continue;
+    }
+    if (line.startsWith("DESCRIPTION")) {
+      if (event.notes) next.push(`DESCRIPTION:${escapeIcs(event.notes)}`);
+      sawDesc = true;
+      continue;
+    }
+    next.push(line);
+  }
+  return `${next.filter((line) => line !== "").join("\r\n")}\r\n`;
+}
+
 export function parseEvents(xml: string): CalendarEvent[] {
   const events: CalendarEvent[] = [];
   for (const part of xml.split(/<\/[^>]*response>/i)) {

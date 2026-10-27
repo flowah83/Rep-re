@@ -4,18 +4,22 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, ty
 import { CoachFace } from "@/components/coach-face";
 import { coachErrorText } from "@/lib/display";
 import { useApp } from "@/components/app-context";
+import { settleApply, type ApplyStep } from "@/lib/calendar-apply";
 import {
   applyAppTool,
   buildCoachContext,
   calendarBodyForTool,
+  calendarReadContent,
   chefSportNotice,
   describeAction,
+  fitCoachContext,
   parseToolArgs,
   partitionToolCalls,
   type ToolCall,
 } from "@/lib/coach";
 import {
   coachIsReady,
+  coachPhase,
   loadCoachChat,
   loadCoachMemo,
   recordCoachNotice,
@@ -54,6 +58,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
   const [partial, setPartial] = useState("");
   const [face, setFace] = useState<"idle" | "thinking" | "speaking">("idle");
   const [online, setOnline] = useState(true);
+  const [down, setDown] = useState(false);
   const [muted, setMuted] = useState(false);
   const [slow, setSlow] = useState(false);
   const [drag, setDrag] = useState(0);
@@ -221,9 +226,11 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
   const sendText = async (text: string) => {
     if (!text || busy || !ready || muted) return;
     if (!navigator.onLine) {
+      setDown(true);
       setError(OFFLINE);
       return;
     }
+    setDown(false);
     setDraft("");
     if (field.current) field.current.style.height = "44px";
     setError("");
@@ -254,7 +261,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
     try {
       const data = await requestCoachStream(
         {
-          context: buildCoachContext(sessions, app.today, { focus: app.readSportFocus(), memoire: loadCoachMemo() }),
+          context: fitCoachContext(buildCoachContext(sessions, app.today, { focus: app.readSportFocus(), memoire: loadCoachMemo() })).context,
           messages: toApi(history),
         },
         (text) => {
@@ -268,12 +275,14 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
       const calls = Array.isArray(message?.tool_calls) ? message.tool_calls.slice(0, 8) : [];
       const groups = partitionToolCalls(calls);
       const content = (message?.content || partialRef.current || (groups.writes.length ? "Voici ce que je propose." : "")).trim();
+      const fitted = fitCoachContext(buildCoachContext(sessions, app.today, { focus: app.readSportFocus(), memoire: loadCoachMemo() }));
       const assistant: StoredTurn = {
         id: uid(),
         role: "assistant",
         content: content || (calls.length ? "" : "Le coach n’a rien répondu."),
         toolCalls: calls,
         pending: groups.writes.length > 0,
+        omitted: fitted.omitted ?? undefined,
       };
       let next = [...history, assistant];
       setPartial("");
@@ -298,6 +307,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
       }
       const message = caught instanceof Error ? caught.message : "Le coach n’a pas pu répondre.";
       const shown = presentError(message);
+      if (/hors ligne|joignable|injoignable|ne répond pas|network/i.test(shown.text) || /hors ligne|joignable|injoignable/i.test(message)) setDown(true);
       setError(shown.text);
       if (shown.mute) {
         setMuted(true);
@@ -318,6 +328,8 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
     const groups = partitionToolCalls(calls);
     const results: StoredTurn[] = [];
     const lines: string[] = [];
+    const steps: ApplyStep[] = [];
+    const retryCalls: ToolCall[] = [];
     let state = { sessions: app.sessions, customs: app.customs };
     try {
       if (apply) {
@@ -327,6 +339,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
             if (!prepared.ok) {
               results.push(toolTurn(call.id, prepared.error));
               lines.push(prepared.error);
+              steps.push({ scope: "calendar", ok: false });
               continue;
             }
             try {
@@ -337,20 +350,26 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
               const summary = describeAction(call, state.sessions).summary;
               results.push(toolTurn(call.id, `Appliqué. ${summary}`));
               lines.push(summary);
+              steps.push({ scope: "calendar", ok: true });
             } catch (caught) {
+              const conflict = Boolean(caught && typeof caught === "object" && "conflict" in caught && (caught as { conflict?: boolean }).conflict);
               const message = caught instanceof Error ? caught.message : "Le calendrier n’a pas répondu.";
               results.push(toolTurn(call.id, message));
               lines.push(message);
+              steps.push({ scope: "calendar", ok: false, conflict });
+              retryCalls.push(call);
             }
           } else {
             const result = applyAppTool(state, call);
             if (result.error) {
               results.push(toolTurn(call.id, result.error));
               lines.push(result.error);
+              steps.push({ scope: "phone", ok: false });
             } else {
               state = result.state;
               results.push(toolTurn(call.id, result.summary));
               lines.push(result.summary);
+              steps.push({ scope: "phone", ok: true });
             }
           }
         }
@@ -358,15 +377,67 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
       } else {
         for (const call of groups.writes) results.push(toolTurn(call.id, "Ignoré. Rien n’a été modifié."));
       }
+      const settled = settleApply(steps, apply);
       const cleared = turnsRef.current.map((item) => (item.id === turn.id ? { ...item, pending: false } : item));
-      const note = apply ? "C’est noté." : "On garde le plan.";
-      rememberCoachLine(apply ? lines.filter(Boolean).join(" · ") : "Ignoré. On garde le plan.");
-      remember([...cleared, ...results, { id: uid(), role: "assistant" as const, content: note }]);
+      rememberCoachLine(apply ? lines.filter(Boolean).join(" · ") || settled.headline : "Ignoré. On garde le plan.");
+      remember([
+        ...cleared,
+        ...results,
+        {
+          id: uid(),
+          role: "assistant" as const,
+          content: settled.headline,
+          card: settled.kind === "partial" || settled.kind === "conflict" ? settled.kind : undefined,
+          retryCalls: retryCalls.length ? retryCalls : undefined,
+        },
+      ]);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "La modification n’a pas pu être enregistrée.");
     } finally {
       setBusy(false);
     }
+  };
+
+  const retryCalendar = async (turn: StoredTurn, refresh: boolean) => {
+    const calls = turn.retryCalls ?? [];
+    if (!calls.length || busy) return;
+    setBusy(true);
+    setError("");
+    const lines: string[] = [];
+    let failed = false;
+    let conflict = false;
+    try {
+      for (const call of calls) {
+        const prepared = calendarBodyForTool(call, { refresh });
+        if (!prepared.ok) {
+          lines.push(prepared.error);
+          failed = true;
+          continue;
+        }
+        try {
+          await requestCoach("/calendar", prepared.body);
+          lines.push(describeAction(call, app.sessions).summary);
+        } catch (caught) {
+          failed = true;
+          conflict = conflict || Boolean(caught && typeof caught === "object" && "conflict" in caught && (caught as { conflict?: boolean }).conflict);
+          lines.push(caught instanceof Error ? caught.message : "Le calendrier n’a pas répondu.");
+        }
+      }
+      const cleared = turnsRef.current.map((item) => (item.id === turn.id ? { ...item, card: undefined, retryCalls: undefined } : item));
+      const content = failed
+        ? conflict
+          ? "Le calendrier a encore changé. Rien de plus n’a été écrit."
+          : "Le calendrier n’a toujours pas suivi. Réessayer ne crée pas un deuxième événement."
+        : "Calendrier Flo est à jour. Le réessai n’a pas créé un deuxième événement.";
+      remember([...cleared, { id: uid(), role: "assistant", content: lines.length ? `${content} ${lines.join(" ")}` : content }]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const dismissCard = (turn: StoredTurn, content: string) => {
+    const cleared = turnsRef.current.map((item) => (item.id === turn.id ? { ...item, card: undefined, retryCalls: undefined } : item));
+    remember([...cleared, { id: uid(), role: "assistant", content }]);
   };
 
   const closeRef = useRef(close);
@@ -451,7 +522,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
   const visible = turns.filter((turn) => turn.role !== "tool");
   const lastId = visible.at(-1)?.id;
   const trailing = Boolean(partial) || (busy && !partial);
-  const status = !online ? "Hors ligne" : busy ? "Écrit…" : "En ligne";
+  const phase = coachPhase({ configured: ready, busy, down: !online || down });
 
   return (
     <>
@@ -473,7 +544,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
           <CoachFace state={face} />
           <div className="coach-id">
             <strong>Coach</strong>
-            <span>{status}</span>
+            <span data-testid="coach-status" className={phase.phase === "pret" ? "sage" : phase.phase === "non-configure" ? "" : "copper"}>{phase.label}</span>
           </div>
           <button type="button" className="coach-close" data-testid="coach-close" aria-label="Fermer" onClick={close}>
             <CloseMark />
@@ -484,7 +555,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
           <div className="coach-log" ref={scroller} onScroll={onLogScroll}>
             {!ready ? (
               <div className="coach-note" data-testid="coach-inactive">
-                <h2>Le coach n’est pas encore activé.</h2>
+                <h2>Le coach n’est pas configuré.</h2>
                 <p>
                   Dans Réglages, indiquez le code secret. L’adresse est déjà remplie. Tant que le code n’est pas enregistré, vous continuez à
                   noter vos séances normalement. Les suggestions de charge, avant une séance, marchent sans le coach.
@@ -514,6 +585,21 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
                         onToggle={() => setDetail((value) => !value)}
                         onApply={() => void resolve(turn, true)}
                         onCancel={() => void resolve(turn, false)}
+                      />
+                    ) : null}
+                    {turn.card ? (
+                      <OutcomeCard
+                        kind={turn.card}
+                        busy={busy}
+                        onPrimary={() => void retryCalendar(turn, turn.card === "conflict")}
+                        onSecondary={() =>
+                          dismissCard(
+                            turn,
+                            turn.card === "conflict"
+                              ? "La version de Calendrier Flo est gardée. Rien n’a été écrasé."
+                              : "Le téléphone reste à jour. Calendrier Flo n’a pas changé.",
+                          )
+                        }
                       />
                     ) : null}
                   </div>
@@ -583,7 +669,12 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
             </button>
           )}
         </div>
-        {!online ? <p className="coach-offline" data-testid="coach-offline">{OFFLINE}</p> : null}
+        {phase.phase === "indisponible" && ready ? (
+          <div className="banner" data-testid="coach-down">
+            <b>Le service ne répond pas.</b>
+            <span>Le carnet marche. Rien n’a été envoyé. Être sur le réseau ne veut pas dire que le coach est prêt.</span>
+          </div>
+        ) : null}
         {ready && chips.length ? (
           <div className="coach-chips-wrap">
             <div className="coach-chips">
@@ -630,6 +721,13 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
             </button>
           )}
         </form>
+        {phase.phase === "indisponible" && ready ? (
+          <div style={{ padding: "0 16px 16px" }}>
+            <button type="button" className="btn" data-testid="coach-retry" style={{ marginTop: 0 }} onClick={() => setDown(false)}>
+              Réessayer
+            </button>
+          </div>
+        ) : null}
       </div>
     </>
   );
@@ -669,12 +767,58 @@ function ConfirmCard({
         </button>
       ) : null}
       {chef ? <p className="fine">Chef sport en sera informé au prochain « Envoyer à Chef sport ».</p> : null}
+      {turn.omitted ? <p className="omit" data-testid="coach-omitted">{turn.omitted}</p> : null}
+      <p className="fine">Le coach ne voit pas le mouvement.</p>
       <div className="coach-actions">
         <button type="button" className="btn" data-testid="coach-apply" disabled={busy} onClick={onApply}>
           Tout accepter
         </button>
         <button type="button" className="btn ghost" data-testid="coach-cancel" disabled={busy} onClick={onCancel}>
           Ignorer
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function OutcomeCard({
+  kind,
+  busy,
+  onPrimary,
+  onSecondary,
+}: {
+  kind: "partial" | "conflict";
+  busy: boolean;
+  onPrimary: () => void;
+  onSecondary: () => void;
+}) {
+  const partial = kind === "partial";
+  return (
+    <article className="coach-card" data-testid={partial ? "calendar-partial" : "calendar-conflict"}>
+      <h3>{partial ? "Une moitié a réussi" : "Le calendrier a changé"}</h3>
+      {partial ? (
+        <div className="outcome-split">
+          <div>
+            <div className="k2">Téléphone</div>
+            <b>À jour</b>
+            <span>La séance est notée ici.</span>
+          </div>
+          <div>
+            <div className="k2">Calendrier Flo</div>
+            <b>Pas écrit</b>
+            <span>L’événement précédent est encore là.</span>
+          </div>
+        </div>
+      ) : (
+        <p>Rien n’a été écrasé. L’alarme, la répétition et le fuseau sont restés.</p>
+      )}
+      <p className="fine">{partial ? "Réessayer ne crée pas un deuxième événement." : "Reprendre relit Calendrier Flo, puis réécrit seulement le titre et l’horaire."}</p>
+      <div className="coach-actions">
+        <button type="button" className="btn" disabled={busy} onClick={onPrimary}>
+          {partial ? "Réessayer l’écriture" : "Reprendre"}
+        </button>
+        <button type="button" className="btn ghost" disabled={busy} onClick={onSecondary}>
+          {partial ? "Corriger" : "Garder"}
         </button>
       </div>
     </article>
@@ -710,7 +854,7 @@ async function readCalendar(call: ToolCall): Promise<StoredTurn> {
   try {
     const data = await requestCoach("/calendar", prepared.body);
     const events = Array.isArray(data.events) ? data.events : [];
-    return toolTurn(call.id, JSON.stringify({ evenements: events }).slice(0, 8000));
+    return toolTurn(call.id, calendarReadContent({ events, recurrenceIncomplete: data.recurrenceIncomplete === true }));
   } catch (caught) {
     return toolTurn(call.id, caught instanceof Error ? caught.message : "Le calendrier n’a pas répondu.");
   }
