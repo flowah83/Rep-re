@@ -41,7 +41,7 @@ export type Env = AiEnv & {
   CALDAV_USER?: string;
   CALENDAR_NAME?: string;
   ALLOWED_ORIGIN?: string;
-  /** Délai d’un essai de flux, en millisecondes. 20 secondes si absent. */
+  /** Délai d’un essai, en millisecondes. 45 secondes si absent. */
   STREAM_DEADLINE_MS?: string;
 };
 
@@ -75,7 +75,7 @@ export async function handleRequest(request: Request, env: Env, fetchImpl: Fetch
   }
 }
 
-const DEFAULT_STREAM_DEADLINE_MS = 20_000;
+const DEFAULT_STREAM_DEADLINE_MS = 45_000;
 
 function streamDeadline(env: Env): number {
   const value = Number(env.STREAM_DEADLINE_MS);
@@ -288,8 +288,9 @@ function consumeGeminiLine(state: StreamFold, line: string, push: (payload: unkn
   }
 }
 
+/** Un commentaire large force Safari iOS à rendre le flux, au lieu d’attendre la fin. */
 function encodeSse(payload: unknown): string {
-  return `data: ${JSON.stringify(payload)}\n\n`;
+  return `:${" ".repeat(2048)}\ndata: ${JSON.stringify(payload)}\n\n`;
 }
 
 async function coach(request: Request, env: Env, fetchImpl: FetchLike): Promise<Response> {
@@ -300,7 +301,17 @@ async function coach(request: Request, env: Env, fetchImpl: FetchLike): Promise<
   for (let index = 0; index < models.length; index++) {
     const call = buildAiCall({ ...env, AI_MODEL: models[index] }, body.context ?? {}, body.messages);
     if ("error" in call) return json({ error: call.error }, call.status);
-    const response = await fetchImpl(call.url, { method: "POST", headers: call.headers, body: call.body });
+    let response: Response;
+    const attempt = new AbortController();
+    const timer = setTimeout(() => attempt.abort(), streamDeadline(env));
+    try {
+      response = await fetchImpl(call.url, { method: "POST", headers: call.headers, body: call.body, signal: attempt.signal });
+    } catch {
+      lastStatus = 504;
+      break;
+    } finally {
+      clearTimeout(timer);
+    }
     if (response.ok) {
       const data = (await response.json()) as unknown;
       return json({ message: readAiMessage(provider, data) }, 200);

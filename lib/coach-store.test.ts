@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_COACH_URL,
+  STREAM_QUIET_MS,
   coachIsReady,
   loadCoachConfig,
   normalizeCoachUrl,
@@ -53,6 +54,16 @@ describe("coach config", () => {
     expect(loadCoachConfig().url).toBe(DEFAULT_COACH_URL);
     saveCoachConfig({ url: DEFAULT_COACH_URL, token: "   " });
     expect(coachIsReady()).toBe(false);
+  });
+
+  it("laisse en place l’adresse https et le code déjà enregistrés", () => {
+    stubStorage();
+    memory.set("repere-coach-url", "https://repere-coach.repere-flo.workers.dev");
+    memory.set("repere-coach-token", "code-deja-la");
+    expect(loadCoachConfig()).toEqual({ url: DEFAULT_COACH_URL, token: "code-deja-la" });
+    expect(memory.get("repere-coach-url")).toBe("https://repere-coach.repere-flo.workers.dev");
+    expect(memory.get("repere-coach-token")).toBe("code-deja-la");
+    expect(coachIsReady()).toBe(true);
   });
 });
 
@@ -124,37 +135,94 @@ describe("requestCoachStream", () => {
     expect(result).toMatchObject({ message: { content: "Par /coach." } });
   });
 
-  it("retombe sur /coach si aucun octet n’arrive", async () => {
+  it("n’appelle pas /coach quand le flux ne démarre pas", async () => {
     ready();
     const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      if (String(input).endsWith("/coach/stream")) {
-        return await new Promise<Response>((_, reject) => {
-          const fail = () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
-          if (init?.signal?.aborted) fail();
-          else init?.signal?.addEventListener("abort", fail, { once: true });
-        });
-      }
-      return new Response(JSON.stringify({ message: { role: "assistant", content: "Secours." } }), { status: 200 });
+      if (String(input).endsWith("/coach")) return new Promise<Response>(() => undefined);
+      return await new Promise<Response>((_, reject) => {
+        const fail = () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+        if (init?.signal?.aborted) fail();
+        else init?.signal?.addEventListener("abort", fail, { once: true });
+      });
     });
-    const result = await requestCoachStream({ messages: [] }, () => undefined, undefined, { fetchImpl, firstByteMs: 40 });
-    expect(result).toMatchObject({ message: { content: "Secours." } });
+    await expect(requestCoachStream({ messages: [] }, () => undefined, undefined, { fetchImpl, firstByteMs: 40 })).rejects.toThrow(/pas pu répondre/);
+    expect(fetchImpl.mock.calls.map((call) => String(call[0]))).toEqual([`${DEFAULT_COACH_URL}/coach/stream`]);
   });
 
-  it("retombe sur /coach si le flux se tait", async () => {
+  it("n’appelle pas /coach quand le flux ouvert se tait", async () => {
     ready();
     const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
-      if (String(input).endsWith("/coach/stream")) {
-        const stream = new ReadableStream({
-          start(controller) {
-            controller.enqueue(new TextEncoder().encode('data: {"ready":true}\n\n'));
-          },
-        });
-        return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+      if (String(input).endsWith("/coach")) {
+        return new Response(JSON.stringify({ message: { role: "assistant", content: "Secours." } }), { status: 200 });
       }
-      return new Response(JSON.stringify({ message: { role: "assistant", content: "Secours." } }), { status: 200 });
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('data: {"ready":true}\n\n'));
+        },
+      });
+      return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
     });
-    const result = await requestCoachStream({ messages: [] }, () => undefined, undefined, { fetchImpl, inactivityMs: 40 });
-    expect(result).toMatchObject({ message: { content: "Secours." } });
+    await expect(requestCoachStream({ messages: [] }, () => undefined, undefined, { fetchImpl, inactivityMs: 40 })).rejects.toThrow(/pas pu répondre/);
+    expect(fetchImpl.mock.calls.map((call) => String(call[0]))).toEqual([`${DEFAULT_COACH_URL}/coach/stream`]);
+  });
+
+  it("lit la réponse livrée d’un bloc à la fermeture, comme Safari", async () => {
+    ready();
+    expect(STREAM_QUIET_MS).toBeGreaterThanOrEqual(45_000);
+    const payload = new TextEncoder().encode(
+      `: ${" ".repeat(2048)}\ndata: {"ready":true}\n\ndata: {"text":"Oui"}\n\ndata: {"message":{"role":"assistant","content":"Oui"}}\n\n`,
+    );
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/coach")) {
+        return new Response(JSON.stringify({ message: { role: "assistant", content: "Secours." } }), { status: 200 });
+      }
+      const response = new Response(new ReadableStream(), { status: 200, headers: { "Content-Type": "text/event-stream" } });
+      Object.defineProperty(response, "body", {
+        value: {
+          getReader() {
+            let pending = true;
+            return {
+              read: async () => {
+                if (pending) {
+                  pending = false;
+                  return { done: true, value: payload };
+                }
+                return { done: true, value: undefined };
+              },
+              cancel: async () => undefined,
+            };
+          },
+        },
+      });
+      return response;
+    });
+    const seen: string[] = [];
+    const result = await requestCoachStream({ messages: [{ role: "user", content: "Test" }] }, (text) => seen.push(text), undefined, { fetchImpl });
+    expect(seen).toEqual(["Oui"]);
+    expect(result).toMatchObject({ message: { content: "Oui" } });
+    expect(fetchImpl.mock.calls.map((call) => String(call[0]))).toEqual([`${DEFAULT_COACH_URL}/coach/stream`]);
+  });
+
+  it("attend la fin d’un flux lent au lieu de basculer vers /coach", async () => {
+    ready();
+    const encoder = new TextEncoder();
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/coach")) return new Promise<Response>(() => undefined);
+      const stream = new ReadableStream({
+        start(controller) {
+          setTimeout(() => {
+            controller.enqueue(
+              encoder.encode('data: {"ready":true}\n\ndata: {"text":"Oui"}\n\ndata: {"message":{"role":"assistant","content":"Oui"}}\n\n'),
+            );
+            controller.close();
+          }, 50);
+        },
+      });
+      return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+    });
+    const result = await requestCoachStream({ messages: [] }, () => undefined, undefined, { fetchImpl, inactivityMs: 400 });
+    expect(result).toMatchObject({ message: { content: "Oui" } });
+    expect(fetchImpl.mock.calls.map((call) => String(call[0]))).toEqual([`${DEFAULT_COACH_URL}/coach/stream`]);
   });
 
   it("laisse passer le texte puis le message", async () => {
