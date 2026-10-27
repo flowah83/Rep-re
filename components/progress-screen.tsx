@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useApp, type RangeKey } from "@/components/app-context";
 import { SettingsButton } from "@/components/settings-button";
 import { BodyMap, E1Chart, heatFill } from "@/components/chart";
-import { bestLoads, e1rmSeries, heaviestSet, isHardSet, muscleTotals, samplesForExercise, type E1Point } from "@/lib/calc";
+import { bestLoads, bestReps, countsForProgress, e1rmSeries, heaviestSet, isHardSet, muscleTotals, samplesForExercise, type E1Point } from "@/lib/calc";
 import { cardioSummary } from "@/lib/history";
 import { unitPhrase } from "@/lib/display";
+import { recordKey, resolvedUnit } from "@/lib/unit";
 import { MUSCLE_LABEL } from "@/lib/exercises";
 import { bestE1rmLabel } from "@/lib/session";
 import type { Muscle, Session } from "@/lib/types";
@@ -21,18 +23,19 @@ const RANGES: { id: RangeKey; label: string }[] = [
 export function ProgressScreen() {
   const app = useApp();
   const sessions = sessionsForHome(app.sessions);
-  const names = [...new Set(sessions.flatMap((session) => session.exercises.map((exercise) => exercise.name)))].sort((a, b) =>
-    a.localeCompare(b, "fr"),
-  );
-  const name = app.progressName && names.includes(app.progressName)
-    ? app.progressName
-    : names.includes("Développé couché barre")
-      ? "Développé couché barre"
-      : (names[0] ?? "");
-  const series = e1rmSeries(samplesForExercise(sessions, name));
+  const options = recordOptions(sessions);
+  const [choice, setChoice] = useState<string | null>(null);
+  const selected =
+    options.find((option) => option.key === choice) ??
+    options.find((option) => option.name === app.progressName) ??
+    options.find((option) => option.name === "Développé couché barre" && option.unit === "kg") ??
+    options[0];
+  const name = selected?.name ?? "";
+  const unit = selected?.unit;
+  const series = e1rmSeries(samplesForExercise(sessions, name, unit));
   const from = addDays(app.today, -app.range);
   const plotted = plot(series, from, app.today);
-  const best = name ? bestE1rmLabel(sessions, name) : null;
+  const best = name ? bestE1rmLabel(sessions, name, unit) : null;
   const prior = [...series].reverse().find((point) => point.date < from);
   const inside = series.filter((point) => point.date >= from && point.date <= app.today);
   const start = prior?.bestSoFar ?? inside[0]?.bestSoFar ?? null;
@@ -40,8 +43,9 @@ export function ProgressScreen() {
   const delta = start != null && end != null ? Math.round((end - start) * 10) / 10 : null;
   const totals = muscleTotals(sessions, addDays(app.today, -6), app.today);
   const fill = (muscle: Muscle) => heatFill(totals[muscle]);
-  const records = bestLoads(sessions).slice(0, 3);
-  const held = name ? heaviestSet(sessions, name) : null;
+  const records = bestLoads(sessions).slice(0, 4);
+  const held = name ? heaviestSet(sessions, name, unit) : null;
+  const repsRecord = name ? bestReps(sessions, name, unit) : null;
   const lastRun = [...sessions]
     .filter((session) => session.status === "done" && session.cardio)
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))[0];
@@ -52,19 +56,19 @@ export function ProgressScreen() {
     <div className="screen" data-screen="progress">
       <div className="toprow">
         <div>
-          <div className="eyebrow">Record estimé</div>
-          <h1 className="title">Progrès</h1>
+          <div className="eyebrow">Record</div>
+          <h1 className="title">{name || "Progrès"}</h1>
         </div>
         <SettingsButton />
       </div>
       {sessions.some((session) => session.source === "demo") ? (
         <p className="quiet" data-testid="demo-stats">Ces chiffres viennent de la démonstration.</p>
       ) : null}
-      {names.length === 0 ? (
+      {options.length === 0 ? (
         <article className="card">
           <div className="empty">
             <h2>Pas encore de courbe.</h2>
-            <p>Terminez une séance, avec une charge et des répétitions. Le record estimé apparaîtra ici, sur de vraies dates.</p>
+            <p>Terminez une séance, avec une charge et des répétitions. Le record apparaîtra ici, avec le nom de l’exercice.</p>
           </div>
         </article>
       ) : (
@@ -72,13 +76,45 @@ export function ProgressScreen() {
           <label className="fieldlabel" htmlFor="mouvement">
             Mouvement
           </label>
-          <select id="mouvement" className="select" value={name} onChange={(event) => app.setProgressName(event.target.value)}>
-            {names.map((item) => (
-              <option key={item} value={item}>
-                {item}
+          <select
+            id="mouvement"
+            className="select"
+            value={selected?.key ?? ""}
+            onChange={(event) => {
+              const next = options.find((option) => option.key === event.target.value);
+              if (!next) return;
+              setChoice(next.key);
+              app.setProgressName(next.name);
+            }}
+          >
+            {options.map((item) => (
+              <option key={item.key} value={item.key}>
+                {item.label}
               </option>
             ))}
           </select>
+          {unit && unit !== "kg" ? <p className="fine">Unité : {unitPhrase(unit)}. Elle n’est pas mélangée avec les kg totaux.</p> : null}
+          <article className="card record-card" data-testid="record-load">
+            <div className="kicker">Record de charge</div>
+            <h2 className="num">{held ? `${formatKg(held.loadKg)} ${unitPhrase(held.unit)} × ${held.reps}` : "—"}</h2>
+            <p className="meta">{held ? formatLong(held.date) : "Pas encore de série de travail."}</p>
+          </article>
+          <article className="card record-card" data-testid="record-reps">
+            <div className="kicker">Record de répétitions</div>
+            <h2 className="num">{repsRecord ? `${repsRecord.reps} répétitions` : "—"}</h2>
+            <p className="meta">
+              {repsRecord ? `à ${formatKg(repsRecord.loadKg)} ${unitPhrase(repsRecord.unit)} · ${formatLong(repsRecord.date)}` : "Pas encore noté."}
+            </p>
+          </article>
+          <article className="card record-card" data-testid="record-epley">
+            <div className="kicker">Estimation Epley</div>
+            <h2 className="num">{best ? `${formatKg(Math.round(best.kg))} kg` : "—"}</h2>
+            <p className="meta">
+              {best
+                ? `${best.detail}. Arrondie au kilo. De 1 à 10 répétitions. Ce n’est pas une garantie.`
+                : "Pas d’estimation hors de 1 à 10 répétitions."}
+            </p>
+          </article>
           <div className="segment">
             {RANGES.map((item) => (
               <button key={item.id} type="button" className={app.range === item.id ? "on" : ""} aria-pressed={app.range === item.id} data-testid={`range-${item.id}`} onClick={() => app.setRange(item.id)}>
@@ -86,34 +122,10 @@ export function ProgressScreen() {
               </button>
             ))}
           </div>
-          <div className="hero">
-            <div>
-              <p className="who">Meilleure estimation tenue</p>
-              <p className="kg num">
-                {best ? formatKg(best.kg) : held && held.reps > 10 ? formatKg(held.loadKg) : "—"}
-                <small>{best ? "kg" : held && held.reps > 10 ? `kg × ${held.reps}` : "kg"}</small>
-              </p>
-            </div>
-            <div className="delta">
-              {delta == null ? (
-                "En attente"
-              ) : delta > 0 ? (
-                <>
-                  <b className="num">+{formatKg(delta)} kg</b>
-                  sur la période
-                </>
-              ) : (
-                <>
-                  <b>Record tenu</b>
-                  sur la période
-                </>
-              )}
-            </div>
+          <div className="section-label">
+            Courbe de record <span>{delta != null && delta > 0 ? `+${formatKg(delta)} kg sur la période` : "période sélectionnée"}</span>
           </div>
           {sentence ? <p className="callout">{sentence}</p> : null}
-          {!best && held && held.reps > 10 ? (
-            <p className="fine">Pas d’estimation au-delà de 10 répétitions. Charge tenue : {formatKg(held.loadKg)} kg × {held.reps}.</p>
-          ) : null}
           <E1Chart points={plotted} from={from} to={app.today} />
         </>
       )}
@@ -138,13 +150,14 @@ export function ProgressScreen() {
         </div>
       </div>
       <p className="callout">{callout(totals, lastGym)}</p>
+      <p className="fine">Les couleurs comptent des séries dures notées. Elles ne disent pas si un muscle a récupéré.</p>
       {lastRun?.cardio ? (
         <p className="fine">
-          Dernière course · {formatLong(lastRun.date)} · {cardioSummary(lastRun.cardio)}
+          Dernier {lastRun.cardio.sport.toLowerCase()} · {formatLong(lastRun.date)} · {cardioSummary(lastRun.cardio)}
         </p>
       ) : null}
       <div className="section-label">
-        Records <span>les trois plus lourdes</span>
+        Records <span>une carte par exercice et par unité</span>
       </div>
       {records.length === 0 ? (
         <p className="fine">Les records s’affichent après une série de travail notée.</p>
@@ -153,18 +166,19 @@ export function ProgressScreen() {
           {records.map((record) => (
             <button
               type="button"
-              key={record.name}
+              key={recordKey(record.name, record.unit ?? "kg")}
               onClick={() => {
+                setChoice(recordKey(record.name, record.unit ?? "kg"));
                 app.setProgressName(record.name);
                 app.setTab("progress");
               }}
             >
-              <b className="num">
-                {formatKg(record.loadKg)} kg × {record.reps}
-                {record.unit === "kg/main" ? " par haltère" : record.unit === "kg/jambe" ? " par jambe" : ""}
+              <b>
+                {record.name}
+                {record.unit && record.unit !== "kg" ? ` · ${unitPhrase(record.unit)}` : ""}
               </b>
-              <span>
-                {record.name} · {shortDate(record.date)}
+              <span className="num">
+                {formatKg(record.loadKg)} {unitPhrase(record.unit)} × {record.reps} · {shortDate(record.date)}
               </span>
             </button>
           ))}
@@ -172,6 +186,24 @@ export function ProgressScreen() {
       )}
     </div>
   );
+}
+
+function recordOptions(sessions: Session[]): { key: string; name: string; unit: string; label: string }[] {
+  const map = new Map<string, { key: string; name: string; unit: string; label: string }>();
+  for (const session of sessions) {
+    if (!countsForProgress(session)) continue;
+    for (const exercise of session.exercises) {
+      for (const set of exercise.sets) {
+        if (!isHardSet(set) || set.loadKg == null || set.reps == null) continue;
+        const unit = resolvedUnit(set, exercise);
+        const key = recordKey(exercise.name, unit);
+        if (map.has(key)) continue;
+        const phrase = unit === "kg" ? "" : ` · ${unitPhrase(unit)}`;
+        map.set(key, { key, name: exercise.name, unit, label: `${exercise.name}${phrase}` });
+      }
+    }
+  }
+  return [...map.values()].sort((a, b) => a.label.localeCompare(b.label, "fr"));
 }
 
 function plot(series: E1Point[], from: string, today: string) {
@@ -203,8 +235,8 @@ function callout(totals: Record<Muscle, number>, lastGym: string | null) {
   const low = (Object.keys(totals) as Muscle[]).filter((muscle) => totals[muscle] > 0 && totals[muscle] < 8);
   const quiet = (Object.keys(totals) as Muscle[]).filter((muscle) => totals[muscle] === 0);
   const lowText = low.length
-    ? `Sous 8 séries dures : ${low.map((muscle) => `${MUSCLE_LABEL[muscle].toLowerCase()} (${totals[muscle]})`).join(", ")}.`
-    : "Les muscles sollicités sont dans la zone tranquille.";
+    ? `Moins de 8 séries dures notées : ${low.map((muscle) => `${MUSCLE_LABEL[muscle].toLowerCase()} (${totals[muscle]})`).join(", ")}. Ce compte ne dit pas si le muscle a récupéré.`
+    : "Muscles notés cette semaine. Le nombre de séries n’est pas une mesure de récupération.";
   if (!quiet.length || quiet.length > 4) return lowText;
   return `${lowText} Sans série : ${quiet.map((muscle) => MUSCLE_LABEL[muscle].toLowerCase()).join(", ")}.`;
 }

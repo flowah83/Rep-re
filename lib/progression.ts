@@ -365,10 +365,10 @@ export type ProgramPreview = {
   upcoming: ProgramStep[];
 };
 
-const PROGRAM_SENTENCE = "On monte la charge, puis les répétitions dans la fourchette, avec un allègement après deux échecs ou trois réussites.";
+const PROGRAM_SENTENCE = "Règle de Repère : on monte d’abord les répétitions dans la fourchette, puis la charge. L’allègement après deux échecs ou trois réussites est une proposition, pas une obligation.";
 const COACH_SENTENCE = "Le plan de Chef sport reste prioritaire, et cette suite ne le remplace pas.";
-const STALL_SENTENCE = "Deux séances sans l’objectif : on allège une fois, puis on reprend la charge.";
-const CADENCE_SENTENCE = "Trois séances réussies : on allège une fois, puis on reprend.";
+const STALL_SENTENCE = "Règle de Repère : deux séances sans l’objectif, une charge plus légère est proposée une fois. Ce n’est pas une obligation.";
+const CADENCE_SENTENCE = "Règle de Repère : après trois séances réussies à charge stable, une séance plus légère est proposée. Ce n’est pas une loi.";
 
 /** Suite lisible, sans écrire dans le carnet ni toucher un plan de Chef sport. */
 export function programPreview(

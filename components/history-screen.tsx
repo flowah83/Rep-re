@@ -6,8 +6,9 @@ import { SettingsButton } from "@/components/settings-button";
 import { hardSetCount } from "@/lib/calc";
 import { historyBucket } from "@/lib/display";
 import { cardioSummary, formatMinutes, groupSessionsNewestWeekFirst, groupSessionsSoonestWeekFirst, splitCarnet } from "@/lib/history";
+import { latestWork } from "@/lib/session";
 import type { Session } from "@/lib/types";
-import { mondayOf, parseISODate, stripAccents } from "@/lib/utils";
+import { formatLong, mondayOf, parseISODate, stripAccents } from "@/lib/utils";
 
 const FILTERS: { id: HistFilter; label: string }[] = [
   { id: "all", label: "Tout" },
@@ -46,10 +47,11 @@ export function HistoryScreen() {
         className="searchfield"
         data-testid="history-search"
         value={query}
-        placeholder="Chercher une séance ou un geste"
-        aria-label="Chercher une séance ou un geste"
+        placeholder="Chercher une séance ou un exercice"
+        aria-label="Chercher une séance ou un exercice"
         onChange={(event) => setQuery(event.target.value)}
       />
+      <LastHits sessions={app.sessions} needle={needle} onOpen={(name) => { app.setProgressName(name); app.setTab("progress"); }} />
       <div className="chips">
         {FILTERS.map((item) => (
           <button key={item.id} type="button" className={app.filter === item.id ? "on" : ""} aria-pressed={app.filter === item.id} data-testid={`filter-${item.id}`} onClick={() => app.setFilter(item.id)}>
@@ -139,14 +141,54 @@ function WeekBlock({ week, today, sessions }: { week: string; today: string; ses
               </div>
             </button>
             {session.status === "done" ? (
-              <button type="button" className="linkish correct" data-testid="correct-session" onClick={() => app.openSession(session.id)}>
-                Corriger
-              </button>
+              <div className="row-actions">
+                <button type="button" className="linkish" data-testid="duplicate-session" onClick={() => void app.duplicateSession(session.id)}>
+                  Reprendre le plan
+                </button>
+                <button type="button" className="linkish correct" data-testid="correct-session" onClick={() => app.openSession(session.id)}>
+                  Corriger
+                </button>
+              </div>
             ) : null}
           </div>
         );
       })}
     </section>
+  );
+}
+
+function LastHits({
+  sessions,
+  needle,
+  onOpen,
+}: {
+  sessions: Session[];
+  needle: string;
+  onOpen: (name: string) => void;
+}) {
+  if (needle.length < 2) return null;
+  const names = new Map<string, string>();
+  for (const session of sessions) {
+    for (const exercise of session.exercises) {
+      if (stripAccents(exercise.name).includes(needle)) names.set(exercise.name, exercise.name);
+    }
+  }
+  const hits = [...names.keys()]
+    .map((name) => ({ name, work: latestWork(sessions, name) }))
+    .filter((item) => item.work)
+    .slice(0, 3);
+  if (!hits.length) return null;
+  return (
+    <div className="last-hits">
+      {hits.map((item) => (
+        <button type="button" className="card" key={item.name} onClick={() => onOpen(item.name)}>
+          <b>{item.name}</b>
+          <span>
+            Dernière fois · {formatLong(item.work!.date)} · {item.work!.line}
+          </span>
+        </button>
+      ))}
+    </div>
   );
 }
 

@@ -92,8 +92,19 @@ export function E1Chart({
         ))}
       </svg>
       <p className="chartnote">
-        Trait pointillé : plus de deux semaines sans ce mouvement. La courbe ne devine pas la hausse.
+        {points.filter((point) => !point.synthetic).length < 2
+          ? "Un seul point ne fait pas une tendance. La courbe suit le record tenu et ne baisse pas."
+          : "Courbe de record : elle suit le meilleur niveau tenu. Une séance plus légère ne la fait pas descendre. Trait pointillé : plus de deux semaines sans ce mouvement."}
       </p>
+      <ul className="vh">
+        {points
+          .filter((point) => !point.synthetic)
+          .map((point) => (
+            <li key={point.date}>
+              {axisDate(point.date)} : record {formatKg(point.bestSoFar)} kg, estimation du jour {formatKg(point.dayEstimate)} kg
+            </li>
+          ))}
+      </ul>
     </div>
   );
 }

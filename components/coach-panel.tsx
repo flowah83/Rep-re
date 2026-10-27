@@ -74,6 +74,34 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
   partialRef.current = partial;
 
   useEffect(() => {
+    const root = dialog.current;
+    if (!root) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const nodes = [...root.querySelectorAll<HTMLElement>("button, a, input, textarea, select")].filter(
+        (node) => !node.hidden && node.tabIndex !== -1 && !node.hasAttribute("disabled"),
+      );
+      if (!nodes.length) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !root.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !root.contains(active))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    root.addEventListener("keydown", onKey);
+    return () => root.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  useEffect(() => {
     setTurns(loadCoachChat());
     setReady(coachIsReady());
     setOnline(navigator.onLine);

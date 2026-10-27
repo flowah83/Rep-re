@@ -43,7 +43,7 @@ function Shell() {
   if (!app.settings.onboarded) return <Onboarding />;
   return (
     <div className="app" data-testid="app-ready">
-      <div className="shell" inert={app.overlay || app.sheet ? true : undefined}>
+      <div className="shell" inert={app.overlay || app.sheet || app.coachOpen ? true : undefined}>
         {app.sessions.some((session) => session.source === "demo") ? (
           <p className="demobadge" data-testid="demo-badge">Démonstration</p>
         ) : null}
@@ -95,11 +95,19 @@ function Onboarding() {
   return (
     <div className="onboard" data-testid="app-ready">
       <div className="markr" aria-hidden="true">R</div>
-      {app.importPreview ? <ImportSummary preview={app.importPreview} /> : <div className="spacer" />}
+      {app.importPreview ? <ImportSummary preview={app.importPreview} /> : null}
       <h1>Vos séances restent sur ce téléphone.</h1>
-      <p>Collez le plan de Chef sport, ou créez une séance. Rien ne part tout seul.</p>
-      <Button data-testid="onboarding-start" onClick={() => void app.finishOnboarding()}>
-        Déposer le plan
+      <p>Créez une séance, importez un plan, ou essayez avec un exemple. Rien ne change sans votre accord.</p>
+      <div className="spacer" />
+      <p className="hint">L’exemple est fictif. Il reste à part de vos vraies séances.</p>
+      <Button data-testid="onboarding-create" onClick={() => void app.finishOnboarding("create")}>
+        Créer une séance
+      </Button>
+      <Button variant="ghost" data-testid="onboarding-start" onClick={() => void app.finishOnboarding("import")}>
+        Importer un plan
+      </Button>
+      <Button variant="ghost" data-testid="onboarding-demo" onClick={() => void app.finishOnboarding("demo")}>
+        Essayer avec un exemple
       </Button>
     </div>
   );

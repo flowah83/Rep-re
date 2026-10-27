@@ -1,4 +1,5 @@
 import type { ExerciseLog, Muscle, Session, SetLog } from "./types";
+import { canonicalUnit, recordKey, resolvedUnit } from "./unit";
 
 export function round1(n: number): number {
   return Math.round(n * 10) / 10;
@@ -104,7 +105,8 @@ export function e1rmSeries(
   return points;
 }
 
-export function samplesForExercise(sessions: Session[], name: string) {
+export function samplesForExercise(sessions: Session[], name: string, unit?: string) {
+  const want = unit == null ? null : canonicalUnit(unit);
   const samples: { date: string; loadKg: number; reps: number }[] = [];
   for (const session of sessions) {
     if (!countsForProgress(session)) continue;
@@ -112,6 +114,7 @@ export function samplesForExercise(sessions: Session[], name: string) {
       if (ex.name !== name) continue;
       for (const set of ex.sets) {
         if (!isHardSet(set) || set.loadKg == null || set.reps == null) continue;
+        if (want && resolvedUnit(set, ex) !== want) continue;
         samples.push({ date: session.date, loadKg: set.loadKg, reps: set.reps });
       }
     }
@@ -162,9 +165,11 @@ export function bestLoads(sessions: Session[]): BestLoad[] {
     for (const ex of session.exercises) {
       for (const set of ex.sets) {
         if (!isHardSet(set) || set.loadKg == null || set.reps == null || set.loadKg <= 0) continue;
-        const prev = map.get(ex.name);
+        const unit = resolvedUnit(set, ex);
+        const key = recordKey(ex.name, unit);
+        const prev = map.get(key);
         if (!prev || set.loadKg > prev.loadKg || (set.loadKg === prev.loadKg && session.date > prev.date)) {
-          map.set(ex.name, { name: ex.name, loadKg: set.loadKg, reps: set.reps, date: session.date, unit: set.unit ?? ex.unit ?? null });
+          map.set(key, { name: ex.name, loadKg: set.loadKg, reps: set.reps, date: session.date, unit });
         }
       }
     }
@@ -172,8 +177,13 @@ export function bestLoads(sessions: Session[]): BestLoad[] {
   return [...map.values()].sort((a, b) => b.loadKg - a.loadKg || (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
 
+function matchesUnit(set: SetLog, exercise: ExerciseLog, unit?: string): boolean {
+  if (unit == null) return true;
+  return resolvedUnit(set, exercise) === canonicalUnit(unit);
+}
+
 /** Plus lourde série close, même au-delà de 10 répétitions, là où Epley ne trace rien. */
-export function heaviestSet(sessions: Session[], name: string): BestLoad | null {
+export function heaviestSet(sessions: Session[], name: string, unit?: string): BestLoad | null {
   let best: BestLoad | null = null;
   for (const session of sessions) {
     if (!countsForProgress(session)) continue;
@@ -181,9 +191,33 @@ export function heaviestSet(sessions: Session[], name: string): BestLoad | null 
       if (exercise.name !== name) continue;
       for (const set of exercise.sets) {
         if (!isHardSet(set) || set.loadKg == null || set.reps == null || set.loadKg <= 0) continue;
+        if (!matchesUnit(set, exercise, unit)) continue;
+        const resolved = resolvedUnit(set, exercise);
         if (!best || set.loadKg > best.loadKg || (set.loadKg === best.loadKg && set.reps > best.reps)) {
-          best = { name, loadKg: set.loadKg, reps: set.reps, date: session.date, unit: set.unit ?? exercise.unit ?? null };
+          best = { name, loadKg: set.loadKg, reps: set.reps, date: session.date, unit: resolved };
         }
+      }
+    }
+  }
+  return best;
+}
+
+/** Plus grand nombre de répétitions, à la charge où il a été tenu. Une autre unité ne compte pas. */
+export function bestReps(sessions: Session[], name: string, unit?: string): BestLoad | null {
+  let best: BestLoad | null = null;
+  for (const session of sessions) {
+    if (!countsForProgress(session)) continue;
+    for (const exercise of session.exercises) {
+      if (exercise.name !== name) continue;
+      for (const set of exercise.sets) {
+        if (!isHardSet(set) || set.loadKg == null || set.reps == null || set.reps <= 0) continue;
+        if (!matchesUnit(set, exercise, unit)) continue;
+        const resolved = resolvedUnit(set, exercise);
+        const better =
+          !best ||
+          set.reps > best.reps ||
+          (set.reps === best.reps && set.loadKg > best.loadKg);
+        if (better) best = { name, loadKg: set.loadKg, reps: set.reps, date: session.date, unit: resolved };
       }
     }
   }
