@@ -184,7 +184,7 @@ export function summaryText(session: Session, prior: Session[]): string {
     `${formatLong(session.date)} — ${session.title}, faite.`,
     session.cardio
       ? cardioLine(session)
-      : `${minutes ? `${minutes} min. ` : ""}${workLine(hardSetCount(session.exercises))} ${formatKg(tonnage(session.exercises))} kg déplacés.`,
+      : `${minutes ? `${minutes} min. ` : ""}${workLine(hardSetCount(session.exercises))}`,
   ];
   for (const ex of session.exercises) {
     if (ex.detailUnknown) {
@@ -236,8 +236,9 @@ export function reportJson(session: Session) {
 }
 
 export function lastPerformance(sessions: Session[], name: string, beforeId?: string): string | null {
-  const done = sessions
-    .filter((s) => s.id !== beforeId && !s.cardio && s.status !== "planned" && s.exercises.some((e) => e.name === name))
+  const usable = sessions.some((session) => session.source !== "demo") ? sessions.filter((session) => session.source !== "demo") : sessions;
+  const done = usable
+    .filter((s) => s.id !== beforeId && !s.cardio && s.status === "done" && s.exercises.some((e) => e.name === name))
     .sort((a, b) => (a.date < b.date ? 1 : -1));
   const session = done[0];
   if (!session) return null;
@@ -251,7 +252,7 @@ export function lastPerformance(sessions: Session[], name: string, beforeId?: st
 export function bestE1rmLabel(sessions: Session[], name: string): { kg: number; detail: string } | null {
   let best: { kg: number; load: number; reps: number; date: string } | null = null;
   for (const session of sessions) {
-    if (session.cardio || session.status === "planned") continue;
+    if (session.cardio || session.status !== "done") continue;
     for (const ex of session.exercises) {
       if (ex.name !== name) continue;
       for (const set of ex.sets) {

@@ -9,11 +9,14 @@ import { DEFAULT_COACH_URL, loadCoachConfig, normalizeCoachToken, normalizeCoach
 import { readProgressionRaw } from "@/lib/progression";
 import { exportPlanSnapshots } from "@/lib/snapshot";
 import { toCsv } from "@/lib/db";
+import { backupProblem, backupReminder, isBackup, sessionsForBackup } from "@/lib/backup";
+import { IMPORT_LIMIT, parseDecimalDraft } from "@/lib/contract";
 import { CATALOG, PATTERN_LABEL } from "@/lib/exercises";
 import { importSummary, type ImportPreview } from "@/lib/history";
-import { exerciseFromPlan } from "@/lib/plan";
+import { applySessionEdit } from "@/lib/session-edit";
+import { plateGlance } from "@/lib/display";
 import { platesPerSide } from "@/lib/calc";
-import type { BackupFile, Pattern, Session } from "@/lib/types";
+import type { BackupFile, Pattern } from "@/lib/types";
 import { withBase } from "@/lib/base-path";
 import { formatKg, formatLong, localDate, uid } from "@/lib/utils";
 
@@ -71,8 +74,13 @@ function SettingsSheet() {
       <p className="fine">Barre actuelle : {formatKg(app.settings.barKg)} kg. Sert seulement au calcul des disques.</p>
       <h3 className="grouplabel">Données</h3>
       <p className="fine" data-testid="backup-status">
-        Dernière copie : {app.settings.lastBackupAt ? formatLong(app.settings.lastBackupAt.slice(0, 10)) : "aucune"}.
+        {backupReminder(app.settings).text}
       </p>
+      {app.settings.storagePersistent === false ? (
+        <p className="fine">Ce navigateur peut effacer les données peu utilisées. Une copie téléchargée reste le seul filet. Rien n’est garanti pour toujours.</p>
+      ) : app.settings.storagePersistent === true ? (
+        <p className="fine">Ce navigateur a accepté de garder les données plus longtemps. Ce n’est pas une garantie.</p>
+      ) : null}
       <p className="fine">
         Pour l’installer : dans Safari, touchez Partager, puis « Sur l’écran d’accueil ».
       </p>
@@ -91,20 +99,21 @@ function SettingsSheet() {
         variant="ghost"
         onClick={() => {
           const coach = loadCoachConfig();
+          const filename = `repere-${localDate()}.json`;
           const backup: BackupFile = {
             app: "repere",
             version: 1,
             exportedAt: new Date().toISOString(),
-            settings: { ...app.settings, lastBackupAt: new Date().toISOString() },
-            sessions: app.sessions,
+            settings: app.settings,
+            sessions: sessionsForBackup(app.sessions),
             customExercises: app.customs,
             progression: readProgressionRaw(),
             planSnapshots: exportPlanSnapshots(),
             coachToken: includeCoach && coach.token ? coach.token : null,
           };
-          download(`repere-${localDate()}.json`, JSON.stringify(backup, null, 2), "application/json");
-          void app.updateSettings({ lastBackupAt: backup.exportedAt });
-          app.flash("Copie enregistrée.");
+          download(filename, JSON.stringify(backup, null, 2), "application/json");
+          void app.updateSettings({ lastDownloadAt: backup.exportedAt });
+          app.flash(`Téléchargement lancé : ${filename}.`);
         }}
       >
         Enregistrer une copie
@@ -112,12 +121,14 @@ function SettingsSheet() {
       <Button
         variant="ghost"
         onClick={() => {
-          download(`repere-${localDate()}.csv`, toCsv(app.sessions), "text/csv");
+          const filename = `repere-${localDate()}.csv`;
+          download(filename, toCsv(sessionsForBackup(app.sessions)), "text/csv");
+          app.flash(`Téléchargement lancé : ${filename}.`);
         }}
       >
         Exporter pour un tableur
       </Button>
-      <p className="fine">Le tableau ne garde que les séries de barre déjà faites. La copie JSON est la vraie sauvegarde.</p>
+      <p className="fine">Le tableau ne contient pas les notes, le cardio, ni les réglages. La copie JSON est le fichier à garder.</p>
       <label className="btn ghost" style={{ marginTop: 8 }}>
         Restaurer une copie
         <input
@@ -130,6 +141,10 @@ function SettingsSheet() {
             event.target.value = "";
             if (!file) return;
             void file.text().then(async (text) => {
+              if (text.length > IMPORT_LIMIT) {
+                app.flash("Ce fichier est trop volumineux. Rien n’a été remplacé.");
+                return;
+              }
               try {
                 const data = JSON.parse(text) as unknown;
                 if (isBackup(data)) {
@@ -285,7 +300,7 @@ function ImportSheet() {
 export function ImportSummary({ preview }: { preview: ImportPreview }) {
   const app = useApp();
   const lines = importSummary(preview);
-  const canSave = preview.kind === "history" ? preview.toAdd.length > 0 : preview.planSessions.length > 0;
+  const canSave = preview.toAdd.length > 0 || preview.planSessions.length > 0 || preview.updates.length > 0;
   return (
     <div data-testid="import-summary">
       {lines.map((line) => (
@@ -347,6 +362,10 @@ function ImportForm() {
             event.target.value = "";
             if (!file) return;
             void file.text().then(async (raw) => {
+              if (raw.length > IMPORT_LIMIT) {
+                setError("Ce fichier est trop volumineux. Rien n’a été ajouté.");
+                return;
+              }
               try {
                 const data = JSON.parse(raw) as unknown;
                 if (isBackup(data)) {
@@ -380,14 +399,16 @@ function EditSheet() {
   const [time, setTime] = useState(existing?.time ?? "");
   const [title, setTitle] = useState(existing?.title ?? "Séance");
   const [note, setNote] = useState(existing?.coachNote ?? "");
-  const [rows, setRows] = useState(() =>
+  const [rows, setRows] = useState<
+    { key: string; name: string; sets: number | null; reps: number | null; load: number | null; rest: number | null }[]
+  >(() =>
     existing
       ? existing.exercises.map((exercise) => ({
           key: exercise.id,
           name: exercise.name,
           sets: exercise.planned.sets,
           reps: exercise.planned.reps ?? 8,
-          load: exercise.planned.loadKg ?? 0,
+          load: exercise.planned.loadKg,
           rest: exercise.planned.restSec,
         }))
       : [{ key: uid(), name: "", sets: 3, reps: 8, load: 20, rest: 120 }],
@@ -396,44 +417,34 @@ function EditSheet() {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const save = async () => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      setError("La date doit être au format année-mois-jour.");
+    const result = applySessionEdit(
+      existing,
+      {
+        date,
+        time,
+        title,
+        note,
+        rows: rows.map((row) => ({
+          key: row.key,
+          name: row.name,
+          sets: row.sets ?? Number.NaN,
+          reps: row.reps ?? Number.NaN,
+          load: row.load,
+          rest: row.rest ?? Number.NaN,
+        })),
+      },
+      app.customs,
+    );
+    if ("error" in result) {
+      setError(result.error);
       return;
     }
-    if (!title.trim()) {
-      setError("Donnez un nom à la séance.");
+    try {
+      await app.saveSession(result.session, "confirmed");
+    } catch {
+      setError("Pas enregistré. Les notes restent à l’écran. Réessayez.");
       return;
     }
-    if (rows.some((row) => !row.name.trim())) {
-      setError("Chaque exercice a besoin d’un nom.");
-      return;
-    }
-    const session: Session = {
-      id: existing?.id ?? uid(),
-      date,
-      time: time || undefined,
-      title: title.trim(),
-      coachNote: note.trim() || undefined,
-      intention: existing?.intention,
-      noteForMe: existing?.noteForMe,
-      noteForCoach: existing?.noteForCoach,
-      status: existing?.status === "active" ? "active" : "planned",
-      startedAt: existing?.startedAt,
-      source: existing?.source ?? "manual",
-      exercises: rows.map((row) =>
-        exerciseFromPlan(
-          {
-            nom: row.name.trim(),
-            series: row.sets,
-            repetitions: row.reps,
-            charge_kg: row.load,
-            repos_secondes: row.rest,
-          },
-          app.customs,
-        ),
-      ),
-    };
-    await app.saveSession(session);
     app.setSelectedDate(date);
     app.setSheet(null);
     app.setTab("today");
@@ -474,10 +485,10 @@ function EditSheet() {
           </div>
           <Input list="catalogue" value={row.name} placeholder="Nom du geste" onChange={(event) => update(index, { name: event.target.value })} />
           <div className="row2">
-            <Num label="Séries" value={row.sets} onChange={(sets) => update(index, { sets })} />
-            <Num label="Répétitions" value={row.reps} onChange={(reps) => update(index, { reps })} />
-            <Num label="Charge kg" value={row.load} step={0.5} onChange={(load) => update(index, { load })} />
-            <Num label="Repos s" value={row.rest} step={15} onChange={(rest) => update(index, { rest })} />
+            <Num label="Séries" integer value={row.sets} onChange={(sets) => update(index, { sets })} />
+            <Num label="Répétitions" integer value={row.reps} onChange={(reps) => update(index, { reps })} />
+            <Num label="Charge kg" value={row.load} onChange={(load) => update(index, { load })} />
+            <Num label="Repos s" integer value={row.rest} onChange={(rest) => update(index, { rest })} />
           </div>
         </div>
       ))}
@@ -526,18 +537,34 @@ function EditSheet() {
   }
 }
 
-function Num({ label, value, onChange, step = 1 }: { label: string; value: number; onChange: (value: number) => void; step?: number }) {
+function Num({
+  label,
+  value,
+  onChange,
+  integer = false,
+}: {
+  label: string;
+  value: number | null;
+  onChange: (value: number | null) => void;
+  integer?: boolean;
+}) {
+  const [text, setText] = useState<string | null>(null);
+  const idle = value == null ? "" : String(value).replace(".", ",");
   return (
     <label className="fieldlabel">
       {label}
       <Input
-        inputMode="decimal"
-        value={String(value)}
+        inputMode={integer ? "numeric" : "decimal"}
+        value={text ?? idle}
         onChange={(event) => {
-          const next = Number(event.target.value.replace(",", "."));
-          if (Number.isFinite(next)) onChange(next);
+          const raw = event.target.value;
+          const parsed = parseDecimalDraft(raw, { integer, min: 0, max: integer ? 400 : 1000 });
+          if (parsed.kind === "invalid") return;
+          setText(raw);
+          if (parsed.kind === "empty") onChange(null);
+          if (parsed.kind === "number") onChange(parsed.value);
         }}
-        step={step}
+        onBlur={() => setText(null)}
       />
     </label>
   );
@@ -566,7 +593,7 @@ function PlatesSheet() {
         <p className="err">La charge est plus légère que la barre.</p>
       ) : (
         <>
-          <p className="fine">{formatKg(result.perSide)} kg de chaque côté.</p>
+          <p className="fine" data-testid="plate-glance">{plateGlance(app.platesKg, "kg", app.settings.barKg)}</p>
           <div className="plates">
             {result.plates.length === 0 ? <span>Aucun disque</span> : result.plates.map((plate) => (
               <span key={plate.kg} className="num">
@@ -668,23 +695,20 @@ function BackupPreview({ backup, onCancel }: { backup: BackupFile; onCancel: () 
       >
         Remplacer le carnet
       </Button>
+      <Button
+        variant="ghost"
+        data-testid="backup-merge"
+        onClick={() => {
+          void app.mergeBackup(backup).then(onCancel);
+        }}
+      >
+        Ajouter sans effacer
+      </Button>
       <Button variant="ghost" onClick={onCancel}>
         Annuler
       </Button>
     </div>
   );
-}
-
-function backupProblem(data: BackupFile): string | null {
-  const broken = data.sessions.some((session) => !session || typeof session.id !== "string" || typeof session.date !== "string" || typeof session.title !== "string");
-  if (broken) return "Cette copie a des séances incomplètes. Rien n’a été remplacé.";
-  return null;
-}
-
-function isBackup(data: unknown): data is BackupFile {
-  if (!data || typeof data !== "object") return false;
-  const value = data as BackupFile;
-  return value.app === "repere" && value.version === 1 && Array.isArray(value.sessions) && value.settings != null;
 }
 
 function download(filename: string, content: string, type: string) {

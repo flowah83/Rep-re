@@ -20,8 +20,12 @@ export function hardSetCount(exercises: ExerciseLog[]): number {
   return exercises.reduce((n, ex) => n + ex.sets.filter(isHardSet).length, 0);
 }
 
-/** Une charge « kg/main » est celle d’une seule main : le volume compte les deux. */
-export function loadFactor(unit: string | null | undefined): number {
+/**
+ * Une charge « kg/main » sans côté est celle d’une seule main : le volume compte les deux.
+ * Droite et gauche déjà séparées ne sont pas comptées une seconde fois.
+ */
+export function loadFactor(unit: string | null | undefined, side?: "D" | "G" | null): number {
+  if (side === "D" || side === "G") return 1;
   return unit === "kg/main" ? 2 : 1;
 }
 
@@ -31,7 +35,7 @@ export function tonnage(exercises: ExerciseLog[]): number {
   for (const ex of exercises) {
     for (const set of ex.sets) {
       if (!isHardSet(set) || set.loadKg == null || set.reps == null) continue;
-      total += set.loadKg * set.reps * loadFactor(set.unit ?? ex.unit);
+      total += set.loadKg * set.reps * loadFactor(set.unit ?? ex.unit, set.side);
     }
   }
   return round1(total);
@@ -146,6 +150,7 @@ export type BestLoad = {
 };
 
 /** Séance close : une série encore en cours ne devient ni un record, ni un point de courbe. */
+/** Une séance encore ouverte, même avec une série notée, n’entre pas dans les records. */
 export function countsForProgress(session: Session): boolean {
   return session.status === "done" && !session.cardio;
 }

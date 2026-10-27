@@ -126,6 +126,7 @@ button:active { transform: scale(0.98); }
 
 .toprow { display: flex; align-items: flex-start; justify-content: space-between; }
 .eyebrow { font-size: 0.8125rem; font-weight: 560; color: var(--ink-soft); letter-spacing: -0.01em; }
+.demobadge { margin: 0; padding: 8px 16px 0; color: var(--copper); font-size: 0.75rem; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; }
 h1.title {
   font-size: 2.125rem;
   line-height: 1.05;

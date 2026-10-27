@@ -4,10 +4,10 @@ import { useState } from "react";
 import { useApp } from "@/components/app-context";
 import { appendCoachNotices } from "@/lib/coach";
 import { markCoachNoticesSent, pendingCoachNoticeLines } from "@/lib/coach-store";
-import { hardSetCount, tonnage } from "@/lib/calc";
+import { hardSetCount } from "@/lib/calc";
 import { cardioSummary } from "@/lib/history";
 import { compareExercise, formatPerformedSet, reportJson, summaryText, type CompareKind } from "@/lib/session";
-import { formatDuration, formatInt, formatLong } from "@/lib/utils";
+import { formatDuration, formatLong } from "@/lib/utils";
 
 export function BilanScreen({ id }: { id: string }) {
   const app = useApp();
@@ -78,10 +78,6 @@ export function BilanScreen({ id }: { id: string }) {
           <div className="stat">
             <b className="num">{hardSetCount(session.exercises)}</b>
             <span>{hardSetCount(session.exercises) <= 1 ? "série dure" : "séries dures"}</span>
-          </div>
-          <div className="stat">
-            <b className="num">{formatInt(tonnage(session.exercises))}</b>
-            <span>kg déplacés</span>
           </div>
         </div>
         {session.cardio ? (

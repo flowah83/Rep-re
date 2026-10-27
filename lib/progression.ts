@@ -31,14 +31,22 @@ export function suggestionsForSession(session: Session, history: Session[]): Sug
 export function suggestForExercise(exercise: ExerciseLog, history: Session[], skipSessionId?: string): Suggestion | null {
   const recent = latestPerformance(exercise.name, history, skipSessionId);
   if (!recent) return null;
+  if (loggedIsPartial(recent)) return abstain(exercise, "Séance incomplète. Pas de hausse.");
   const working = recent.sets.filter((set) => isHardSet(set) && set.reps != null);
   if (!working.length) return null;
 
   const step = exercise.stepKg > 0 ? exercise.stepKg : 2.5;
   const loads = working.map((set) => set.loadKg).filter((load): load is number => load != null && Number.isFinite(load));
   const targetReps = exercise.planned.reps != null && exercise.planned.reps > 0 ? exercise.planned.reps : null;
+  const histUnit = recent.unit ?? working.find((set) => set.unit)?.unit ?? null;
+  const planUnit = exercise.unit ?? null;
+  if (histUnit && planUnit && histUnit !== planUnit) return abstain(exercise, "Les unités ne sont pas les mêmes. Pas de hausse.");
 
-  if (!loads.length) return bodyweightSuggestion(exercise, working, targetReps);
+  if (!loads.length) {
+    const unit = planUnit ?? histUnit;
+    if (unit === "corps" || unit === "poids du corps") return bodyweightSuggestion(exercise, working, targetReps);
+    return abstain(exercise, "Charge inconnue. Pas de hausse.");
+  }
 
   const load = modeLoad(loads);
   const atLoad = working.filter((set) => set.loadKg != null && Math.abs(set.loadKg - load) < 0.051);
@@ -452,6 +460,22 @@ function isRecord(value: unknown): value is ProgressionRecord {
   return known && Array.isArray(record.items);
 }
 
+function loggedIsPartial(logged: ExerciseLog): boolean {
+  if (logged.sets.some((set) => set.skipped)) return true;
+  const doneHard = logged.sets.filter(isHardSet).length;
+  const open = logged.sets.some((set) => !set.warmup && !set.done && !set.skipped);
+  return Boolean(open && logged.planned.sets > doneHard);
+}
+
+function abstain(exercise: ExerciseLog, reason: string): Suggestion {
+  return pack(exercise, exercise.planned.loadKg, exercise.planned.reps, exercise.unit ?? null, reason);
+}
+
+function usableHistory(history: Session[]): Session[] {
+  if (history.some((session) => session.source !== "demo")) return history.filter((session) => session.source !== "demo");
+  return history;
+}
+
 function mentionPlan(exercise: ExerciseLog, unit: string | null, reason: string): string {
   if (exercise.planned.loadKg == null) return reason;
   return `${reason} Le plan est à ${formatLoad(exercise.planned.loadKg, exercise.unit ?? unit)}.`;
@@ -522,7 +546,7 @@ function trainingBlock(exercise: ExerciseLog, history: Session[], skipSessionId?
 function recentOutcomes(exercise: ExerciseLog, history: Session[], skipSessionId?: string): { loadKg: number | null; hit: boolean }[] {
   const key = normalizeExerciseKey(exercise.name);
   const target = exercise.planned.reps != null && exercise.planned.reps > 0 ? exercise.planned.reps : null;
-  return history
+  return usableHistory(history)
     .filter((session) => session.id !== skipSessionId && !session.cardio && session.status === "done")
     .filter((session) => session.exercises.some((item) => normalizeExerciseKey(item.name) === key && item.sets.some(isHardSet)))
     .sort((a, b) => {
@@ -562,7 +586,7 @@ function deloadLoad(load: number, step: number): number {
 
 function latestPerformance(name: string, history: Session[], skipSessionId?: string): ExerciseLog | null {
   const key = normalizeExerciseKey(name);
-  const sessions = history
+  const sessions = usableHistory(history)
     .filter((session) => session.id !== skipSessionId && !session.cardio && session.status === "done")
     .filter((session) => session.exercises.some((exercise) => normalizeExerciseKey(exercise.name) === key && exercise.sets.some(isHardSet)))
     .sort((a, b) => {

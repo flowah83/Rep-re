@@ -10,6 +10,7 @@ import { StartActions } from "@/components/start-actions";
 import { RestPill } from "@/components/rest-pill";
 import { buildAdjustments, keepsCoachPlan, loadProgression, revertAdjustment, saveProgression, type Adjustment } from "@/lib/progression";
 import type { Session } from "@/lib/types";
+import { backupReminder } from "@/lib/backup";
 import { addDays, formatKg, mondayOf, parseISODate, weekdayLetter } from "@/lib/utils";
 
 export function TodayScreen() {
@@ -23,10 +24,8 @@ export function TodayScreen() {
   const upcoming = nextSession(app.sessions, app.selectedDate);
   const hasRealWork = app.sessions.some((session) => session.status !== "planned" && session.source !== "demo");
   const importedToday = readImportedOn() === app.today;
-  const backupOld =
-    hasRealWork &&
-    !importedToday &&
-    (!app.settings.lastBackupAt || Date.now() - Date.parse(app.settings.lastBackupAt) > 7 * 86400000);
+  const reminder = backupReminder(app.settings);
+  const showReminder = hasRealWork && !importedToday && reminder.kind !== "recent";
   const showBand = Boolean(active && !visible.some((session) => session.id === active.id));
 
   return (
@@ -116,9 +115,7 @@ export function TodayScreen() {
           </article>
         ))
       )}
-      {backupOld ? (
-        <p className="quiet">La dernière sauvegarde date de plus d’une semaine. Un fichier exporté depuis les réglages vous met à l’abri.</p>
-      ) : null}
+      {showReminder ? <p className="quiet" data-testid="backup-reminder">{reminder.text}</p> : null}
     </div>
   );
 }
@@ -134,7 +131,17 @@ function SessionCard({ session, primary, upcoming = false }: { session: Session;
   return (
     <>
       <div className="kicker">
-        <span>{upcoming ? whenLabel(session) : session.source === "manual" ? "Séance personnelle" : session.status === "done" ? "Séance notée" : "Plan de Chef sport"}</span>
+        <span>
+          {upcoming
+            ? whenLabel(session)
+            : session.source === "demo"
+              ? "Démonstration"
+              : session.source === "manual"
+                ? "Séance personnelle"
+                : session.status === "done"
+                  ? "Séance notée"
+                  : "Plan de Chef sport"}
+        </span>
         {!upcoming && session.time ? <span className="num">{session.time}</span> : null}
       </div>
       <h2>{session.title}</h2>

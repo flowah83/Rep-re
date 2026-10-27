@@ -24,14 +24,23 @@ export function unitOfExercise(exercise: { unit?: string | null; name?: string }
   return null;
 }
 
-/** Disques d’une barre. Rien pour un haltère ou le poids du corps. */
+/** Disques d’une barre. Le total réel et le reste sont dits, sans remplacer la cible en silence. */
 export function plateGlance(loadKg: number | null, unit: string | null | undefined, barKg: number): string | null {
   if (loadKg == null) return null;
   if (unit === "kg/main" || unit === "kg/jambe" || unit === "corps" || unit === "poids du corps") return null;
   const result = platesPerSide(loadKg, barKg);
-  if (result.perSide <= 0 || result.plates.length === 0) return null;
+  if (result.perSide < 0) return `La charge est plus légère que la barre de ${formatKg(barKg)} kg.`;
+  const placed = Math.round((result.perSide - Math.max(0, result.remainder)) * 100) / 100;
+  const exact = Math.round((barKg + placed * 2) * 100) / 100;
+  if (result.plates.length === 0) {
+    return `${formatKg(loadKg)} kg n’est pas atteignable avec ces disques. La barre seule fait ${formatKg(barKg)} kg.`;
+  }
   const bits = result.plates.flatMap((plate) => Array.from({ length: plate.count }, () => formatKg(plate.kg)));
-  return `${bits.join(" + ")} kg de chaque côté`;
+  const line = `${bits.join(" + ")} kg de chaque côté, soit ${formatKg(exact)} kg`;
+  if (result.remainder > 0.05) {
+    return `${line}. Il reste ${formatKg(result.remainder)} kg de chaque côté : ${formatKg(loadKg)} kg n’est pas atteignable avec ces disques.`;
+  }
+  return line;
 }
 
 export function seriesWord(count: number): string {

@@ -1,4 +1,5 @@
 import { decodeImportToken } from "./codec";
+import { IMPORT_LIMIT, isCalendarDate, normalizeUnit } from "./contract";
 import { customFromMatch, normalizeExerciseKey, resolveExercise } from "./exercises";
 import { parsePlan } from "./plan";
 import type { CardioLog, CustomExercise, ExerciseLog, Session, SetLog } from "./types";
@@ -12,13 +13,25 @@ export type HistoryDraft = {
 
 export type ParsedImport =
   | { error: string }
-  | { kind: "plan"; sessions: Session[]; customs: CustomExercise[] }
-  | { kind: "history"; sessions: Session[]; customs: CustomExercise[]; recognized: string[] };
+  | { kind: "plan"; sessions: Session[]; customs: CustomExercise[]; skipped: string[] }
+  | { kind: "history"; sessions: Session[]; customs: CustomExercise[]; recognized: string[]; skipped: string[] }
+  | {
+      kind: "mixed";
+      sessions: Session[];
+      planSessions: Session[];
+      customs: CustomExercise[];
+      recognized: string[];
+      skipped: string[];
+    };
+
+export type ImportUpdate = { existingId: string; incoming: Session; reason: string };
 
 export type ImportPreview = {
-  kind: "plan" | "history";
+  kind: "plan" | "history" | "mixed";
   toAdd: Session[];
   duplicates: number;
+  updates: ImportUpdate[];
+  skipped: string[];
   recognized: string[];
   created: CustomExercise[];
   from: string | null;
@@ -40,10 +53,13 @@ export function stripFence(raw: string): string {
   return raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
 }
 
-/** Une série sous forme de tableau, c’est du passé. Un nombre, c’est un plan. */
-export function detectImportKind(data: unknown): "history" | "plan" | "unknown" {
+/** Une série sous forme de tableau, c’est du passé. Un nombre, c’est un plan. Les deux listes sont gardées. */
+export function detectImportKind(data: unknown): "history" | "plan" | "mixed" | "unknown" {
   if (!isObject(data)) return "unknown";
-  if (Array.isArray(data.historique)) return "history";
+  const hasHistory = Array.isArray(data.historique);
+  const hasPlan = Array.isArray(data.seances);
+  if (hasHistory && hasPlan) return "mixed";
+  if (hasHistory) return "history";
   const list = sessionList(data);
   if (!list) return "unknown";
   for (const item of list) {
@@ -68,6 +84,7 @@ function sessionList(data: Loose): unknown[] | null {
 export function parseImport(raw: string, customs: CustomExercise[] = []): ParsedImport {
   const text = stripFence(raw);
   if (!text) return { error: "Le texte est vide." };
+  if (text.length > IMPORT_LIMIT) return { error: "Ce fichier est trop volumineux. Rien n’a été ajouté." };
   let data: unknown;
   try {
     data = JSON.parse(text);
@@ -75,16 +92,54 @@ export function parseImport(raw: string, customs: CustomExercise[] = []): Parsed
     return { error: "Ce texte n’est pas un JSON lisible." };
   }
   const kind = detectImportKind(data);
+  if (kind === "mixed" && isObject(data)) return parseMixed(data, customs);
   if (kind === "history") return parseHistoryData(data, customs);
   if (kind === "plan") {
     const parsed = parsePlan(text, customs);
     if ("error" in parsed) return parsed;
-    return { kind: "plan", sessions: parsed.sessions, customs: parsed.customs };
+    return { kind: "plan", sessions: parsed.sessions, customs: parsed.customs, skipped: [] };
   }
   return { error: "Il manque « seances » ou « historique »." };
 }
 
-function parseHistoryData(data: unknown, customs: CustomExercise[]): ParsedImport {
+function parseMixed(data: Loose, customs: CustomExercise[]): ParsedImport {
+  const skipped: string[] = [];
+  let planSessions: Session[] = [];
+  let planCustoms: CustomExercise[] = [];
+  const planText = JSON.stringify({ seances: data.seances });
+  const plan = parsePlan(planText, customs);
+  if ("error" in plan) skipped.push(plan.error);
+  else {
+    planSessions = plan.sessions;
+    planCustoms = plan.customs;
+  }
+  const history = parseHistoryData({ historique: data.historique }, [...customs, ...planCustoms]);
+  if ("error" in history) {
+    if (planSessions.length === 0) return { error: history.error };
+    skipped.push(history.error);
+    return {
+      kind: "mixed",
+      sessions: [],
+      planSessions,
+      customs: planCustoms,
+      recognized: [],
+      skipped,
+    };
+  }
+  return {
+    kind: "mixed",
+    sessions: history.sessions,
+    planSessions,
+    customs: [...planCustoms, ...history.customs],
+    recognized: history.recognized,
+    skipped: [...skipped, ...history.skipped],
+  };
+}
+
+function parseHistoryData(
+  data: unknown,
+  customs: CustomExercise[],
+): { error: string } | { kind: "history"; sessions: Session[]; customs: CustomExercise[]; recognized: string[]; skipped: string[] } {
   if (!isObject(data)) return { error: "L’historique est illisible." };
   const list = sessionList(data);
   if (!list) return { error: "Il manque la liste des séances." };
@@ -93,12 +148,14 @@ function parseHistoryData(data: unknown, customs: CustomExercise[]): ParsedImpor
   const created: CustomExercise[] = [];
   const recognized = new Set<string>();
   const sessions: Session[] = [];
-  for (const item of list) {
-    const built = sessionFromHistory(item, known, created, recognized);
-    if (built) sessions.push(built);
+  const skipped: string[] = [];
+  for (const [index, item] of list.entries()) {
+    const built = sessionFromHistory(item, known, created, recognized, index);
+    if (built.skip) skipped.push(built.skip);
+    if (built.session) sessions.push(built.session);
   }
-  if (sessions.length === 0) return { error: "Aucune séance n’a de date au format année-mois-jour." };
-  return { kind: "history", sessions, customs: created, recognized: [...recognized] };
+  if (sessions.length === 0) return { error: skipped[0] ?? "Aucune séance n’a de date réelle." };
+  return { kind: "history", sessions, customs: created, recognized: [...recognized], skipped };
 }
 
 function keyOf(name: string): string {
@@ -129,31 +186,39 @@ function sessionFromHistory(
   known: CustomExercise[],
   created: CustomExercise[],
   recognized: Set<string>,
-): Session | null {
-  if (!isObject(item)) return null;
+  index: number,
+): { session: Session | null; skip: string | null } {
+  if (!isObject(item)) return { session: null, skip: `La séance ${index + 1} est illisible.` };
   const date = text(item.date);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   const title = text(item.titre) || text(item.title) || "Séance";
+  if (!isCalendarDate(date)) return { session: null, skip: `« ${title} » : cette date n’existe pas.` };
   const note = text(item.notes) || text(item.note);
   const cardio = cardioFrom(item.cardio);
   const exercises: ExerciseLog[] = [];
+  const unread: string[] = [];
   if (Array.isArray(item.exercices)) {
     for (const exercise of item.exercices) {
       const built = exerciseFromHistory(exercise, known, created, recognized);
       if (built) exercises.push(built);
+      else unread.push(`Un exercice de « ${title} » n’a pas été lu.`);
     }
   }
   const durationMin = finiteOrNull(item.duree_min);
+  const stableId = text(item.id);
   return {
-    id: uid(),
-    date,
-    title,
-    noteForMe: note || undefined,
-    status: "done",
-    source: "manual",
-    exercises,
-    cardio: cardio ?? undefined,
-    durationMin: durationMin ?? cardio?.durationMin ?? undefined,
+    session: {
+      id: stableId || uid(),
+      date,
+      title,
+      noteForMe: note || undefined,
+      status: "done",
+      source: "manual",
+      scheduled: false,
+      exercises,
+      cardio: cardio ?? undefined,
+      durationMin: durationMin ?? cardio?.durationMin ?? undefined,
+    },
+    skip: unread.length ? unread.join(" ") : null,
   };
 }
 
@@ -214,20 +279,14 @@ function setFromHistory(item: unknown, exerciseUnit: string | null): SetLog | nu
     unit: unitOf(item.unite) ?? exerciseUnit,
     restRealSec: finiteOrNull(item.repos_reel_s),
     precision: text(item.precision) || null,
-    warmup: false,
-    done: true,
+    warmup: item.echauffement === true,
+    done: item.fait === false ? false : true,
+    skipped: item.sautee === true ? true : undefined,
   };
 }
 
 function unitOf(value: unknown): string | null {
-  const raw = text(value);
-  if (!raw) return null;
-  const key = raw.toLowerCase();
-  if (key === "kg/main" || key.includes("par main")) return "kg/main";
-  if (key === "kg/jambe" || key.includes("par jambe")) return "kg/jambe";
-  if (key === "kg") return "kg";
-  if (key.includes("pdc") || key.includes("poids du corps")) return raw;
-  return raw;
+  return normalizeUnit(value);
 }
 
 function cardioFrom(value: unknown): CardioLog | null {
@@ -252,22 +311,80 @@ export function historySignature(session: Session): string {
   return JSON.stringify({
     date: session.date,
     title: normalizeExerciseKey(session.title),
+    note: session.noteForMe ?? null,
     cardio: session.cardio
       ? [session.cardio.sport, session.cardio.durationMin, session.cardio.distanceKm]
       : null,
     exercises: session.exercises.map((exercise) => ({
       name: normalizeExerciseKey(exercise.name),
       unknown: Boolean(exercise.detailUnknown),
+      note: exercise.note ?? null,
       sets: exercise.sets.map((set) => [
         set.warmup ? 1 : 0,
         set.loadKg,
         set.reps,
         set.rpe,
+        set.rir ?? null,
         set.side ?? null,
         set.unit ?? null,
+        set.restRealSec ?? null,
       ]),
     })),
   });
+}
+
+function identityKey(session: Session): string {
+  return JSON.stringify({
+    date: session.date,
+    title: normalizeExerciseKey(session.title),
+    exercises: session.exercises.map((exercise) => normalizeExerciseKey(exercise.name)),
+  });
+}
+
+export function classifyIncoming(existing: Session[], incoming: Session[]): { added: Session[]; duplicates: number; updates: ImportUpdate[] } {
+  const signatures = new Set(existing.map(historySignature));
+  const identities = new Map<string, Session>();
+  for (const session of existing) {
+    const key = identityKey(session);
+    if (!identities.has(key)) identities.set(key, session);
+  }
+  const added: Session[] = [];
+  const updates: ImportUpdate[] = [];
+  let duplicates = 0;
+  for (const session of incoming) {
+    const signature = historySignature(session);
+    if (signatures.has(signature)) {
+      duplicates += 1;
+      continue;
+    }
+    const same = identities.get(identityKey(session));
+    if (same) {
+      updates.push({ existingId: same.id, incoming: session, reason: differenceReason(same, session) });
+      continue;
+    }
+    signatures.add(signature);
+    identities.set(identityKey(session), session);
+    added.push(session);
+  }
+  return { added, duplicates, updates };
+}
+
+function differenceReason(current: Session, incoming: Session): string {
+  const noteChanged = (current.noteForMe ?? "") !== (incoming.noteForMe ?? "");
+  const detailChanged = current.exercises.some((exercise, index) => {
+    const other = incoming.exercises[index];
+    if (!other) return false;
+    if ((exercise.note ?? "") !== (other.note ?? "")) return true;
+    return exercise.sets.some((set, setIndex) => {
+      const next = other.sets[setIndex];
+      if (!next) return false;
+      return (set.rir ?? null) !== (next.rir ?? null) || (set.restRealSec ?? null) !== (next.restRealSec ?? null);
+    });
+  });
+  if (noteChanged || detailChanged) {
+    return "La note, le repos ou le RIR diffère. Ce n’est pas un doublon : la séance déjà présente peut être mise à jour.";
+  }
+  return "Le contenu diffère d’une séance déjà présente. Mise à jour proposée, sans deuxième copie.";
 }
 
 export function withoutDuplicates(existing: Session[], incoming: Session[]): { added: Session[]; duplicates: number } {
@@ -300,6 +417,8 @@ export function previewImport(parsed: Exclude<ParsedImport, { error: string }>, 
       kind: "plan",
       toAdd: [],
       duplicates: 0,
+      updates: [],
+      skipped: parsed.skipped,
       recognized: [...recognized],
       created: parsed.customs,
       from: dates[0] ?? null,
@@ -307,23 +426,29 @@ export function previewImport(parsed: Exclude<ParsedImport, { error: string }>, 
       planSessions: parsed.sessions,
     };
   }
-  const { added, duplicates } = withoutDuplicates(existing, parsed.sessions);
-  const dates = parsed.sessions.map((session) => session.date).sort();
+  const historySessions = parsed.sessions;
+  const classified = classifyIncoming(existing, historySessions);
+  const planSessions = parsed.kind === "mixed" ? parsed.planSessions : [];
+  const dates = [...historySessions, ...planSessions].map((session) => session.date).sort();
+  const recognized = parsed.kind === "history" || parsed.kind === "mixed" ? parsed.recognized : [];
   return {
-    kind: "history",
-    toAdd: added,
-    duplicates,
-    recognized: parsed.recognized,
+    kind: parsed.kind,
+    toAdd: classified.added,
+    duplicates: classified.duplicates,
+    updates: classified.updates,
+    skipped: parsed.skipped,
+    recognized,
     created: parsed.customs,
     from: dates[0] ?? null,
     to: dates[dates.length - 1] ?? null,
-    planSessions: [],
+    planSessions,
   };
 }
 
 export function importSummary(preview: ImportPreview): string[] {
-  const count = preview.kind === "history" ? preview.toAdd.length + preview.duplicates : preview.planSessions.length;
-  const fresh = preview.kind === "history" ? preview.toAdd.length : preview.planSessions.length;
+  const pastCount = preview.kind === "plan" ? 0 : preview.toAdd.length + preview.duplicates;
+  const count = pastCount + preview.planSessions.length;
+  const fresh = preview.toAdd.length + preview.planSessions.length;
   const lines: string[] = [];
   const period = preview.from && preview.to ? periodPhrase(preview.from, preview.to) : "";
   lines.push(`${countLabel(count)}${period ? `, ${period}` : ""}.`);
@@ -343,8 +468,10 @@ export function importSummary(preview: ImportPreview): string[] {
     bits.push(created === 1 ? `1 exercice créé (${names})` : `${created} exercices créés (${names})`);
   }
   if (bits.length) lines.push(`${bits.join(", ")}.`);
-  if (preview.kind === "plan") lines.push("Ces séances restent à faire.");
-  else lines.push("Les séances passées seront marquées comme terminées.");
+  if (preview.updates.length) lines.push(preview.updates[0].reason);
+  if (preview.skipped.length) lines.push(`Non lu : ${preview.skipped.join(" ")}`);
+  if (preview.planSessions.length) lines.push("Ces séances restent à faire.");
+  if (preview.kind !== "plan") lines.push("Les séances passées seront marquées comme terminées.");
   return lines;
 }
 

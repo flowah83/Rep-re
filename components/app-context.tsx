@@ -5,11 +5,13 @@ import { buildDemo } from "@/lib/demo";
 import {
   deleteSession,
   loadState,
+  putMany,
   replaceAll,
   saveCustom,
   saveSession as putSession,
   saveSettings,
 } from "@/lib/db";
+import { commitWrite } from "@/lib/commit";
 import { importSummary, parseImport, previewImport, textFromLocation, withoutDuplicates, type ImportPreview } from "@/lib/history";
 import { mergePlans } from "@/lib/plan";
 import type { HistFilter } from "@/lib/display";
@@ -60,7 +62,8 @@ type Api = {
   setProgressName: (name: string) => void;
   toast: string | null;
   flash: (message: string) => void;
-  saveSession: (session: Session) => Promise<void>;
+  saveSession: (session: Session, mode?: "optimistic" | "confirmed") => Promise<void>;
+  mergeBackup: (backup: BackupFile) => Promise<void>;
   updateSession: (id: string, updater: (session: Session) => Session) => Promise<void>;
   removeSession: (id: string) => Promise<void>;
   replaceSessions: (sessions: Session[], customs?: CustomExercise[]) => Promise<void>;
@@ -167,7 +170,16 @@ export function AppProvider({
   }, [initial.notice]);
 
   useEffect(() => {
-    void navigator.storage?.persist?.();
+    const storage = navigator.storage;
+    if (storage?.persist) {
+      void storage.persist().then((granted) => {
+        if (settingsRef.current.storagePersistent === granted) return;
+        const next = { ...settingsRef.current, storagePersistent: granted };
+        settingsRef.current = next;
+        setSettings(next);
+        void saveSettings(next);
+      }).catch(() => undefined);
+    }
     if (process.env.NODE_ENV !== "production") return;
     if ("serviceWorker" in navigator) {
       const base = publicBase();
@@ -187,11 +199,17 @@ export function AppProvider({
       sessionsRef.current = list;
       setSessions(list);
     };
-    const saveSession = async (session: Session) => {
-      const current = sessionsRef.current;
-      const index = current.findIndex((item) => item.id === session.id);
-      writeSessions(index === -1 ? [...current, session] : current.map((item) => (item.id === session.id ? session : item)));
-      await putSession(session);
+    const saveSession = async (session: Session, mode: "optimistic" | "confirmed" = "optimistic") => {
+      const previous = sessionsRef.current;
+      const index = previous.findIndex((item) => item.id === session.id);
+      const nextList = index === -1 ? [...previous, session] : previous.map((item) => (item.id === session.id ? session : item));
+      if (mode === "optimistic") writeSessions(nextList);
+      const outcome = await commitWrite(session, putSession);
+      if (!outcome.saved) {
+        flash("Pas enregistré. Les notes restent à l’écran. Réessayez.");
+        throw new Error("pas-enregistre");
+      }
+      if (mode === "confirmed") writeSessions(nextList);
     };
     const updateSession = async (id: string, updater: (session: Session) => Session) => {
       const current = sessionsRef.current.find((session) => session.id === id);
@@ -281,27 +299,39 @@ export function AppProvider({
         const preview = previewRef.current;
         if (!preview) return;
         const nextCustoms = [...customsRef.current];
+        const createdNow: CustomExercise[] = [];
         for (const custom of preview.created) {
           if (!nextCustoms.some((item) => item.id === custom.id)) {
             nextCustoms.push(custom);
-            await saveCustom(custom);
+            createdNow.push(custom);
           }
+        }
+        let nextSessions = sessionsRef.current;
+        const written: Session[] = [];
+        if (preview.kind === "history" || preview.kind === "mixed") {
+          for (const update of preview.updates) {
+            const incoming = { ...update.incoming, id: update.existingId };
+            nextSessions = nextSessions.map((session) => (session.id === update.existingId ? incoming : session));
+            written.push(incoming);
+          }
+          const fresh = withoutDuplicates(nextSessions, preview.toAdd).added;
+          nextSessions = [...nextSessions, ...fresh];
+          written.push(...fresh);
+        }
+        if (preview.kind === "plan" || preview.kind === "mixed") {
+          const merged = mergePlans(nextSessions, preview.planSessions);
+          nextSessions = merged.sessions;
+          written.push(...merged.touched);
+        }
+        const addedCount = written.length;
+        try {
+          await putMany(written, createdNow);
+        } catch {
+          flash("L’import n’a pas été enregistré. Le carnet de ce téléphone n’a pas changé.");
+          return;
         }
         customsRef.current = nextCustoms;
         setCustoms(nextCustoms);
-        let nextSessions = sessionsRef.current;
-        let addedCount = 0;
-        if (preview.kind === "history") {
-          const fresh = withoutDuplicates(nextSessions, preview.toAdd).added;
-          addedCount = fresh.length;
-          nextSessions = [...nextSessions, ...fresh];
-          for (const session of fresh) await putSession(session);
-        } else {
-          const merged = mergePlans(nextSessions, preview.planSessions);
-          addedCount = merged.touched.length;
-          nextSessions = merged.sessions;
-          for (const session of merged.touched) await putSession(session);
-        }
         sessionsRef.current = nextSessions;
         setSessions(nextSessions);
         if (!settingsRef.current.onboarded) {
@@ -320,7 +350,7 @@ export function AppProvider({
         } catch {
           /* stockage privé */
         }
-        setTab(preview.kind === "history" ? "history" : "today");
+        setTab(preview.planSessions.length ? "today" : "history");
         try {
           localStorage.setItem("repere-imported-on", localDate());
         } catch {
@@ -341,10 +371,18 @@ export function AppProvider({
         setSheet(null);
       },
       restoreBackup: async (backup) => {
-        await replaceAll(backup);
+        try {
+          await replaceAll(backup);
+        } catch {
+          flash("La restauration a échoué. Le carnet de ce téléphone n’a pas changé.");
+          return;
+        }
         setSettings(backup.settings);
+        settingsRef.current = backup.settings;
         setSessions(backup.sessions);
+        sessionsRef.current = backup.sessions;
         setCustoms(backup.customExercises);
+        customsRef.current = backup.customExercises;
         applyTheme(backup.settings.theme);
         writeProgressionRaw(backup.progression);
         importPlanSnapshots(backup.planSnapshots);
@@ -353,6 +391,30 @@ export function AppProvider({
           saveCoachConfig({ url: current.url, token: backup.coachToken });
         }
         flash("Sauvegarde restaurée sur ce téléphone.");
+        setSheet(null);
+      },
+      mergeBackup: async (backup) => {
+        const incomingSessions = backup.sessions.filter((session) => session.source !== "demo");
+        try {
+          await putMany(incomingSessions, backup.customExercises);
+        } catch {
+          flash("L’ajout a échoué. Le carnet de ce téléphone n’a pas changé.");
+          return;
+        }
+        const byId = new Map(sessionsRef.current.map((session) => [session.id, session]));
+        for (const session of incomingSessions) byId.set(session.id, session);
+        const nextSessions = [...byId.values()];
+        const customs = [...customsRef.current];
+        for (const custom of backup.customExercises) {
+          const index = customs.findIndex((item) => item.id === custom.id);
+          if (index === -1) customs.push(custom);
+          else customs[index] = custom;
+        }
+        sessionsRef.current = nextSessions;
+        customsRef.current = customs;
+        setSessions(nextSessions);
+        setCustoms(customs);
+        flash("Séances ajoutées. Le carnet déjà présent est conservé.");
         setSheet(null);
       },
       loadDemo: async () => {
@@ -500,7 +562,7 @@ export function useBoot() {
         applyTheme(loaded.settings.theme);
         if (!cancel) setState({ ...loaded, pendingPlan: Boolean(preview) && !loaded.settings.onboarded, importPreview: preview, notice });
       } catch {
-        if (!cancel) setError("Le carnet de ce navigateur n’est pas accessible.");
+        if (!cancel) setError("Le stockage de ce navigateur ne répond pas. Le carnet n’a pas été ouvert.");
       }
     })();
     return () => {

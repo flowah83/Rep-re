@@ -24,6 +24,7 @@ export function RepereApp() {
         <div style={{ padding: 24, maxWidth: 420 }}>
           <h1 className="title">Repère</h1>
           <p className="quiet">{boot.error}</p>
+          <p className="quiet">Rien n’a été effacé depuis ici. Si vous avez un fichier repere-….json, vous pourrez le restaurer dès que le stockage répond.</p>
         </div>
       </div>
     );
@@ -43,6 +44,9 @@ function Shell() {
   return (
     <div className="app" data-testid="app-ready">
       <div className="shell" inert={app.overlay || app.sheet ? true : undefined}>
+        {app.sessions.some((session) => session.source === "demo") ? (
+          <p className="demobadge" data-testid="demo-badge">Démonstration</p>
+        ) : null}
         <div hidden={app.tab !== "home"}>
           <HomeScreen />
         </div>

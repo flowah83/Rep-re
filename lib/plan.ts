@@ -1,4 +1,5 @@
 import { decodeText, encodeText } from "./codec";
+import { isCalendarDate, isClock, normalizeUnit } from "./contract";
 import { customFromMatch, resolveExercise } from "./exercises";
 import type { CustomExercise, ExerciseLog, Session, SetLog } from "./types";
 import { finiteOrNull, uid } from "./utils";
@@ -28,6 +29,7 @@ export type PlanExercise = {
   repos_secondes?: number;
   rpe_vise?: number | null;
   note?: string;
+  unite?: string;
   echauffement?: { charge_kg?: number; repetitions?: number }[];
 };
 
@@ -69,10 +71,12 @@ export function parsePlan(
       return { error: `La séance ${index + 1} est illisible.` };
     }
     const date = typeof item.date === "string" ? item.date : "";
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return { error: `La séance ${index + 1} n’a pas de date au format année-mois-jour.` };
-    }
     const title = typeof item.titre === "string" && item.titre.trim() ? item.titre.trim() : "Séance";
+    if (!isCalendarDate(date)) {
+      return { error: `« ${title} » : cette date n’existe pas.` };
+    }
+    const time = typeof item.heure === "string" ? item.heure.trim() : "";
+    if (time && !isClock(time)) return { error: `« ${title} » : l’heure n’est pas réelle.` };
     if (!Array.isArray(item.exercices) || item.exercices.length === 0) {
       return { error: `« ${title} » n’a pas d’exercices.` };
     }
@@ -87,15 +91,17 @@ export function parsePlan(
       }
       exercises.push(exerciseFromPlan(ex, customs, created));
     }
+    const stableId = typeof (item as { id?: unknown }).id === "string" ? (item as { id: string }).id.trim() : "";
     built.push({
-      id: uid(),
+      id: stableId || uid(),
       date,
-      time: typeof item.heure === "string" ? item.heure : undefined,
+      time: time || undefined,
       title,
       intention: typeof item.intention === "string" ? item.intention : undefined,
       coachNote: typeof item.note === "string" ? item.note : undefined,
       status: "planned",
       source: "coach",
+      scheduled: true,
       exercises,
     });
   }
@@ -119,6 +125,7 @@ export function exerciseFromPlan(ex: PlanExercise, customs: CustomExercise[] = [
   const load = finiteOrNull(ex.charge_kg);
   const rest = finiteOrNull(ex.repos_secondes) ?? defaultRest(meta.pattern);
   const rpe = finiteOrNull(ex.rpe_vise);
+  const unit = normalizeUnit(ex.unite);
   const sets: SetLog[] = [];
   for (const warm of ex.echauffement ?? []) {
     sets.push({
@@ -126,6 +133,7 @@ export function exerciseFromPlan(ex: PlanExercise, customs: CustomExercise[] = [
       loadKg: finiteOrNull(warm.charge_kg),
       reps: finiteOrNull(warm.repetitions),
       rpe: null,
+      unit,
       warmup: true,
       done: false,
     });
@@ -136,6 +144,7 @@ export function exerciseFromPlan(ex: PlanExercise, customs: CustomExercise[] = [
       loadKg: load,
       reps: null,
       rpe: null,
+      unit,
       warmup: false,
       done: false,
     });
@@ -148,6 +157,7 @@ export function exerciseFromPlan(ex: PlanExercise, customs: CustomExercise[] = [
     cues: meta.cues,
     muscles: meta.muscles,
     note: ex.note,
+    unit,
     planned: {
       sets: setsN,
       reps: Number.isFinite(reps as number) ? reps : null,

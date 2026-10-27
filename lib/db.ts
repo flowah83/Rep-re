@@ -54,6 +54,15 @@ export async function saveCustom(ex: CustomExercise) {
   await database.put("customs", ex);
 }
 
+/** Une seule transaction : tout est écrit, ou rien ne l’est. */
+export async function putMany(sessions: Session[], customs: CustomExercise[]) {
+  const database = await db();
+  const tx = database.transaction(["sessions", "customs"], "readwrite");
+  for (const session of sessions) await tx.objectStore("sessions").put(session);
+  for (const custom of customs) await tx.objectStore("customs").put(custom);
+  await tx.done;
+}
+
 export async function replaceAll(backup: BackupFile) {
   const database = await db();
   const tx = database.transaction(["sessions", "customs", "meta"], "readwrite");
@@ -66,21 +75,23 @@ export async function replaceAll(backup: BackupFile) {
 }
 
 export function toCsv(sessions: Session[]): string {
-  const rows = ["date,titre,exercice,serie,charge_kg,repetitions,rpe,echauffement"];
+  const rows = ["date,titre,exercice,serie,charge_kg,repetitions,rpe,echauffement,unite,cote"];
   for (const session of sessions) {
     session.exercises.forEach((ex) => {
       ex.sets.forEach((set, index) => {
         if (!set.done) return;
         rows.push(
           [
-            session.date,
-            csv(session.title),
-            csv(ex.name),
-            String(index + 1),
-            set.loadKg ?? "",
-            set.reps ?? "",
-            set.rpe ?? "",
-            set.warmup ? "oui" : "non",
+            csvCell(session.date),
+            csvCell(session.title),
+            csvCell(ex.name),
+            csvCell(index + 1),
+            csvCell(set.loadKg),
+            csvCell(set.reps),
+            csvCell(set.rpe),
+            csvCell(set.warmup ? "oui" : "non"),
+            csvCell(set.unit ?? ex.unit),
+            csvCell(set.side),
           ].join(","),
         );
       });
@@ -89,6 +100,10 @@ export function toCsv(sessions: Session[]): string {
   return rows.join("\n");
 }
 
-function csv(value: string) {
-  return `"${value.replace(/"/g, '""')}"`;
+function csvCell(value: string | number | null | undefined) {
+  if (value == null) return "";
+  const raw = String(value);
+  const safe = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
+  if (/[",\n]/.test(safe) || safe.startsWith("'")) return `"${safe.replace(/"/g, '""')}"`;
+  return safe;
 }

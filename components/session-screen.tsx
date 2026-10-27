@@ -14,11 +14,11 @@ import {
   type ProgressionRecord,
 } from "@/lib/progression";
 import { recallPlan } from "@/lib/snapshot";
+import { closeCopy } from "@/lib/close";
+import { parseDecimalDraft } from "@/lib/contract";
 import { lastPerformance, completeSet, firstOpenSlot, noteSetRpe, patchSet, sessionFullyLogged, setSettled, skipSet } from "@/lib/session";
 import type { ExerciseLog, Session, SetLog } from "@/lib/types";
 import { formatClock, formatKg } from "@/lib/utils";
-
-const ALERT_KEY = "repere-rest-alert-asked";
 
 export function SessionScreen({ id }: { id: string }) {
   const app = useApp();
@@ -35,6 +35,7 @@ export function SessionScreen({ id }: { id: string }) {
   const [warmNote, setWarmNote] = useState(false);
   const [wakeFail, setWakeFail] = useState(false);
   const [wakeTry, setWakeTry] = useState(0);
+  const [closing, setClosing] = useState(false);
   const persist = (next: ProgressionRecord) => {
     saveProgression(id, next);
     setRecord(next);
@@ -157,27 +158,39 @@ export function SessionScreen({ id }: { id: string }) {
   };
 
   const closeFull = () => {
+    if (closing) return;
+    if (session.status === "done") {
+      app.openBilan(session.id, false);
+      return;
+    }
+    setClosing(true);
+    const next = {
+      ...session,
+      status: "done" as const,
+      closed: "full" as const,
+      endedAt: new Date().toISOString(),
+      restEndsAt: null,
+    };
     void app
-      .updateSession(session.id, (currentSession) => ({
-        ...currentSession,
-        status: "done",
-        closed: "full",
-        endedAt: new Date().toISOString(),
-        restEndsAt: null,
-      }))
-      .then(() => app.openBilan(session.id, true));
+      .saveSession(next, "confirmed")
+      .then(() => app.openBilan(next.id, true))
+      .catch(() => setClosing(false));
   };
 
   const keepLogged = () => {
+    if (closing) return;
+    setClosing(true);
+    const next = {
+      ...session,
+      status: "done" as const,
+      closed: "partial" as const,
+      endedAt: new Date().toISOString(),
+      restEndsAt: null,
+    };
     void app
-      .updateSession(session.id, (currentSession) => ({
-        ...currentSession,
-        status: "done",
-        closed: "partial",
-        endedAt: new Date().toISOString(),
-        restEndsAt: null,
-      }))
-      .then(() => app.openBilan(session.id, true));
+      .saveSession(next, "confirmed")
+      .then(() => app.openBilan(next.id, true))
+      .catch(() => setClosing(false));
   };
 
   const erase = () => {
@@ -215,7 +228,17 @@ export function SessionScreen({ id }: { id: string }) {
           )}
         </div>
         {finished ? (
-          <EndScreen session={session} onBilan={closeFull} onReview={() => { setReview(true); setExerciseId(session.exercises[0]?.id ?? null); }} />
+          <EndScreen
+            session={session}
+            closing={closing}
+            onBilan={closeFull}
+            onReview={() => { setReview(true); setExerciseId(session.exercises[0]?.id ?? null); }}
+            onRpe={(rpe) => {
+              const last = lastDoneWork(session);
+              if (!last) return;
+              change((item) => noteSetRpe(item, last.exercise.id, last.set.id, rpe));
+            }}
+          />
         ) : exercise && current ? (
           <ActiveSet
             session={session}
@@ -531,6 +554,8 @@ function ActiveSet({
           onRpe={onRpe}
           onSkip={onSkipRest}
         />
+      ) : doneWork ? (
+        <EffortRow rpe={doneWork.set.rpe} onRpe={onRpe} />
       ) : null}
     </>
   );
@@ -540,19 +565,34 @@ function reviewBack(record: ProgressionRecord | null, exercise: ExerciseLog) {
   return record?.mode !== "hold" && record?.items.some((item) => item.exerciseId === exercise.id && !item.active && item.fromLoadKg != null);
 }
 
-function EndScreen({ session, onBilan, onReview }: { session: Session; onBilan: () => void; onReview: () => void }) {
+function EndScreen({
+  session,
+  closing,
+  onBilan,
+  onReview,
+  onRpe,
+}: {
+  session: Session;
+  closing: boolean;
+  onBilan: () => void;
+  onReview: () => void;
+  onRpe: (rpe: number) => void;
+}) {
+  const copy = closeCopy(session);
+  const last = lastDoneWork(session);
   return (
     <div className="sport-end" data-testid="session-end">
       <p className="eyebrow">{session.title}</p>
-      <h1>Séance terminée</h1>
+      <h1>{copy.title}</h1>
       {session.startedAt ? <p className="meta num"><Elapsed from={session.startedAt} /></p> : null}
       <ul>
         {session.exercises.map((exercise) => (
           <li key={exercise.id}>{exercise.name}</li>
         ))}
       </ul>
-      <button type="button" className="btn" data-testid="finish-session" onClick={onBilan}>
-        Voir le bilan
+      {last ? <EffortRow rpe={last.set.rpe} onRpe={onRpe} /> : null}
+      <button type="button" className="btn" data-testid="finish-session" onClick={onBilan} disabled={closing}>
+        {copy.action}
       </button>
       <button type="button" className="btn ghost" data-testid="review-session" onClick={onReview}>
         Corriger une série
@@ -610,8 +650,8 @@ function shortName(name: string) {
 }
 
 function readNumber(value: string): number | null {
-  const parsed = Number(value.replace(",", ".").trim());
-  return Number.isFinite(parsed) ? parsed : null;
+  const parsed = parseDecimalDraft(value, { min: 0, max: 1000 });
+  return parsed.kind === "number" ? parsed.value : null;
 }
 
 function lastDoneWork(session: Session): { exercise: ExerciseLog; set: SetLog } | null {
@@ -686,16 +726,6 @@ function RestBand({
       }
     }
   }, [now, endsAt]);
-  useEffect(() => {
-    if (typeof Notification === "undefined" || Notification.permission !== "default") return;
-    try {
-      if (localStorage.getItem(ALERT_KEY)) return;
-      localStorage.setItem(ALERT_KEY, "1");
-    } catch {
-      return;
-    }
-    void Notification.requestPermission().catch(() => undefined);
-  }, []);
   const left = Math.max(0, (endsAt - now) / 1000);
   return (
     <section className="restband" data-testid="rest-timer" aria-live="polite">
@@ -703,19 +733,26 @@ function RestBand({
         <b className="num">{formatClock(left)}</b>
         <p>{line}</p>
         {plates ? <p className="num">{plates}</p> : null}
-        <div className="rperow">
-          <span>Effort</span>
-          {[6, 7, 8, 9, 10].map((value) => (
-            <button type="button" key={value} className={rpe === value ? "on" : ""} onClick={() => onRpe(value)} aria-label={`Effort ${value}`}>
-              {value}
-            </button>
-          ))}
-        </div>
+        <EffortRow rpe={rpe} onRpe={onRpe} />
       </div>
       <button type="button" className="pass" onClick={onSkip}>
         Passer
       </button>
     </section>
+  );
+}
+
+function EffortRow({ rpe, onRpe }: { rpe: number | null; onRpe: (rpe: number) => void }) {
+  return (
+    <div className="rperow" data-testid="effort-row">
+      <span>Effort</span>
+      {[6, 7, 8, 9, 10].map((value) => (
+        <button type="button" key={value} className={rpe === value ? "on" : ""} onClick={() => onRpe(value)} aria-label={`Effort ${value}`}>
+          {value}
+        </button>
+      ))}
+      <p className="fine">6 facile, 10 maximal. Non renseigné n’est ni facile ni nul.</p>
+    </div>
   );
 }
 

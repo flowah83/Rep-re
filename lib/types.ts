@@ -103,6 +103,12 @@ export type Session = {
   durationMin?: number | null;
   /** Séance close pour de bon, ou rangée avec seulement ce qui était noté. */
   closed?: "full" | "partial";
+  /**
+   * Fait partie du programme de la semaine.
+   * Absent sur une ancienne séance : une séance manuelle déjà notée reste hors du plan.
+   * `false` : un historique importé, qui ne devient pas le programme de cette semaine.
+   */
+  scheduled?: boolean;
 };
 
 export type CustomExercise = {
@@ -116,7 +122,12 @@ export type Settings = {
   onboarded: boolean;
   theme: "system" | "light" | "dark";
   barKg: number;
+  /** Ancien horodatage. Ce n’est pas la preuve qu’un fichier existe encore. */
   lastBackupAt?: string;
+  /** Dernier téléchargement lancé, pas une copie confirmée. */
+  lastDownloadAt?: string;
+  /** Résultat de la demande de conservation. Ce n’est pas une garantie. */
+  storagePersistent?: boolean;
 };
 
 export type BackupFile = {

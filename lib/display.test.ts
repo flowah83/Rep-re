@@ -19,7 +19,7 @@ function exercise(partial: Partial<ExerciseLog> = {}): ExerciseLog {
 
 describe("lignes de plan", () => {
   it("annonce les disques seulement pour une barre", () => {
-    expect(plateGlance(60, "kg", 20)).toBe("20 kg de chaque côté");
+    expect(plateGlance(60, "kg", 20)).toBe("20 kg de chaque côté, soit 60 kg");
     expect(plateGlance(20, "kg/main", 20)).toBeNull();
     expect(plateGlance(70, "corps", 20)).toBeNull();
   });
