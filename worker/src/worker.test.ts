@@ -284,6 +284,26 @@ describe("worker", () => {
     expect(text).toContain('"ready":true');
     expect(text).toContain("Bonjour");
     expect(text).toContain('"message"');
+    expect(text.length).toBeGreaterThan(2048);
+  });
+
+  it("répond tout de suite une erreur si /coach ne revient pas", async () => {
+    const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async (_url, init) => {
+      return await new Promise((_, reject) => {
+        const fail = () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+        if (init?.signal?.aborted) fail();
+        else init?.signal?.addEventListener("abort", fail, { once: true });
+      });
+    });
+    const response = await handleRequest(
+      post("/coach", { messages: [{ role: "user", content: "Salut" }] }, "phone-token", "https://flowah83.github.io"),
+      { ...env, AI_MODEL_FALLBACKS: "gemini-a, gemini-b", STREAM_DEADLINE_MS: "30" },
+      fetchImpl,
+    );
+    expect(response.status).toBe(502);
+    const body = (await response.json()) as { error?: string };
+    expect(body.error).toMatch(/pas pu répondre/);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
   it("envoie un premier événement tout de suite, puis la génération classique si le flux se tait", async () => {

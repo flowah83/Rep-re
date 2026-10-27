@@ -191,8 +191,8 @@ export function rememberCoachLine(line: string) {
   }
 }
 
-const STREAM_FIRST_BYTE_MS = 12_000;
-const STREAM_INACTIVITY_MS = 12_000;
+/** Safari sur iPhone ne livre souvent le flux qu’à la fin. Couper à 12 s basculait vers /coach, qui peut rester sans réponse. */
+export const STREAM_QUIET_MS = 45_000;
 const COACH_FALLBACK_MS = 20_000;
 
 export async function requestCoachStream(
@@ -202,8 +202,8 @@ export async function requestCoachStream(
   options?: { fetchImpl?: typeof fetch; firstByteMs?: number; inactivityMs?: number },
 ): Promise<Record<string, unknown>> {
   const fetchImpl = options?.fetchImpl ?? fetch;
-  const firstByteMs = options?.firstByteMs ?? STREAM_FIRST_BYTE_MS;
-  const inactivityMs = options?.inactivityMs ?? STREAM_INACTIVITY_MS;
+  const firstByteMs = options?.firstByteMs ?? STREAM_QUIET_MS;
+  const inactivityMs = options?.inactivityMs ?? STREAM_QUIET_MS;
   if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
   const config = loadCoachConfig();
   const url = normalizeCoachUrl(config.url);
@@ -233,20 +233,23 @@ export async function requestCoachStream(
     });
   } catch (caught) {
     if (signal?.aborted) throw caught;
-    return fallback();
+    if (caught instanceof Error && caught.name === "AbortError") throw new Error("Le coach n’a pas pu répondre.");
+    throw new Error(`Le coach n’est pas joignable. Adresse utilisée : ${url}`);
   } finally {
     clearTimeout(timer);
     signal?.removeEventListener("abort", onUserAbort);
   }
-  if (response.status === 404 || response.status === 502 || response.status === 503) return fallback();
+  if (response.status === 404) return fallback();
   const type = response.headers.get("content-type") ?? "";
+  if (response.ok && type.includes("text/event-stream") && !response.body) {
+    return finishSse(await response.text(), onText);
+  }
   if (!response.ok || !type.includes("text/event-stream") || !response.body) {
     let data: Record<string, unknown> = {};
     try {
       data = (await response.json()) as Record<string, unknown>;
     } catch {
-      if (!response.ok) throw new Error("Le coach n’a pas pu répondre.");
-      return fallback();
+      throw new Error("Le coach n’a pas pu répondre.");
     }
     if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "Le coach n’a pas pu répondre.");
     return data;
@@ -258,6 +261,16 @@ export async function requestCoachStream(
   let accumulated = "";
   let stop = false;
   const userAbort = aborted(signal);
+  const take = (chunk: string) => {
+    const applied = applySse(`${buffer}${chunk}`, onText);
+    buffer = applied.rest;
+    accumulated = applied.accumulated || accumulated;
+    if (applied.message) message = applied.message;
+    if (applied.error) {
+      if (!accumulated) throw new Error(applied.error);
+      stop = true;
+    }
+  };
   try {
     while (!stop) {
       const reading = reader.read();
@@ -272,47 +285,72 @@ export async function requestCoachStream(
       clearTimeout(idle);
       if (step === "aborted" || signal?.aborted) {
         reading.catch(() => undefined);
-        await reader.cancel().catch(() => undefined);
+        await stopReader(reader);
         throw new DOMException("Aborted", "AbortError");
       }
       if (step === "timeout") {
         reading.catch(() => undefined);
-        await reader.cancel().catch(() => undefined);
+        await stopReader(reader);
         break;
       }
-      if (step.done) break;
-      buffer += decoder.decode(step.value, { stream: true });
-      const parts = buffer.split("\n\n");
-      buffer = parts.pop() ?? "";
-      for (const part of parts) {
-        const line = part.split("\n").find((item) => item.startsWith("data:"));
-        if (!line) continue;
-        let data: Record<string, unknown> = {};
-        try {
-          data = JSON.parse(line.slice(5).trim()) as Record<string, unknown>;
-        } catch {
-          continue;
-        }
-        if (typeof data.error === "string") {
-          if (!accumulated) throw new Error(data.error);
-          stop = true;
-          break;
-        }
-        if (typeof data.text === "string") {
-          accumulated = data.text;
-          onText(data.text);
-        }
-        if (data.message && typeof data.message === "object") message = data.message as Record<string, unknown>;
+      const bytes = step.value ? decoder.decode(step.value, { stream: !step.done }) : "";
+      if (step.done) {
+        take(`${bytes}${decoder.decode()}`);
+        if (buffer.trim()) take("\n\n");
+        break;
       }
+      take(bytes);
     }
   } catch (caught) {
     if (signal?.aborted) throw caught;
     if (caught instanceof Error && /souffle|429/.test(caught.message)) throw caught;
-    if (!accumulated) return fallback();
+    if (!accumulated && !message) throw caught instanceof Error ? caught : new Error("Le coach n’a pas pu répondre.");
   }
   if (message) return { message };
   if (accumulated) return { message: { role: "assistant", content: accumulated } };
-  return fallback();
+  throw new Error("Le coach n’a pas pu répondre.");
+}
+
+function finishSse(raw: string, onText: (text: string) => void): Record<string, unknown> {
+  const applied = applySse(`${raw}\n\n`, onText);
+  if (applied.error && !applied.accumulated) throw new Error(applied.error);
+  if (applied.message) return { message: applied.message };
+  if (applied.accumulated) return { message: { role: "assistant", content: applied.accumulated } };
+  throw new Error("Le coach n’a pas pu répondre.");
+}
+
+function applySse(buffer: string, onText: (text: string) => void): {
+  rest: string;
+  accumulated: string;
+  message: Record<string, unknown> | null;
+  error: string | null;
+} {
+  const parts = buffer.split("\n\n");
+  const rest = parts.pop() ?? "";
+  let accumulated = "";
+  let message: Record<string, unknown> | null = null;
+  let error: string | null = null;
+  for (const part of parts) {
+    const line = part.split("\n").find((item) => item.startsWith("data:"));
+    if (!line) continue;
+    let data: Record<string, unknown> = {};
+    try {
+      data = JSON.parse(line.slice(5).trim()) as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+    if (typeof data.error === "string") error = data.error;
+    if (typeof data.text === "string") {
+      accumulated = data.text;
+      onText(data.text);
+    }
+    if (data.message && typeof data.message === "object") message = data.message as Record<string, unknown>;
+  }
+  return { rest, accumulated, message, error };
+}
+
+async function stopReader(reader: ReadableStreamDefaultReader<Uint8Array>) {
+  await Promise.race([reader.cancel().catch(() => undefined), new Promise((resolve) => setTimeout(resolve, 300))]);
 }
 
 function aborted(signal?: AbortSignal): Promise<"aborted"> {
