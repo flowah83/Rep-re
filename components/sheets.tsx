@@ -15,6 +15,7 @@ import { INSTALL_LINE, backupProblem, isBackup, sessionsForBackup } from "@/lib/
 import { PRESENTATION } from "@/lib/identity";
 import { IMPORT_LIMIT, parseDecimalDraft } from "@/lib/contract";
 import { CATALOG, PATTERN_LABEL } from "@/lib/exercises";
+import { GEAR, GEAR_LABEL, buildSportSession, gearAllows, moveItem, readTemplates, sportPace, substituteExercise, toggleGear } from "@/lib/useful";
 import { importSummary, type ImportPreview } from "@/lib/history";
 import { applySessionEdit } from "@/lib/session-edit";
 import { plateGlance } from "@/lib/display";
@@ -36,6 +37,7 @@ export function Sheets() {
         {app.sheet === "edit" ? <EditSheet /> : null}
         {app.sheet === "plates" ? <PlatesSheet /> : null}
         {app.sheet === "library" ? <LibrarySheet /> : null}
+        {app.sheet === "course" || app.sheet === "natation" ? <SportSheet kind={app.sheet} /> : null}
       </DialogContent>
     </Dialog>
   );
@@ -166,6 +168,14 @@ function SettingsSheet() {
       </button>
       <button type="button" className="rowline" onClick={() => { app.setEditId(null); app.setSheet("edit"); }}>
         <b>Créer une séance</b>
+        <span aria-hidden="true">›</span>
+      </button>
+      <button type="button" className="rowline" data-testid="open-course" onClick={() => app.setSheet("course")}>
+        <b>Noter une course</b>
+        <span aria-hidden="true">›</span>
+      </button>
+      <button type="button" className="rowline" data-testid="open-swim" onClick={() => app.setSheet("natation")}>
+        <b>Noter une natation</b>
         <span aria-hidden="true">›</span>
       </button>
       <button type="button" className="rowline" onClick={() => app.setSheet("library")}>
@@ -716,18 +726,62 @@ function EditSheet() {
         Note
         <Textarea value={note} onChange={(event) => setNote(event.target.value)} />
       </label>
-      {rows.map((row, index) => (
+      {!existing && readTemplates(app.settings.templates).length ? (
+        <label className="fieldlabel">
+          Modèle
+          <select
+            className="select"
+            data-testid="template-pick"
+            defaultValue=""
+            onChange={(event) => {
+              const template = readTemplates(app.settings.templates).find((item) => item.id === event.target.value);
+              if (!template) return;
+              setTitle(template.title);
+              setRows(template.exercises.map((exercise) => ({
+                key: uid(),
+                name: exercise.name,
+                sets: exercise.sets,
+                reps: exercise.reps,
+                load: exercise.loadKg,
+                rest: exercise.restSec,
+              })));
+            }}
+          >
+            <option value="">Partir de zéro</option>
+            {readTemplates(app.settings.templates).map((item) => (
+              <option key={item.id} value={item.id}>{item.title}</option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      {rows.map((row, index) => {
+        const alt = substituteExercise(row.name, app.settings.equipment);
+        return (
         <div className="exedit" key={row.key}>
           <div className="top">
             <b>Exercice {index + 1}</b>
-            <button type="button" className="linkish" onClick={() => setRows(rows.filter((item) => item.key !== row.key))}>
-              Retirer
-            </button>
+            <span className="linkrow">
+              <button type="button" className="linkish" aria-label={`Monter l’exercice ${index + 1}`} disabled={index === 0} onClick={() => setRows((current) => moveItem(current, index, -1))}>
+                Monter
+              </button>
+              <button type="button" className="linkish" aria-label={`Descendre l’exercice ${index + 1}`} disabled={index === rows.length - 1} onClick={() => setRows((current) => moveItem(current, index, 1))}>
+                Descendre
+              </button>
+              <button type="button" className="linkish" onClick={() => setRows(rows.filter((item) => item.key !== row.key))}>
+                Retirer
+              </button>
+            </span>
           </div>
           <label className="fieldlabel">
             Exercice
             <Input list="catalogue" aria-label={`Exercice ${index + 1}`} value={row.name} placeholder="Nom de l’exercice" onChange={(event) => update(index, { name: event.target.value })} />
           </label>
+          {alt ? (
+            <p className="fine">
+              {alt.reason}{" "}
+              <button type="button" className="linkish" onClick={() => update(index, { name: alt.name })}>Utiliser</button>
+            </p>
+          ) : null}
           <div className="row2">
             <Num label="Séries" integer where={`séries de l’exercice ${index + 1}`} value={row.sets} onIssue={(message) => flag(row.key, "sets", message)} onChange={(sets) => update(index, { sets })} />
             <Num label="Répétitions" integer where={`répétitions de l’exercice ${index + 1}`} value={row.reps} onIssue={(message) => flag(row.key, "reps", message)} onChange={(reps) => update(index, { reps })} />
@@ -736,9 +790,10 @@ function EditSheet() {
           </div>
           {chargeField(row.name).unit === "kg" ? <p className="fine">Barre comprise.</p> : null}
         </div>
-      ))}
+        );
+      })}
       <datalist id="catalogue">
-        {CATALOG.map((exercise) => (
+        {CATALOG.filter((exercise) => gearAllows(exercise.equipment, app.settings.equipment)).map((exercise) => (
           <option key={exercise.id} value={exercise.name} />
         ))}
         {app.customs.map((exercise) => (
@@ -911,6 +966,54 @@ function parseMinutes(raw: string): { kind: "empty" } | { kind: "partial" } | { 
   return { kind: "number", seconds: Math.round(parsed.value * 60) };
 }
 
+function SportSheet({ kind }: { kind: "course" | "natation" }) {
+  const app = useApp();
+  const swim = kind === "natation";
+  const [date, setDate] = useState(app.selectedDate);
+  const [duration, setDuration] = useState<number | null>(30);
+  const [distance, setDistance] = useState<number | null>(swim ? 1500 : 5);
+  const [rpe, setRpe] = useState<number | null>(5);
+  const [error, setError] = useState<string | null>(null);
+  const pace = duration != null && distance != null ? sportPace(kind, distance, duration) : null;
+  return (
+    <>
+      <button type="button" className="navline" onClick={() => app.setSheet("settings")}>‹ Réglages</button>
+      <DialogTitle asChild><h2>{swim ? "Natation" : "Course"}</h2></DialogTitle>
+      <DialogDescription asChild>
+        <p className="lead">Durée, distance et ressenti. Pas de note de forme. La séance se range dans le carnet, le même jour que la salle. Une montre, ou un autre téléphone, viendra plus tard.</p>
+      </DialogDescription>
+      <label className="fieldlabel">
+        Date
+        <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+      </label>
+      <div className="row2">
+        <Num label="Durée" unit="min" where="durée" value={duration} onChange={setDuration} />
+        <Num label="Distance" unit={swim ? "m" : "km"} where="distance" value={distance} onChange={setDistance} />
+        <Num label="Ressenti" integer where="ressenti" value={rpe} onChange={setRpe} />
+      </div>
+      {pace ? <p className="fine" data-testid="sport-pace">Allure {pace}. Ce n’est pas un score.</p> : null}
+      {error ? <p className="err" role="alert">{error}</p> : null}
+      <Button
+        onClick={() => {
+          const result = buildSportSession({ kind, date, durationMin: duration, distance, rpe });
+          if ("error" in result) {
+            setError(result.error);
+            return;
+          }
+          void app.saveSession(result.session, "confirmed").then(() => {
+            app.setSelectedDate(date);
+            app.setSheet(null);
+            app.setTab("today");
+            app.flash(swim ? "Natation notée." : "Course notée.");
+          });
+        }}
+      >
+        Enregistrer
+      </Button>
+    </>
+  );
+}
+
 function PlatesSheet() {
   const app = useApp();
   const result = platesPerSide(app.platesKg, app.settings.barKg);
@@ -955,18 +1058,39 @@ function LibrarySheet() {
   const [name, setName] = useState("");
   const [pattern, setPattern] = useState<Pattern>("hpush");
   const [cues, setCues] = useState("");
+  const gear = app.settings.equipment;
   const items = useMemo(() => {
     const key = query.trim().toLowerCase();
-    const catalog = CATALOG.map((exercise) => ({ name: exercise.name, detail: PATTERN_LABEL[exercise.pattern] }));
+    const catalog = CATALOG.filter((exercise) => gearAllows(exercise.equipment, gear)).map((exercise) => ({
+      name: exercise.name,
+      detail: `${PATTERN_LABEL[exercise.pattern]} · ${GEAR_LABEL[exercise.equipment]}`,
+    }));
     const custom = app.customs.map((exercise) => ({ name: exercise.name, detail: `${PATTERN_LABEL[exercise.pattern]} · à vous` }));
     return [...custom, ...catalog].filter((item) => !key || item.name.toLowerCase().includes(key));
-  }, [app.customs, query]);
+  }, [app.customs, gear, query]);
   return (
     <>
       <DialogTitle asChild><h2>Exercices</h2></DialogTitle>
       <DialogDescription asChild>
         <p className="lead">Les exercices de base sont déjà là. Vous pouvez en ajouter un, avec vos repères.</p>
       </DialogDescription>
+      <div className="chips wrap" aria-label="Matériel disponible">
+        {GEAR.map((item) => {
+          const on = !gear?.length || gear.includes(item);
+          return (
+            <button
+              key={item}
+              type="button"
+              className={on ? "on" : ""}
+              aria-pressed={on}
+              onClick={() => void app.updateSettings({ equipment: toggleGear(gear, item) })}
+            >
+              {GEAR_LABEL[item]}
+            </button>
+          );
+        })}
+      </div>
+      <p className="fine">Décochez ce que vous n’avez pas. Le même geste peut être proposé avec un autre matériel.</p>
       <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher" aria-label="Rechercher un exercice" />
       <div style={{ maxHeight: 220, overflow: "auto", marginTop: 8 }}>
         {items.map((item) => (

@@ -1,6 +1,7 @@
 import {
   buildAiCall,
   coachFailure,
+  FIRST_TOKEN_MS,
   foldGeminiChunk,
   messageFromGeminiBody,
   modelChain,
@@ -82,10 +83,10 @@ export async function handleRequest(request: Request, env: Env, fetchImpl: Fetch
   }
 }
 
-const MODEL_ATTEMPT_MS = 15_000;
+const MODEL_ATTEMPT_MS = FIRST_TOKEN_MS;
 const COACH_BUDGET_MS = 40_000;
 
-/** Délai d’un essai. Court dans les tests, 15 s sinon, pour laisser la place au modèle suivant. */
+/** Délai avant le premier mot. Court dans les tests, 5 s sinon, puis le modèle suivant. */
 function attemptLimit(env: Env): number {
   const value = Number(env.STREAM_DEADLINE_MS);
   if (Number.isFinite(value) && value >= 20 && value < 1_000) return value;

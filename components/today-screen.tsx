@@ -103,6 +103,10 @@ export function TodayScreen() {
           >
             Créer une séance
           </button>
+          <div className="linkrow">
+            <button type="button" className="linkish" onClick={() => app.setSheet("course")}>Noter une course</button>
+            <button type="button" className="linkish" onClick={() => app.setSheet("natation")}>Noter une natation</button>
+          </div>
         </article>
       ) : (
         visible.map((session, index) => (
