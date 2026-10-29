@@ -40,6 +40,7 @@ export function RepereApp() {
 function Shell() {
   const app = useApp();
   useOverlayHistory(Boolean(app.overlay), app.closeOverlay);
+  useKeyboardInset();
   if (!app.settings.onboarded) return <Onboarding />;
   return (
     <div className="app" data-testid="app-ready">
@@ -102,6 +103,33 @@ function Shell() {
       <ScrollEdge />
     </div>
   );
+}
+
+/** Le clavier ne doit pas couvrir le champ en cours. L’inset suit le visualViewport. */
+function useKeyboardInset() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const apply = () => {
+      const viewport = window.visualViewport;
+      const inset = viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0;
+      root.style.setProperty("--keyboard-inset", `${Math.round(inset)}px`);
+    };
+    const onFocus = (event: FocusEvent) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (!target.matches("input, textarea, select")) return;
+      window.setTimeout(() => target.scrollIntoView({ block: "center" }), 60);
+    };
+    apply();
+    window.visualViewport?.addEventListener("resize", apply);
+    window.visualViewport?.addEventListener("scroll", apply);
+    document.addEventListener("focusin", onFocus);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", apply);
+      window.visualViewport?.removeEventListener("scroll", apply);
+      document.removeEventListener("focusin", onFocus);
+    };
+  }, []);
 }
 
 function Onboarding() {

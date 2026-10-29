@@ -121,6 +121,49 @@ export function foldGeminiChunk(state: StreamFold, data: unknown): StreamFold {
   return { text, calls };
 }
 
+/**
+ * Extrait les objets JSON complets d’un flux Gemini (objet unique ou tableau),
+ * sans attendre la fin du tableau.
+ */
+export function takeJsonValues(input: string): { values: unknown[]; rest: string } {
+  const values: unknown[] = [];
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let index = 0; index < input.length; index += 1) {
+    const char = input[index];
+    if (inString) {
+      if (escape) escape = false;
+      else if (char === "\\") escape = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+    if (char === "{") {
+      if (depth === 0) start = index;
+      depth += 1;
+      continue;
+    }
+    if (char === "}" && depth > 0) {
+      depth -= 1;
+      if (depth === 0 && start >= 0) {
+        try {
+          values.push(JSON.parse(input.slice(start, index + 1)));
+          start = -1;
+        } catch {
+          return { values, rest: input.slice(start) };
+        }
+      }
+    }
+  }
+  if (start >= 0) return { values, rest: input.slice(start) };
+  return { values, rest: "" };
+}
+
 export function streamUrl(call: AiCall): string {
   if (call.provider !== "gemini") return call.url;
   return call.url.replace(":generateContent", ":streamGenerateContent?alt=sse");

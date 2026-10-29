@@ -53,6 +53,9 @@ describe("données d’accueil", () => {
     expect(sessionsForHome([demo, real])).toEqual([real]);
     const home = buildHome([demo, real], TODAY);
     expect(home.bench?.kg).toBe(46.7);
+    expect(home.bench?.bestSet).toEqual({ loadKg: 40, reps: 5 });
+    expect(home.bench?.aria).toMatch(/max estimé/);
+    expect(home.bench?.aria).toMatch(/meilleure série/);
     expect(sessionsForHome([demo])).toEqual([demo]);
   });
 
