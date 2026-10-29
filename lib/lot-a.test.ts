@@ -204,7 +204,7 @@ describe("lot A, scénarios 1 à 23", () => {
   it("6 et 11 et 12. une charge inconnue, une séance partielle ou une autre unité ne haussent pas", () => {
     const unknown = suggestForExercise(
       exercise({ planned: { sets: 3, reps: 8, loadKg: null, restSec: 90, rpe: null }, sets: [] }),
-      [session({ date: "2026-10-01", exercises: [exercise({ sets: [set({ loadKg: null, reps: 8, rpe: 7 })] })] })],
+      [session({ date: "2026-10-01", exercises: [exercise({ planned: { sets: 1, reps: 8, loadKg: null, restSec: 90, rpe: null }, sets: [set({ loadKg: null, reps: 8, rpe: 7 })] })] })],
     );
     expect(unknown?.changesPlan).toBe(false);
     expect(unknown?.reason).toMatch(/Charge inconnue/);
@@ -212,7 +212,7 @@ describe("lot A, scénarios 1 à 23", () => {
 
     const body = suggestForExercise(
       exercise({ unit: "corps", planned: { sets: 1, reps: 8, loadKg: null, restSec: 90, rpe: null } }),
-      [session({ date: "2026-10-01", exercises: [exercise({ unit: "corps", sets: [set({ loadKg: null, reps: 8, rpe: 7, unit: "corps" })] })] })],
+      [session({ date: "2026-10-01", exercises: [exercise({ unit: "corps", planned: { sets: 1, reps: 8, loadKg: null, restSec: 90, rpe: null }, sets: [set({ loadKg: null, reps: 8, rpe: 7, unit: "corps" })] })] })],
     );
     expect(body?.reps).toBe(9);
     expect(body?.reason).toMatch(/Poids du corps/);
@@ -237,7 +237,7 @@ describe("lot A, scénarios 1 à 23", () => {
 
     const mismatch = suggestForExercise(
       exercise({ unit: "kg", planned: { sets: 1, reps: 10, loadKg: 14, restSec: 90, rpe: 8 } }),
-      [session({ date: "2026-10-01", exercises: [exercise({ unit: "kg/main", sets: [set({ loadKg: 14, reps: 10, rpe: 8, unit: "kg/main" })] })] })],
+      [session({ date: "2026-10-01", exercises: [exercise({ unit: "kg/main", planned: { sets: 1, reps: 10, loadKg: 14, restSec: 90, rpe: 8 }, sets: [set({ loadKg: 14, reps: 10, rpe: 8, unit: "kg/main" })] })] })],
     );
     expect(mismatch?.changesPlan).toBe(false);
     expect(mismatch?.reason).toMatch(/unités/);

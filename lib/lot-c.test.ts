@@ -62,7 +62,7 @@ describe("lot C", () => {
     expect(coachPhase({ configured: false, busy: false, down: true })).toEqual({ phase: "non-configure", label: "Non configuré" });
     expect(coachPhase({ configured: true, busy: true, down: false }).label).toBe("Réponse en cours");
     expect(coachPhase({ configured: true, busy: false, down: true }).label).toBe("Indisponible");
-    expect(coachPhase({ configured: true, busy: false, down: false }).label).toBe("Prêt");
+    expect(coachPhase({ configured: true, busy: false, down: false }).label).toBe("Configuration présente");
   });
 
   it("laisse de côté les séances anciennes sans couper le contexte", () => {

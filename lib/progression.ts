@@ -56,11 +56,15 @@ export function suggestForExercise(exercise: ExerciseLog, history: Session[], sk
   const hit = minReps >= target;
   const effort = effortOf(scored);
   const unit = exercise.unit ?? scored.find((set) => set.unit)?.unit ?? null;
-  const notedEffort = scored.some((set) => set.rpe != null || set.rir != null);
+  const notedEffort = scored.length > 0 && scored.every((set) => set.rpe != null || set.rir != null);
   const plannedHard = (exercise.planned.rpe ?? 0) >= 8;
   const block = trainingBlock(exercise, history, skipSessionId);
+  const floor = target;
+  const ceiling = floor <= 5 ? floor : floor + 2;
+  const when = recentDate(exercise.name, history, skipSessionId);
 
   let nextLoad = load;
+  let nextReps = target;
   let reason: string;
   if (block === "stall") {
     nextLoad = deloadLoad(load, step);
@@ -68,12 +72,16 @@ export function suggestForExercise(exercise: ExerciseLog, history: Session[], sk
   } else if (block === "cadence" && hit && !effort.blocksIncrease && !(plannedHard && !notedEffort)) {
     nextLoad = deloadLoad(load, step);
     reason = `Trois séances réussies. Suggestion : ${formatLoad(nextLoad, unit)} × ${target}.`;
+  } else if (hit && minReps < ceiling && !effort.blocksIncrease && !(plannedHard && !notedEffort)) {
+    nextReps = minReps + 1;
+    reason = `On monte d’abord les répétitions. ${when} : ${minReps} répétitions. Suggestion : ${formatLoad(load, unit)} × ${nextReps}.`;
   } else if (hit && !effort.blocksIncrease && !(plannedHard && !notedEffort)) {
     nextLoad = snap(load + step, step);
+    nextReps = floor;
     const shown = formatLoad(nextLoad, unit);
     reason = effort.easy
-      ? `Toutes les séries ont été faciles. Suggestion : ${shown} × ${target}.`
-      : `Objectif de répétitions atteint. Suggestion : ${shown} × ${target}.`;
+      ? `Toutes les séries ont été faciles. Suggestion : ${shown} × ${nextReps}.`
+      : `La fourchette de répétitions est atteinte. Suggestion : ${shown} × ${nextReps}.`;
   } else if (!hit && effort.grind) {
     nextLoad = snap(Math.max(0, load - step), step);
     if (nextLoad >= load - 0.01) nextLoad = snap(Math.max(0, load - step), step);
@@ -86,7 +94,7 @@ export function suggestForExercise(exercise: ExerciseLog, history: Session[], sk
     reason = `La dernière fois, les répétitions n’y étaient pas toutes. Gardez ${formatLoad(load, unit)} et visez ${target}.`;
   }
 
-  return pack(exercise, nextLoad, target, unit, mentionPlan(exercise, unit, reason));
+  return pack(exercise, nextLoad, nextReps, unit, mentionPlan(exercise, unit, reason));
 }
 
 export function applySuggestion(session: Session, suggestion: Suggestion): Session {
@@ -333,9 +341,19 @@ export function startOffer(session: Session, history: Session[]): StartOffer {
   if (keepsCoachPlan(session)) return { kind: "hold" };
   const existing = loadProgression(session.id);
   if (existing && existing.choice !== "pending") return { kind: "plain" };
-  const items = buildAdjustments(session, history).filter(loadMoved);
+  const items = buildAdjustments(session, history).filter(proposalMoved);
   if (!items.length) return { kind: "plain" };
   const first = items[0];
+  const loadChanged = first.fromLoadKg != null && first.toLoadKg != null && Math.abs(first.toLoadKg - first.fromLoadKg) > 0.01;
+  const repsChanged = first.fromReps != null && first.toReps != null && first.fromReps !== first.toReps;
+  if (items.length === 1 && repsChanged && !loadChanged) {
+    return {
+      kind: "choice",
+      upLabel: `Commencer à ${first.toReps} répétitions`,
+      keepLabel: "Garder le plan",
+      summary: `${first.name} peut passer de ${first.fromReps} à ${first.toReps} répétitions, sans changer la charge. ${PROGRAM_SENTENCE}`,
+    };
+  }
   if (items.length === 1 && first.fromLoadKg != null && first.toLoadKg != null) {
     const lighter = first.toLoadKg + 0.01 < first.fromLoadKg;
     return {
@@ -381,7 +399,8 @@ export function programPreview(
   const reps = suggestion.reps;
   if (reps == null || reps <= 0) return null;
   const step = exercise.stepKg > 0 ? exercise.stepKg : 2.5;
-  const top = reps <= 5 ? reps : reps + 2;
+  const floor = exercise.planned.reps != null && exercise.planned.reps > 0 ? exercise.planned.reps : reps;
+  const top = floor <= 5 ? floor : floor + 2;
   const block = trainingBlock(exercise, history, options.skipSessionId);
   const unit = exercise.unit ?? null;
   let load = suggestion?.loadKg ?? exercise.planned.loadKg;
@@ -389,12 +408,12 @@ export function programPreview(
   if (block && exercise.planned.loadKg != null) {
     const back = exercise.planned.loadKg;
     upcoming.push(programStep(back, reps, unit));
-    const third = advanceProgram(back, reps, reps, top, step);
+    const third = advanceProgram(back, reps, floor, top, step);
     upcoming.push(programStep(third.loadKg, third.reps, unit));
   } else {
     let cursorReps = reps;
     for (let index = 0; index < 2; index += 1) {
-      const next = advanceProgram(load, cursorReps, reps, top, step);
+      const next = advanceProgram(load, cursorReps, floor, top, step);
       load = next.loadKg;
       cursorReps = next.reps;
       upcoming.push(programStep(load, cursorReps, unit));
@@ -404,9 +423,9 @@ export function programPreview(
   return { sentence, upcoming };
 }
 
-function loadMoved(item: Adjustment): boolean {
-  if (item.fromLoadKg != null && item.toLoadKg != null) return Math.abs(item.toLoadKg - item.fromLoadKg) > 0.01;
-  return isIncrease(item);
+function proposalMoved(item: Adjustment): boolean {
+  if (item.fromLoadKg != null && item.toLoadKg != null && Math.abs(item.toLoadKg - item.fromLoadKg) > 0.01) return true;
+  return item.fromReps != null && item.toReps != null && item.fromReps !== item.toReps;
 }
 
 function programStep(loadKg: number | null, reps: number, unit: string | null): ProgramStep {
@@ -461,10 +480,10 @@ function isRecord(value: unknown): value is ProgressionRecord {
 }
 
 function loggedIsPartial(logged: ExerciseLog): boolean {
-  if (logged.sets.some((set) => set.skipped)) return true;
   const doneHard = logged.sets.filter(isHardSet).length;
-  const open = logged.sets.some((set) => !set.warmup && !set.done && !set.skipped);
-  return Boolean(open && logged.planned.sets > doneHard);
+  if (logged.sets.some((set) => set.skipped)) return true;
+  if (logged.planned.sets > doneHard) return true;
+  return logged.sets.some((set) => !set.warmup && !set.done && !set.skipped);
 }
 
 function abstain(exercise: ExerciseLog, reason: string): Suggestion {
@@ -604,10 +623,25 @@ function effortOf(sets: SetLog[]): { blocksIncrease: boolean; grind: boolean; ea
   const maxRpe = rpes.length ? Math.max(...rpes) : null;
   const grind = (minRir != null && minRir <= 0) || (maxRpe != null && maxRpe >= 9.5);
   const blocksIncrease = grind || (minRir != null && minRir <= 0) || (maxRpe != null && maxRpe >= 9);
-  const easy =
-    !blocksIncrease &&
-    ((minRir != null && minRir >= 2 && (maxRpe == null || maxRpe <= 8)) || (minRir == null && maxRpe != null && maxRpe <= 7));
+  const easy = sets.length > 0 && sets.every((set) => effortNotedEasy(set));
   return { blocksIncrease, grind, easy };
+}
+
+function effortNotedEasy(set: SetLog): boolean {
+  if (set.rpe == null && set.rir == null) return false;
+  if (set.rir != null && set.rir < 2) return false;
+  if (set.rpe != null && set.rpe > 7) return false;
+  return true;
+}
+
+function recentDate(name: string, history: Session[], skipSessionId?: string): string {
+  const key = normalizeExerciseKey(name);
+  const session = usableHistory(history)
+    .filter((item) => item.id !== skipSessionId && item.status === "done")
+    .filter((item) => item.exercises.some((exercise) => normalizeExerciseKey(exercise.name) === key && exercise.sets.some(isHardSet)))
+    .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+  if (!session) return "La dernière séance";
+  return `Le ${session.date}`;
 }
 
 function modeLoad(loads: number[]): number {

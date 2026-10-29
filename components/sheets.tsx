@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { CALENDAR_NAME } from "@/lib/coach";
-import { DEFAULT_COACH_URL, coachUrlIssue, loadCoachConfig, maskSecret, normalizeCoachToken, normalizeCoachUrl, saveCoachConfig, testCoachConnection } from "@/lib/coach-store";
+import { DEFAULT_COACH_URL, coachUrlIssue, loadCoachConfig, markCoachVerified, maskSecret, normalizeCoachToken, normalizeCoachUrl, saveCoachConfig, testCoachConnection } from "@/lib/coach-store";
 import { unitPhrase } from "@/lib/display";
 import { unambiguousUnit } from "@/lib/unit";
 import { readProgressionRaw } from "@/lib/progression";
@@ -304,7 +304,10 @@ function CoachSettings() {
           setProbing(true);
           setProbe(null);
           void testCoachConnection({ url, token })
-            .then((result) => setProbe(result))
+            .then((result) => {
+              setProbe(result);
+              if (result.ok) markCoachVerified({ url, token });
+            })
             .finally(() => setProbing(false));
         }}
       >
@@ -344,9 +347,17 @@ function PartageSheet() {
         <h3>Jamais envoyé</h3>
         <ul>
           <li>Notes pour vous.</li>
-          <li>Code secret.{mask ? ` Ici il reste ${mask}.` : ""}</li>
+          <li>Code secret.{mask ? ` Ici il reste ${mask}.` : ""} Il authentifie la requête. Il n’entre pas dans le texte du modèle.</li>
           <li>Séances d’exemple.</li>
           <li>Anciennes séances manquées, qui ne sont plus à venir.</li>
+        </ul>
+      </div>
+      <div className="card flat" data-testid="coach-privacy">
+        <h3>Service</h3>
+        <ul>
+          <li>Fournisseur : le modèle contacté par le service du coach. Repère ne choisit pas une autre destination.</li>
+          <li>Catégories : séances utiles, charges, répétitions, plan, mémoire que vous avez autorisée. Les notes pour le coach sont nommées comme telles.</li>
+          <li>Durée : la conversation reste sur ce téléphone. Repère n’allonge pas la conservation du fournisseur.</li>
         </ul>
       </div>
       <p className="fine">La météo n’emporte rien de cette liste. Désactivé, le coach n’envoie plus rien. Le carnet continue.</p>
