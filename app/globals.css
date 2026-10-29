@@ -833,13 +833,24 @@ h1.title {
   width: 52px;
   height: 52px;
   border-radius: 16px;
-  background: #e8925a;
-  color: #1b120c;
+  background: #b75d36;
+  color: #f3efe6;
   display: grid;
   place-items: center;
-  font-weight: 700;
-  font-size: 1.75rem;
-  letter-spacing: -0.04em;
+  font-weight: 560;
+  font-size: 1.85rem;
+  letter-spacing: -0.05em;
+  position: relative;
+}
+.onboard .markr::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f3efe6;
+  right: 7px;
+  bottom: 9px;
 }
 .onboard h1 { font-size: 2.125rem; letter-spacing: -0.04em; font-weight: 640; line-height: 1.05; margin: 28px 0 0; }
 .onboard p { font-size: 1.0625rem; line-height: 1.4; color: var(--ink-soft); margin: 12px 0 0; }
@@ -2082,6 +2093,15 @@ button.home-card { appearance: none; }
   border: 0;
 }
 .mbars li { position: relative; }
+.day-repere { margin: 0 0 8px; color: var(--ink-soft); font-size: 0.875rem; line-height: 1.35; }
+.day-repere span, .cap b { color: var(--ink); font-weight: 640; }
+.cap { margin: 12px 0 0; font-size: 0.875rem; line-height: 1.35; color: var(--ink-soft); }
+.keepsake { margin: 8px 0 4px; }
+.keepsake h2 { font-size: 1.15rem; letter-spacing: -0.03em; margin: 0 0 4px; }
+.keepsake p { margin: 0 0 4px; color: var(--ink-soft); }
+.install-offer h2 { font-size: 1.35rem; letter-spacing: -0.03em; margin: 2px 0 6px; }
+.install-offer p { margin: 0 0 8px; }
+.onboard .eyebrow { margin-top: 14px; }
 
 .estbadge {
   display: inline-block;

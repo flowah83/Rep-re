@@ -12,6 +12,7 @@ import { readProgressionRaw } from "@/lib/progression";
 import { exportPlanSnapshots } from "@/lib/snapshot";
 import { toCsv } from "@/lib/db";
 import { INSTALL_LINE, backupProblem, isBackup, sessionsForBackup } from "@/lib/backup";
+import { PRESENTATION } from "@/lib/identity";
 import { IMPORT_LIMIT, parseDecimalDraft } from "@/lib/contract";
 import { CATALOG, PATTERN_LABEL } from "@/lib/exercises";
 import { importSummary, type ImportPreview } from "@/lib/history";
@@ -290,6 +291,8 @@ function StayLeave() {
   const mask = maskSecret(coach.token);
   return (
     <div data-testid="stay-leave">
+      <p className="eyebrow">Repère</p>
+      <p>{PRESENTATION}</p>
       <p>Le carnet reste sur ce téléphone. La météo, si elle est affichée, et le coach, si vous lui écrivez, utilisent un service à part. Rien ne change sans votre accord.</p>
       <h3>Météo</h3>
       <p>Lieu approximatif seulement. Aucune séance n’est jointe.</p>

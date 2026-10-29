@@ -6,6 +6,7 @@ import { appendCoachNotices } from "@/lib/coach";
 import { markCoachNoticesSent, pendingCoachNoticeLines } from "@/lib/coach-store";
 import { cardioSummary } from "@/lib/history";
 import { compareExercise, comparisonPriors, formatPerformedSet, reportJson, sessionEffort, summaryText, versus, type CompareKind } from "@/lib/session";
+import { keepsake } from "@/lib/identity";
 import { formatDuration, formatLong } from "@/lib/utils";
 
 export function BilanScreen({ id }: { id: string }) {
@@ -18,6 +19,7 @@ export function BilanScreen({ id }: { id: string }) {
   const rows = session.exercises.map((exercise) => ({ exercise, ...compareExercise(exercise, prior) }));
   const text = appendCoachNotices(summaryText(session, prior), pendingCoachNoticeLines());
   const effort = sessionEffort(session);
+  const kept = keepsake(session);
   const minutes = effort.minutes != null ? formatDuration(effort.minutes * 60000) : "—";
 
   const share = async () => {
@@ -62,11 +64,12 @@ export function BilanScreen({ id }: { id: string }) {
           {formatLong(session.date)}
           {fresh ? ` · ${session.title}` : ""}
         </p>
-        {effort.partial ? (
-          <p className="partial" data-testid="bilan-partial">
-            Séance partielle. Elle n’est pas comptée comme une séance complète.
-          </p>
-        ) : null}
+        <section className="keepsake" data-testid="keepsake">
+          <h2>{kept.title}</h2>
+          {kept.facts.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </section>
         <div className="stats">
           <div className="stat">
             <b className="num">{minutes}</b>
@@ -148,7 +151,7 @@ export function BilanScreen({ id }: { id: string }) {
           }
         />
         <label className="fieldlabel" htmlFor="me-note">
-          Note pour vous
+          Une note, si vous voulez
         </label>
         <textarea
           id="me-note"

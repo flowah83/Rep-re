@@ -1,7 +1,7 @@
 {
   "name": "Repère",
   "short_name": "Repère",
-  "description": "Carnet de musculation, sur votre téléphone.",
+  "description": "Retrouvez vos charges. Notez votre séance. Voyez ce qui progresse.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
