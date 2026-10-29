@@ -15,7 +15,7 @@ import {
   type StreamFold,
 } from "./ai";
 import { calendarObjectName } from "../../lib/calendar-apply";
-import { isChefSportTitle } from "../../lib/coach";
+import { isChefSportTitle, peelContextEcho, visibleCoachText } from "../../lib/coach";
 import {
   basicHeader,
   buildIcs,
@@ -81,19 +81,28 @@ export async function handleRequest(request: Request, env: Env, fetchImpl: Fetch
   }
 }
 
-const DEFAULT_STREAM_DEADLINE_MS = 45_000;
+const MODEL_ATTEMPT_MS = 15_000;
+const COACH_BUDGET_MS = 40_000;
 
-function streamDeadline(env: Env): number {
+/** Délai d’un essai. Court dans les tests, 15 s sinon, pour laisser la place au modèle suivant. */
+function attemptLimit(env: Env): number {
   const value = Number(env.STREAM_DEADLINE_MS);
-  if (Number.isFinite(value) && value >= 20 && value <= 60_000) return value;
-  return DEFAULT_STREAM_DEADLINE_MS;
+  if (Number.isFinite(value) && value >= 20 && value < 1_000) return value;
+  return MODEL_ATTEMPT_MS;
+}
+
+/** Sous le délai du téléphone (45 s). Les essais courts des tests gardent toute la chaîne. */
+function coachBudget(env: Env): number {
+  const attempt = attemptLimit(env);
+  if (attempt < 1_000) return attempt * 6;
+  return COACH_BUDGET_MS;
 }
 
 async function coachStream(request: Request, env: Env, fetchImpl: FetchLike): Promise<Response> {
   const body = await readJson(request);
   const encoder = new TextEncoder();
   const upstream = new AbortController();
-  const deadline = streamDeadline(env);
+  const clock = { started: Date.now(), budget: coachBudget(env), attempt: attemptLimit(env) };
   const stream = new ReadableStream({
     async start(controller) {
       const push = (payload: unknown) => {
@@ -106,7 +115,7 @@ async function coachStream(request: Request, env: Env, fetchImpl: FetchLike): Pr
       push({ ready: true });
       const beat = setInterval(() => push({ ready: true }), 5000);
       try {
-        const message = await answerForStream(env, body, fetchImpl, push, upstream.signal, deadline);
+        const message = await answerForStream(env, body, fetchImpl, push, upstream.signal, clock);
         if (upstream.signal.aborted) return;
         push({ message });
         controller.close();
@@ -137,28 +146,38 @@ async function coachStream(request: Request, env: Env, fetchImpl: FetchLike): Pr
   });
 }
 
+type AttemptClock = { started: number; budget: number; attempt: number };
+
+function timeLeft(clock: AttemptClock): number {
+  return clock.budget - (Date.now() - clock.started);
+}
+
 async function answerForStream(
   env: Env,
   body: Record<string, unknown>,
   fetchImpl: FetchLike,
   push: (payload: unknown) => void,
   parent: AbortSignal,
-  deadline: number,
+  clock: AttemptClock,
 ) {
   const provider = providerName(env.AI_PROVIDER);
-  if (provider !== "gemini") return plainMessage(env, body, fetchImpl, push, parent, deadline);
+  if (provider !== "gemini") return plainMessage(env, body, fetchImpl, push, parent, timeLeft(clock));
   const models = modelChain(env);
   let lastStatus = 504;
   for (const model of models) {
     if (parent.aborted) throw new Error("annulé");
+    const ms = Math.min(clock.attempt, timeLeft(clock));
+    if (ms < 20) break;
     const call = buildAiCall({ ...env, AI_MODEL: model }, body.context ?? {}, body.messages);
     if ("error" in call) throw new Error(call.error);
-    const streamed = await tryGeminiStream(call, fetchImpl, push, parent, deadline);
+    const streamed = await tryGeminiStream(call, fetchImpl, push, parent, ms);
     if (streamed.ok) return streamed.message;
     lastStatus = streamed.status;
     if (!retryableStreamStatus(lastStatus)) break;
   }
-  return plainMessage(env, body, fetchImpl, push, parent, deadline, lastStatus);
+  const left = timeLeft(clock);
+  if (left < 20) throw new Error("Le coach n’a pas pu répondre. Réessayez dans un moment.");
+  return plainMessage(env, body, fetchImpl, push, parent, Math.min(clock.attempt, left), lastStatus);
 }
 
 async function tryGeminiStream(
@@ -186,11 +205,12 @@ async function tryGeminiStream(
       return { ok: true, message };
     }
     const folded = await readGeminiSse(response.body, push, deadline);
+    const visible = visibleCoachText(folded.state.text);
     if (folded.timedOut) {
       attempt.abort();
-      if (!folded.state.text && folded.state.calls.length === 0) return { ok: false, status: 504 };
+      if (!visible && folded.state.calls.length === 0) return { ok: false, status: 504 };
     }
-    return { ok: true, message: { role: "assistant", content: folded.state.text, tool_calls: folded.state.calls } };
+    return { ok: true, message: { role: "assistant", content: visible, tool_calls: folded.state.calls } };
   } catch (caught) {
     if (parent.aborted) throw caught;
     return { ok: false, status: 504 };
@@ -287,7 +307,9 @@ function consumeGeminiLine(state: StreamFold, line: string, push: (payload: unkn
   if (!raw || raw === "[DONE]") return state;
   try {
     const next = foldGeminiChunk(state, JSON.parse(raw) as unknown);
-    if (next.text !== state.text) push({ text: next.text });
+    const shown = peelContextEcho(next.text, false);
+    const previous = peelContextEcho(state.text, false);
+    if (shown.visible && shown.visible !== previous.visible) push({ text: shown.visible });
     return next;
   } catch {
     return state;
@@ -303,18 +325,21 @@ async function coach(request: Request, env: Env, fetchImpl: FetchLike): Promise<
   const body = await readJson(request);
   const provider = providerName(env.AI_PROVIDER);
   const models = provider === "gemini" ? modelChain(env) : [modelName(env)];
+  const clock = { started: Date.now(), budget: coachBudget(env), attempt: attemptLimit(env) };
   let lastStatus = 502;
   for (let index = 0; index < models.length; index++) {
+    const ms = Math.min(clock.attempt, timeLeft(clock));
+    if (ms < 20) break;
     const call = buildAiCall({ ...env, AI_MODEL: models[index] }, body.context ?? {}, body.messages);
     if ("error" in call) return json({ error: call.error }, call.status);
     let response: Response;
     const attempt = new AbortController();
-    const timer = setTimeout(() => attempt.abort(), streamDeadline(env));
+    const timer = setTimeout(() => attempt.abort(), ms);
     try {
       response = await fetchImpl(call.url, { method: "POST", headers: call.headers, body: call.body, signal: attempt.signal });
     } catch {
       lastStatus = 504;
-      break;
+      continue;
     } finally {
       clearTimeout(timer);
     }
@@ -323,8 +348,9 @@ async function coach(request: Request, env: Env, fetchImpl: FetchLike): Promise<
       return json({ message: readAiMessage(provider, data) }, 200);
     }
     lastStatus = response.status;
-    if (!shouldTryNextModel(lastStatus) || index === models.length - 1) break;
+    if (!shouldTryNextModel(lastStatus) && lastStatus < 500) break;
   }
+  if (lastStatus === 504) return json({ error: "Le coach n’a pas pu répondre. Réessayez dans un moment." }, 502);
   const failure = coachFailure(lastStatus, provider === "gemini" && shouldTryNextModel(lastStatus));
   return json({ error: failure.error }, failure.status);
 }

@@ -304,7 +304,62 @@ describe("worker", () => {
     expect(response.status).toBe(502);
     const body = (await response.json()) as { error?: string };
     expect(body.error).toMatch(/pas pu répondre/);
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("passe au modèle suivant si le premier ne répond pas à temps", async () => {
+    const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async (url, init) => {
+      if (String(url).includes("gemini-a")) {
+        return await new Promise((_, reject) => {
+          const fail = () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+          if (init?.signal?.aborted) fail();
+          else init?.signal?.addEventListener("abort", fail, { once: true });
+        });
+      }
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "CONTEXTE {}\nFIN_CONTEXTE OK" }] } }] }), { status: 200 });
+    });
+    const started = Date.now();
+    const response = await handleRequest(
+      post("/coach", { messages: [{ role: "user", content: "Salut" }] }, "phone-token", "https://flowah83.github.io"),
+      { ...env, AI_MODEL_FALLBACKS: "gemini-a, gemini-b", STREAM_DEADLINE_MS: "40" },
+      fetchImpl,
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { message?: { content?: string } };
+    expect(body.message?.content).toBe("OK");
+    expect(Date.now() - started).toBeLessThan(1_000);
+    expect(fetchImpl.mock.calls.map((call) => String(call[0]))).toEqual([
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-a:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-b:generateContent",
+    ]);
+  });
+
+  it("essaie le flux suivant tant qu’aucun texte n’est parti", async () => {
+    const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async (url, init) => {
+      if (String(url).includes("gemini-a")) {
+        return await new Promise((_, reject) => {
+          const fail = () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+          if (init?.signal?.aborted) fail();
+          else init?.signal?.addEventListener("abort", fail, { once: true });
+        });
+      }
+      return new Response('data: {"candidates":[{"content":{"parts":[{"text":"CONTEXTE {} FIN_CONTEXTE OK"}]}}]}\n\n', {
+        status: 200,
+        headers: { "Content-Type": "text/event-stream" },
+      });
+    });
+    const response = await handleRequest(
+      post("/coach/stream", { messages: [{ role: "user", content: "Salut" }] }, "phone-token", "https://flowah83.github.io"),
+      { ...env, AI_MODEL_FALLBACKS: "gemini-a, gemini-b", STREAM_DEADLINE_MS: "40" },
+      fetchImpl,
+    );
+    const text = await response.text();
+    expect(text).toContain('"text":"OK"');
+    expect(text).not.toContain("FIN_CONTEXTE");
+    expect(fetchImpl.mock.calls.map((call) => String(call[0])).filter((url) => url.includes("streamGenerateContent"))).toEqual([
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-a:streamGenerateContent?alt=sse",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-b:streamGenerateContent?alt=sse",
+    ]);
   });
 
   it("envoie un premier événement tout de suite, puis la génération classique si le flux se tait", async () => {
