@@ -33,12 +33,16 @@ export type SetLog = {
   rir?: number | null;
   /** Côté, pour un unilatéral noté droite / gauche. */
   side?: "D" | "G" | null;
-  /** `kg`, `kg/main`, `kg/jambe`, ou une mention de poids du corps. */
+  /** `kg`, `kg/main`, `kg/jambe`, corps, lest ou assistance. */
   unit?: string | null;
+  /** Présent quand l’unité de la série a été déduite. */
+  unitSource?: "inferred";
   restRealSec?: number | null;
   precision?: string | null;
   warmup: boolean;
   done: boolean;
+  /** `plan` : valeur copiée de la cible. `saisie` : la personne ou une série faite l’a écrite. */
+  origin?: "plan" | "saisie";
   /** Série laissée de côté : elle ne compte pas, et elle ne bloque pas la fin. */
   skipped?: boolean;
 };
@@ -59,8 +63,10 @@ export type ExerciseLog = {
   cues: string[];
   muscles: Muscle[];
   note?: string;
-  /** Charge par main, par jambe, ou poids du corps. */
+  /** Charge par main, par jambe, poids du corps, lest ou assistance. */
   unit?: string | null;
+  /** Présent quand l’unité a été déduite, pour pouvoir revenir en arrière. */
+  unitSource?: "inferred";
   /** L’exercice a été fait, mais le détail des séries n’est pas connu. */
   detailUnknown?: boolean;
   planned: Planned;
@@ -128,6 +134,8 @@ export type Settings = {
   lastDownloadAt?: string;
   /** Résultat de la demande de conservation. Ce n’est pas une garantie. */
   storagePersistent?: boolean;
+  /** Version des données déjà migrées sur ce téléphone. */
+  schemaVersion?: number;
 };
 
 export type BackupFile = {

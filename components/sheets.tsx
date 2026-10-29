@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { CALENDAR_NAME } from "@/lib/coach";
 import { DEFAULT_COACH_URL, coachUrlIssue, loadCoachConfig, maskSecret, normalizeCoachToken, normalizeCoachUrl, saveCoachConfig, testCoachConnection } from "@/lib/coach-store";
+import { unitPhrase } from "@/lib/display";
+import { unambiguousUnit } from "@/lib/unit";
 import { readProgressionRaw } from "@/lib/progression";
 import { exportPlanSnapshots } from "@/lib/snapshot";
 import { toCsv } from "@/lib/db";
-import { backupProblem, backupReminder, isBackup, sessionsForBackup } from "@/lib/backup";
+import { INSTALL_LINE, backupProblem, backupReminder, isBackup, sessionsForBackup } from "@/lib/backup";
 import { IMPORT_LIMIT, parseDecimalDraft } from "@/lib/contract";
 import { CATALOG, PATTERN_LABEL } from "@/lib/exercises";
 import { importSummary, type ImportPreview } from "@/lib/history";
@@ -106,7 +108,7 @@ function SettingsSheet() {
       >
         Alerte de fin de repos
       </Button>
-      <p className="fine">Pour l’installer : dans Safari, touchez Partager, puis « Sur l’écran d’accueil ».</p>
+      <p className="fine">Pour l’installer : dans Safari, touchez Partager, puis « Sur l’écran d’accueil ». {INSTALL_LINE}</p>
       <h3 className="grouplabel">Données</h3>
       <p className="fine" data-testid="backup-status">
         {backupReminder(app.settings).text}
@@ -607,7 +609,7 @@ function EditSheet() {
           <div className="row2">
             <Num label="Séries" integer value={row.sets} onChange={(sets) => update(index, { sets })} />
             <Num label="Répétitions" integer value={row.reps} onChange={(reps) => update(index, { reps })} />
-            <Num label="Charge kg" value={row.load} onChange={(load) => update(index, { load })} />
+            <Num label={chargeLabel(row.name)} value={row.load} onChange={(load) => update(index, { load })} />
             <Num label="Repos s" integer value={row.rest} onChange={(rest) => update(index, { rest })} />
           </div>
         </div>
@@ -787,12 +789,62 @@ function LibrarySheet() {
   );
 }
 
+function chargeLabel(name: string): string {
+  const unit = unambiguousUnit({ name });
+  return unit ? `Charge, ${unitPhrase(unit)}` : "Charge";
+}
+
 function BackupPreview({ backup, onCancel }: { backup: BackupFile; onCancel: () => void }) {
   const app = useApp();
   const dates = backup.sessions.map((session) => session.date).filter((date) => typeof date === "string").sort();
   const from = dates[0];
   const to = dates[dates.length - 1];
   const done = backup.sessions.filter((session) => session.status === "done").length;
+  const plan = app.backupPlan;
+  const [choices, setChoices] = useState<Record<string, "keep" | "replace" | "copy">>({});
+  if (plan) {
+    return (
+      <div className="holdnote" data-testid="backup-collisions">
+        <p>
+          <b>Certaines séances existent déjà.</b>
+        </p>
+        <p className="fine">Par défaut, celles de ce téléphone restent. Vous pouvez remplacer ou importer une copie.</p>
+        {plan.collisions.map((collision) => {
+          const choice = choices[collision.id] ?? "keep";
+          return (
+            <div key={collision.id} className="card flat">
+              <h3>{collision.existing.title}</h3>
+              <p>{collision.existing.date} · ici « {collision.existing.title} », dans le fichier « {collision.incoming.title} ».</p>
+              <div className="row2">
+                <Button variant={choice === "keep" ? "default" : "ghost"} onClick={() => setChoices({ ...choices, [collision.id]: "keep" })}>
+                  Garder
+                </Button>
+                <Button variant={choice === "replace" ? "default" : "ghost"} onClick={() => setChoices({ ...choices, [collision.id]: "replace" })}>
+                  Remplacer
+                </Button>
+                <Button variant={choice === "copy" ? "default" : "ghost"} onClick={() => setChoices({ ...choices, [collision.id]: "copy" })}>
+                  Copie
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+        <Button
+          data-testid="backup-collision-confirm"
+          onClick={() => {
+            void app.chooseBackupAdd(choices).then((saved) => {
+              if (saved) onCancel();
+            });
+          }}
+        >
+          Continuer
+        </Button>
+        <Button variant="ghost" onClick={app.dismissBackupAdd}>
+          Annuler
+        </Button>
+      </div>
+    );
+  }
   return (
     <div className="holdnote" data-testid="backup-preview">
       <p>
@@ -819,7 +871,9 @@ function BackupPreview({ backup, onCancel }: { backup: BackupFile; onCancel: () 
         variant="ghost"
         data-testid="backup-merge"
         onClick={() => {
-          void app.mergeBackup(backup).then(onCancel);
+          void app.mergeBackup(backup).then((result) => {
+            if (result !== "pending") onCancel();
+          });
         }}
       >
         Ajouter sans effacer

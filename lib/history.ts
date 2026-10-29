@@ -1,5 +1,5 @@
 import { decodeImportToken } from "./codec";
-import { IMPORT_LIMIT, isCalendarDate, normalizeUnit } from "./contract";
+import { IMPORT_LIMIT, isCalendarDate, MAX_EXERCISES, MAX_SESSIONS, MAX_SETS, normalizeUnit, readStoredNumber } from "./contract";
 import { customFromMatch, normalizeExerciseKey, resolveExercise } from "./exercises";
 import { parsePlan } from "./plan";
 import type { CardioLog, CustomExercise, ExerciseLog, Session, SetLog } from "./types";
@@ -144,6 +144,7 @@ function parseHistoryData(
   const list = sessionList(data);
   if (!list) return { error: "Il manque la liste des séances." };
   if (list.length === 0) return { error: "L’historique ne contient aucune séance." };
+  if (list.length > MAX_SESSIONS) return { error: "Ce fichier a trop de séances. Rien n’a été ajouté." };
   const known = customs.map((item) => ({ ...item }));
   const created: CustomExercise[] = [];
   const recognized = new Set<string>();
@@ -196,8 +197,17 @@ function sessionFromHistory(
   const cardio = cardioFrom(item.cardio);
   const exercises: ExerciseLog[] = [];
   const unread: string[] = [];
+  if (item.exercices != null && !Array.isArray(item.exercices)) {
+    return { session: null, skip: `« ${title} » : les exercices doivent être une liste.` };
+  }
   if (Array.isArray(item.exercices)) {
+    if (item.exercices.length > MAX_EXERCISES) return { session: null, skip: `« ${title} » a trop d’exercices.` };
     for (const exercise of item.exercices) {
+      const issue = exerciseIssue(exercise, title);
+      if (issue) {
+        unread.push(issue);
+        continue;
+      }
       const built = exerciseFromHistory(exercise, known, created, recognized);
       if (built) exercises.push(built);
       else unread.push(`Un exercice de « ${title} » n’a pas été lu.`);
@@ -220,6 +230,29 @@ function sessionFromHistory(
     },
     skip: unread.length ? unread.join(" ") : null,
   };
+}
+
+function exerciseIssue(item: unknown, title: string): string | null {
+  if (!isObject(item)) return `Un exercice de « ${title} » est illisible.`;
+  const name = text(item.nom) || text(item.name) || "exercice";
+  if (item.series != null && !Array.isArray(item.series)) {
+    return `« ${title} », « ${name} » : les séries doivent être une liste.`;
+  }
+  if (Array.isArray(item.series) && item.series.length > MAX_SETS) {
+    return `« ${title} », « ${name} » : il y a trop de séries.`;
+  }
+  if (Array.isArray(item.series)) {
+    for (const set of item.series) {
+      if (!isObject(set)) return `« ${title} », « ${name} » : une série est illisible.`;
+      const load = readStoredNumber(set.charge_kg);
+      if (!load.ok || (load.value != null && load.value < 0)) return `« ${title} », « ${name} » : la charge n’est pas valide.`;
+      const reps = readStoredNumber(set.repetitions);
+      if (!reps.ok || (reps.value != null && reps.value < 0)) {
+        return `« ${title} », « ${name} » : les répétitions ne sont pas valides.`;
+      }
+    }
+  }
+  return null;
 }
 
 function exerciseFromHistory(

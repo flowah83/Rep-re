@@ -472,8 +472,7 @@ function abstain(exercise: ExerciseLog, reason: string): Suggestion {
 }
 
 function usableHistory(history: Session[]): Session[] {
-  if (history.some((session) => session.source !== "demo")) return history.filter((session) => session.source !== "demo");
-  return history;
+  return history.filter((session) => session.source !== "demo");
 }
 
 function mentionPlan(exercise: ExerciseLog, unit: string | null, reason: string): string {

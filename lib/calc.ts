@@ -36,7 +36,7 @@ export function tonnage(exercises: ExerciseLog[]): number {
   for (const ex of exercises) {
     for (const set of ex.sets) {
       if (!isHardSet(set) || set.loadKg == null || set.reps == null) continue;
-      total += set.loadKg * set.reps * loadFactor(set.unit ?? ex.unit, set.side);
+      total += set.loadKg * set.reps * loadFactor(resolvedUnit(set, ex), set.side);
     }
   }
   return round1(total);

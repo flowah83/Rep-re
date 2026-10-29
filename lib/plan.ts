@@ -1,24 +1,45 @@
 import { decodeText, encodeText } from "./codec";
-import { isCalendarDate, isClock, normalizeUnit } from "./contract";
+import { isCalendarDate, isClock, MAX_EXERCISES, MAX_SESSIONS, MAX_SETS, normalizeUnit, readStoredNumber } from "./contract";
 import { customFromMatch, resolveExercise } from "./exercises";
 import type { CustomExercise, ExerciseLog, Session, SetLog } from "./types";
+import { unambiguousUnit } from "./unit";
 import { finiteOrNull, uid } from "./utils";
 
-export function mergePlans(current: Session[], incoming: Session[]): { sessions: Session[]; touched: Session[] } {
+export function mergePlans(current: Session[], incoming: Session[]): { sessions: Session[]; touched: Session[]; conflicts: { id: string; reason: string }[] } {
   const next = current.map((session) => ({ ...session }));
   const touched: Session[] = [];
+  const conflicts: { id: string; reason: string }[] = [];
+  const used = new Set(next.map((session) => session.id));
   for (const item of incoming) {
     const index = next.findIndex((session) => session.date === item.date && session.title === item.title);
     if (index === -1) {
-      next.push(item);
-      touched.push(item);
+      let session = item;
+      if (used.has(item.id)) {
+        const holder = next.find((known) => known.id === item.id);
+        conflicts.push({
+          id: item.id,
+          reason: holder?.status === "done" ? "Séance déjà notée. Rien n’est écrasé." : "Identifiant déjà utilisé. La séance est importée comme copie.",
+        });
+        session = { ...item, id: freshId(used) };
+      }
+      used.add(session.id);
+      next.push(session);
+      touched.push(session);
     } else if (next[index].status === "planned") {
       const replaced = { ...item, id: next[index].id };
       next[index] = replaced;
       touched.push(replaced);
+    } else {
+      conflicts.push({ id: next[index].id, reason: "Cette séance est déjà notée. Le plan ne l’écrase pas." });
     }
   }
-  return { sessions: next, touched };
+  return { sessions: next, touched, conflicts };
+}
+
+function freshId(used: Set<string>): string {
+  let id = uid();
+  while (used.has(id)) id = uid();
+  return id;
 }
 
 export type PlanExercise = {
@@ -64,6 +85,7 @@ export function parsePlan(
     return { error: "Il manque la liste « seances ». Chef sport doit envoyer la semaine, ou une séance avec sa date." };
   }
   if (sessions.length === 0) return { error: "Le plan ne contient aucune séance." };
+  if (sessions.length > MAX_SESSIONS) return { error: "Ce plan a trop de séances. Rien n’a été ajouté." };
   const built: Session[] = [];
   const created: CustomExercise[] = [];
   for (const [index, item] of sessions.entries()) {
@@ -80,14 +102,26 @@ export function parsePlan(
     if (!Array.isArray(item.exercices) || item.exercices.length === 0) {
       return { error: `« ${title} » n’a pas d’exercices.` };
     }
+    if (item.exercices.length > MAX_EXERCISES) return { error: `« ${title} » a trop d’exercices. Rien n’a été ajouté.` };
     const exercises: ExerciseLog[] = [];
     for (const ex of item.exercices) {
       if (!ex || typeof ex.nom !== "string" || !ex.nom.trim()) {
         return { error: `Un exercice de « ${title} » n’a pas de nom.` };
       }
       const setsN = Number(ex.series ?? 0);
-      if (!Number.isFinite(setsN) || setsN < 1) {
-        return { error: `« ${ex.nom} » n’a pas de nombre de séries.` };
+      if (!Number.isInteger(setsN) || setsN < 1 || setsN > MAX_SETS) {
+        return { error: `« ${title} », « ${ex.nom} » : le nombre de séries doit être un entier.` };
+      }
+      if (ex.echauffement != null && !Array.isArray(ex.echauffement)) {
+        return { error: `« ${title} », « ${ex.nom} » : l’échauffement doit être une liste, pas un objet.` };
+      }
+      const load = readStoredNumber(ex.charge_kg);
+      if (!load.ok || (load.value != null && load.value < 0)) {
+        return { error: `« ${title} », « ${ex.nom} » : la charge n’est pas valide.` };
+      }
+      const reps = readStoredNumber(ex.repetitions);
+      if (!reps.ok || (reps.value != null && reps.value < 0)) {
+        return { error: `« ${title} », « ${ex.nom} » : les répétitions ne sont pas valides.` };
       }
       exercises.push(exerciseFromPlan(ex, customs, created));
     }
@@ -125,7 +159,10 @@ export function exerciseFromPlan(ex: PlanExercise, customs: CustomExercise[] = [
   const load = finiteOrNull(ex.charge_kg);
   const rest = finiteOrNull(ex.repos_secondes) ?? defaultRest(meta.pattern);
   const rpe = finiteOrNull(ex.rpe_vise);
-  const unit = normalizeUnit(ex.unite);
+  const written = normalizeUnit(ex.unite);
+  const inferred = written ? null : unambiguousUnit({ name: meta.name });
+  const unit = written ?? inferred;
+  const unitSource = !written && inferred ? ("inferred" as const) : undefined;
   const sets: SetLog[] = [];
   for (const warm of ex.echauffement ?? []) {
     sets.push({
@@ -136,6 +173,7 @@ export function exerciseFromPlan(ex: PlanExercise, customs: CustomExercise[] = [
       unit,
       warmup: true,
       done: false,
+      origin: "plan",
     });
   }
   for (let i = 0; i < setsN; i++) {
@@ -147,6 +185,7 @@ export function exerciseFromPlan(ex: PlanExercise, customs: CustomExercise[] = [
       unit,
       warmup: false,
       done: false,
+      origin: "plan",
     });
   }
   return {
@@ -158,6 +197,7 @@ export function exerciseFromPlan(ex: PlanExercise, customs: CustomExercise[] = [
     muscles: meta.muscles,
     note: ex.note,
     unit,
+    unitSource,
     planned: {
       sets: setsN,
       reps: Number.isFinite(reps as number) ? reps : null,

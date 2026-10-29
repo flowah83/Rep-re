@@ -1,5 +1,5 @@
 import { exerciseFromPlan } from "./plan";
-import type { CustomExercise, ExerciseLog, Session } from "./types";
+import type { CustomExercise, ExerciseLog, Session, SetLog } from "./types";
 import { isCalendarDate, isClock } from "./contract";
 import { uid } from "./utils";
 
@@ -38,7 +38,7 @@ export function applySessionEdit(
       date: input.date,
       time: input.time.trim() || undefined,
       title,
-      coachNote: input.note.trim() || existing?.coachNote,
+      coachNote: input.note.trim() || undefined,
       intention: existing?.intention,
       noteForMe: existing?.noteForMe,
       noteForCoach: existing?.noteForCoach,
@@ -54,6 +54,20 @@ export function applySessionEdit(
       closed: existing?.closed,
     },
   };
+}
+
+export function realignPrefills(sets: SetLog[], previousLoad: number | null, nextLoad: number | null): SetLog[] {
+  return sets.map((set) => {
+    if (!isPrefilled(set, previousLoad)) return set;
+    return { ...set, loadKg: nextLoad, origin: "plan" as const };
+  });
+}
+
+function isPrefilled(set: SetLog, previousLoad: number | null): boolean {
+  if (set.warmup || set.done || set.skipped || set.origin === "saisie") return false;
+  if (set.origin === "plan") return true;
+  const untouched = set.reps == null && set.rpe == null && set.rir == null;
+  return untouched && (set.loadKg ?? null) === (previousLoad ?? null);
 }
 
 function mergeRow(existing: Session | null, row: EditRow, customs: CustomExercise[]): ExerciseLog {
@@ -73,7 +87,7 @@ function mergeRow(existing: Session | null, row: EditRow, customs: CustomExercis
   }
   const warmups = previous.sets.filter((set) => set.warmup);
   const work = previous.sets.filter((set) => !set.warmup);
-  const nextWork = work.slice(0, row.sets).map((set) => ({ ...set }));
+  const nextWork = realignPrefills(work.slice(0, row.sets), previous.planned.loadKg, row.load);
   while (nextWork.length < row.sets) {
     nextWork.push({
       id: uid(),
@@ -83,6 +97,7 @@ function mergeRow(existing: Session | null, row: EditRow, customs: CustomExercis
       warmup: false,
       done: false,
       unit: previous.unit ?? null,
+      origin: "plan",
     });
   }
   return {

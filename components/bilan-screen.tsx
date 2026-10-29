@@ -5,7 +5,7 @@ import { useApp } from "@/components/app-context";
 import { appendCoachNotices } from "@/lib/coach";
 import { markCoachNoticesSent, pendingCoachNoticeLines } from "@/lib/coach-store";
 import { cardioSummary } from "@/lib/history";
-import { compareExercise, formatPerformedSet, reportJson, sessionEffort, summaryText, versus, type CompareKind } from "@/lib/session";
+import { compareExercise, comparisonPriors, formatPerformedSet, reportJson, sessionEffort, summaryText, versus, type CompareKind } from "@/lib/session";
 import { formatDuration, formatLong } from "@/lib/utils";
 
 export function BilanScreen({ id }: { id: string }) {
@@ -14,7 +14,7 @@ export function BilanScreen({ id }: { id: string }) {
   const session = app.sessions.find((item) => item.id === id);
   const fresh = app.overlay?.kind === "bilan" && app.overlay.fresh === true;
   if (!session) return null;
-  const prior = app.sessions.filter((item) => item.id !== session.id && item.status === "done" && item.date <= session.date);
+  const prior = comparisonPriors(app.sessions, session);
   const rows = session.exercises.map((exercise) => ({ exercise, ...compareExercise(exercise, prior) }));
   const text = appendCoachNotices(summaryText(session, prior), pendingCoachNoticeLines());
   const effort = sessionEffort(session);
@@ -98,7 +98,7 @@ export function BilanScreen({ id }: { id: string }) {
                 <p>
                   {exercise.detailUnknown
                     ? "séries non détaillées"
-                    : exercise.sets.filter((set) => set.done && !set.warmup).map((set) => formatPerformedSet(set, exercise.unit)).join(", ") || "séries non détaillées"}
+                    : exercise.sets.filter((set) => set.done && !set.warmup).map((set) => formatPerformedSet(set, exercise.unit, exercise.name)).join(", ") || "séries non détaillées"}
                 </p>
               </div>
             ))}

@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
+import { resolvedUnit } from "./unit";
 import type { BackupFile, CustomExercise, Session, Settings } from "./types";
 
 type Schema = DBSchema & {
@@ -90,7 +91,7 @@ export function toCsv(sessions: Session[]): string {
             csvCell(set.reps),
             csvCell(set.rpe),
             csvCell(set.warmup ? "oui" : "non"),
-            csvCell(set.unit ?? ex.unit),
+            csvCell(resolvedUnit(set, ex)),
             csvCell(set.side),
           ].join(","),
         );

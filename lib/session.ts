@@ -17,6 +17,7 @@ export function buildSets(count: number, loadKg: number | null, warmup: boolean)
     rpe: null,
     warmup,
     done: false,
+    origin: "plan",
   }));
 }
 
@@ -49,12 +50,21 @@ export function noteSetRpe(session: Session, exerciseId: string, setId: string, 
 }
 
 export function patchSet(session: Session, exerciseId: string, setId: string, patch: Partial<SetLog>): Session {
+  const touches = (["loadKg", "reps", "rpe", "rir", "done", "skipped"] as const).some((key) => key in patch);
   return {
     ...session,
     exercises: session.exercises.map((ex) =>
       ex.id !== exerciseId
         ? ex
-        : { ...ex, sets: ex.sets.map((s) => (s.id === setId ? { ...s, ...patch } : s)) },
+        : {
+            ...ex,
+            sets: ex.sets.map((s) => {
+              if (s.id !== setId) return s;
+              const next = { ...s, ...patch };
+              if (touches && patch.origin == null) next.origin = "saisie";
+              return next;
+            }),
+          },
     ),
   };
 }
@@ -91,6 +101,12 @@ export function completeSet(session: Session, exerciseId: string, setId: string)
     next = { ...next, restEndsAt: null };
   }
   return next;
+}
+
+/** Séances déjà faites auxquelles comparer un bilan. L’exemple ne sert pas de référence à une vraie séance. */
+export function comparisonPriors(all: Session[], session: Session): Session[] {
+  const pool = session.source === "demo" ? all.filter((item) => item.source === "demo") : all.filter((item) => item.source !== "demo");
+  return pool.filter((item) => item.id !== session.id && item.status === "done" && item.date <= session.date);
 }
 
 export function startSession(session: Session): Session {
@@ -198,7 +214,7 @@ export function summaryText(session: Session, prior: Session[]): string {
     }
     const done = ex.sets.filter((set) => set.done && !set.warmup);
     if (!done.length) continue;
-    const bits = done.map((set) => formatPerformedSet(set, ex.unit)).join(", ");
+    const bits = done.map((set) => formatPerformedSet(set, ex.unit, ex.name)).join(", ");
     const cmp = compareExercise(ex, prior);
     lines.push(`${ex.name} : ${bits}. ${cmp.line}`);
   }
@@ -233,7 +249,7 @@ export function reportJson(session: Session) {
           rpe: s.rpe,
           rir: s.rir ?? null,
           cote: s.side ?? null,
-          unite: s.unit ?? ex.unit ?? null,
+          unite: resolvedUnit(s, ex),
           echauffement: s.warmup,
         })),
     })),
@@ -252,7 +268,7 @@ export function latestWork(
   unit?: string,
 ): { date: string; line: string; unit: string } | null {
   const want = unit == null ? null : canonicalUnit(unit);
-  const usable = sessions.some((session) => session.source !== "demo") ? sessions.filter((session) => session.source !== "demo") : sessions;
+  const usable = sessions.filter((session) => session.source !== "demo");
   const done = usable
     .filter((s) => s.id !== beforeId && !s.cardio && s.status === "done")
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
@@ -261,7 +277,7 @@ export function latestWork(
     if (!ex) continue;
     const work = ex.sets.filter((set) => isHardSet(set) && (want == null || resolvedUnit(set, ex) === want));
     if (!work.length) continue;
-    return { date: session.date, line: work.map((set) => formatPerformedSet(set, ex.unit)).join(", "), unit: resolvedUnit(work[0], ex) };
+    return { date: session.date, line: work.map((set) => formatPerformedSet(set, ex.unit, ex.name)).join(", "), unit: resolvedUnit(work[0], ex) };
   }
   return null;
 }
@@ -302,7 +318,7 @@ export function sessionEffort(session: Session): { minutes: number | null; done:
 }
 
 export function versus(exercise: ExerciseLog): { plannedLoad: string; plannedSets: string; doneLoad: string; doneDetail: string } {
-  const phrase = unitPhrase(exercise.unit);
+  const phrase = unitPhrase(resolvedUnit({ unit: exercise.unit }, exercise));
   const plannedLoad =
     exercise.planned.loadKg != null
       ? `${formatKg(exercise.planned.loadKg)} ${phrase} × ${exercise.planned.reps ?? "—"}`
@@ -313,7 +329,7 @@ export function versus(exercise: ExerciseLog): { plannedLoad: string; plannedSet
   const work = exercise.sets.filter(isHardSet);
   if (!work.length) return { plannedLoad, plannedSets, doneLoad: "Pas fait", doneDetail: "0 série" };
   const top = work.reduce((best, set) => ((set.loadKg ?? -1) > (best.loadKg ?? -1) ? set : best));
-  const donePhrase = unitPhrase(top.unit ?? exercise.unit);
+  const donePhrase = unitPhrase(resolvedUnit(top, exercise));
   const doneLoad = top.loadKg == null ? `${top.reps ?? "—"} répétitions` : `${formatKg(top.loadKg)} ${donePhrase} × ${top.reps ?? "—"}`;
   const effort = top.rpe != null ? `effort ${formatKg(top.rpe)}` : null;
   const count = work.length <= 1 ? "1 série" : `${work.length} séries`;
@@ -341,8 +357,8 @@ export function duplicateAsPlan(session: Session, date: string): Session {
   };
 }
 
-export function formatPerformedSet(set: SetLog, exerciseUnit?: string | null): string {
-  const unit = set.unit ?? exerciseUnit ?? null;
+export function formatPerformedSet(set: SetLog, exerciseUnit?: string | null, exerciseName?: string): string {
+  const unit = resolvedUnit(set, { unit: exerciseUnit, name: exerciseName });
   const side = set.side ? `${set.side} ` : "";
   const load = formatLoad(set.loadKg, unit);
   const reps = set.reps == null ? "—" : String(set.reps);

@@ -1,5 +1,7 @@
 import { bestE1rmLabel, formatPerformedSet } from "./session";
+import { realignPrefills } from "./session-edit";
 import { exerciseFromPlan } from "./plan";
+import { resolvedUnit } from "./unit";
 import type { CustomExercise, ExerciseLog, Session, SetLog } from "./types";
 import { finiteOrNull, formatKg, formatLong, parseISODate, uid } from "./utils";
 
@@ -333,8 +335,9 @@ export function buildCoachContext(sessions: Session[], today: string, extra?: { 
   const names = [...new Set(done.flatMap((session) => session.exercises.map((exercise) => exercise.name)))];
   const records = names
     .map((name) => {
+      const sample = own.flatMap((item) => item.exercises).find((item) => item.name === name);
       const best = bestE1rmLabel(own, name);
-      const unit = own.flatMap((item) => item.exercises).find((item) => item.name === name)?.unit ?? null;
+      const unit = sample ? resolvedUnit(sample.sets.find((set) => set.done && !set.warmup) ?? {}, sample) : null;
       return best ? { exercice: name, max_estime_kg: best.kg, detail: best.detail, unite: unit } : null;
     })
     .filter((item): item is { exercice: string; max_estime_kg: number; detail: string; unite: string | null } => item != null)
@@ -598,7 +601,7 @@ function updateExercise(state: AppState, args: Record<string, unknown>) {
       restSec: rest.present && rest.value != null ? rest.value : exercise.planned.restSec,
       rpe: rpe.present ? rpe.value : exercise.planned.rpe,
     },
-    sets: sets.map((set) => (set.done || set.warmup || !load.present ? set : { ...set, loadKg: plannedLoad })),
+    sets: load.present ? realignPrefills(sets, exercise.planned.loadKg, plannedLoad) : sets,
   };
   const next = { ...current, exercises: current.exercises.map((item) => (item.id === exercise.id ? nextExercise : item)) };
   return { state: replaceSession(state, next), summary: `${nextExercise.name} mis à jour.` };
@@ -636,7 +639,7 @@ function updateSet(state: AppState, args: Record<string, unknown>) {
 }
 
 function patchLoggedSet(set: SetLog, args: Record<string, unknown>): SetLog {
-  const next = { ...set };
+  const next = { ...set, origin: "saisie" as const };
   for (const key of ["loadKg", "reps", "rpe", "rir"] as const) {
     if (!has(args, key)) continue;
     next[key] = finiteOrNull(args[key]);
@@ -671,7 +674,7 @@ function exerciseFromArgs(item: unknown, customs: CustomExercise[], created: Cus
 }
 
 function blankSet(loadKg: number | null): SetLog {
-  return { id: uid(), loadKg, reps: null, rpe: null, warmup: false, done: false };
+  return { id: uid(), loadKg, reps: null, rpe: null, warmup: false, done: false, origin: "plan" };
 }
 
 function compactPlan(session: Session) {
@@ -691,7 +694,7 @@ function compactPlan(session: Session) {
       charge_kg: exercise.planned.loadKg,
       repos_s: exercise.planned.restSec,
       rpe: exercise.planned.rpe,
-      unite: exercise.unit ?? null,
+      unite: resolvedUnit({}, exercise),
       note: exercise.note ?? null,
       echauffements: exercise.sets.filter((set) => set.warmup).length,
     })),
@@ -717,7 +720,7 @@ function focusNow(sessions: Session[], focus?: CoachFocus | null) {
     series: work.length,
     charge_kg: set.loadKg ?? exercise.planned.loadKg,
     repetitions: set.reps ?? exercise.planned.reps,
-    unite: exercise.unit ?? null,
+    unite: resolvedUnit(set, exercise),
     repos_s: exercise.planned.restSec,
   };
 }
@@ -736,7 +739,7 @@ function compactDone(session: Session) {
         : exercise.sets
             .filter((set) => set.done)
             .slice(0, 8)
-            .map((set) => formatPerformedSet(set, exercise.unit))
+            .map((set) => formatPerformedSet(set, exercise.unit, exercise.name))
             .join(", "),
     })),
   };
