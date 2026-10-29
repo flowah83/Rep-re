@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { basicHeader, buildIcs, listRecurrenceIncomplete, parisDayToUtc, parseEvents, patchIcs } from "./caldav";
+import { FIRST_TOKEN_MS, modelChain } from "./ai";
+import { buildSystemPrompt } from "../../lib/coach";
 import { handleRequest, resetAuthGuard, resetCalendarCache, resetCoachUsage, type Env } from "./index";
 
 const env: Env = {
@@ -107,7 +109,7 @@ describe("worker", () => {
     );
     expect(response.status).toBe(200);
     const sent = fetchImpl.mock.calls[0];
-    expect(sent[0]).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent");
+    expect(sent[0]).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent");
     const init = sent[1] as RequestInit;
     expect(new Headers(init.headers).get("x-goog-api-key")).toBe("AIza-test");
     const payload = JSON.parse(String(init.body)) as {
@@ -165,9 +167,9 @@ describe("worker", () => {
       fetchImpl,
     );
     expect(fetchImpl.mock.calls.map((call) => call[0])).toEqual([
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent",
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
     ]);
     expect(response.status).toBe(429);
     const body = (await response.json()) as { error: string };
@@ -263,6 +265,18 @@ describe("worker", () => {
     expect(deleted?.headers.get("If-Match")).toBe('"t1"');
   });
 
+  it("met le modèle rapide en premier et limite le premier mot à 5 s", () => {
+    expect(modelChain(env)[0]).toBe("gemini-flash-lite-latest");
+    expect(modelChain({ ...env, AI_MODEL: "gemini-3.8-flash" })[0]).toBe("gemini-flash-lite-latest");
+    expect(modelChain({ AI_MODEL_FALLBACKS: "gemini-a, gemini-b" })).toEqual(["gemini-a", "gemini-b"]);
+    expect(FIRST_TOKEN_MS).toBe(5_000);
+    const prompt = buildSystemPrompt({ aujourd_hui: "2026-10-29", seances_recentes: [], plan: [] });
+    expect(prompt).toMatch(/en la vouvoyant/);
+    expect(prompt).not.toMatch(/\bTu\b/);
+    expect(prompt).toMatch(/n’appelle pas le calendrier/);
+    expect(prompt).not.toMatch(/Avant de créer ou déplacer une séance, liste le calendrier/);
+  });
+
   it("diffuse le texte Gemini au fil de l’eau", async () => {
     const body = [
       'data: {"candidates":[{"content":{"parts":[{"text":"Bon"}]}}]}',
@@ -279,7 +293,7 @@ describe("worker", () => {
     );
     expect(response.status).toBe(200);
     expect(String(fetchImpl.mock.calls[0][0])).toBe(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:streamGenerateContent?alt=sse",
     );
     const text = await response.text();
     expect(text).toContain('"ready":true');

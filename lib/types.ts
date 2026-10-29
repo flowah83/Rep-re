@@ -138,6 +138,14 @@ export type Settings = {
   schemaVersion?: number;
   /** La proposition d’installation a été écartée. Elle ne revient pas. */
   installDismissed?: boolean;
+  /** Matériel présent. Absent : tout reste proposé. */
+  equipment?: ("barre" | "halteres" | "poulie" | "machine" | "corps")[];
+  /** Séances gardées pour repartir, sans les séries déjà faites. */
+  templates?: {
+    id: string;
+    title: string;
+    exercises: { name: string; sets: number; reps: number; loadKg: number | null; restSec: number }[];
+  }[];
 };
 
 export type BackupFile = {

@@ -8,6 +8,7 @@ import { historyBucket } from "@/lib/display";
 import { cardioSummary, formatMinutes, groupSessionsNewestWeekFirst, groupSessionsSoonestWeekFirst, splitCarnet } from "@/lib/history";
 import { latestWork } from "@/lib/session";
 import type { Session } from "@/lib/types";
+import { rememberTemplate, templateFromSession } from "@/lib/useful";
 import { formatLong, mondayOf, parseISODate, stripAccents } from "@/lib/utils";
 
 const FILTERS: { id: HistFilter; label: string }[] = [
@@ -145,6 +146,22 @@ function WeekBlock({ week, today, sessions }: { week: string; today: string; ses
                 <button type="button" className="linkish" data-testid="duplicate-session" onClick={() => void app.duplicateSession(session.id)}>
                   Reprendre le plan
                 </button>
+                <button
+                  type="button"
+                  className="linkish"
+                  data-testid="save-template"
+                  onClick={() => {
+                    const template = templateFromSession(session);
+                    if (!template.exercises.length) {
+                      app.flash("Ce modèle a besoin d’au moins un exercice.");
+                      return;
+                    }
+                    void app.updateSettings({ templates: rememberTemplate(app.settings.templates, template) });
+                    app.flash("Modèle gardé. Il est proposé quand vous créez une séance.");
+                  }}
+                >
+                  Garder comme modèle
+                </button>
                 <button type="button" className="linkish correct" data-testid="correct-session" onClick={() => app.openSession(session.id)}>
                   Corriger
                 </button>
@@ -184,7 +201,7 @@ function LastHits({
         <button type="button" className="card" key={item.name} onClick={() => onOpen(item.name)}>
           <b>{item.name}</b>
           <span>
-            Dernière fois · {formatLong(item.work!.date)} · {item.work!.line}
+            Comparer · {formatLong(item.work!.date)} · {item.work!.line}
           </span>
         </button>
       ))}

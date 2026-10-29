@@ -1,7 +1,9 @@
 import { TOOLS, buildSystemPrompt, sanitizeMessages, visibleCoachText } from "../../lib/coach";
 
-export const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
-export const DEFAULT_GEMINI_CHAIN = ["gemini-3.8-flash", "gemini-3-flash-preview", "gemini-flash-lite-latest"];
+export const DEFAULT_GEMINI_MODEL = "gemini-flash-lite-latest";
+/** Le plus rapide d’abord : les premiers mots visent moins de 5 s, les autres restent en repli. */
+export const DEFAULT_GEMINI_CHAIN = ["gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-3.8-flash"];
+export const FIRST_TOKEN_MS = 5_000;
 export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 export const RATE_LIMIT_MESSAGE = "Le coach souffle un peu, réessayez dans une minute.";
 
@@ -35,7 +37,7 @@ export function modelChain(env: AiEnv): string[] {
   const configured = splitModels(env.AI_MODEL_FALLBACKS);
   if (configured.length) return configured;
   const primary = env.AI_MODEL?.trim();
-  if (!primary || primary === DEFAULT_GEMINI_CHAIN[0]) return [...DEFAULT_GEMINI_CHAIN];
+  if (!primary || DEFAULT_GEMINI_CHAIN.includes(primary)) return [...DEFAULT_GEMINI_CHAIN];
   return dedupe([primary, ...DEFAULT_GEMINI_CHAIN]);
 }
 

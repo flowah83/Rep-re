@@ -6,7 +6,7 @@ import { SettingsButton } from "@/components/settings-button";
 import { BestSetChart, BodyMap, heatFill } from "@/components/chart";
 import { bestLoads, bestReps, countsForProgress, heaviestSet, isHardSet, muscleTotals } from "@/lib/calc";
 import { comparableSessions, dipSentence, effortLine, sessionPoints, setsLine } from "@/lib/progress-board";
-import { cardioSummary } from "@/lib/history";
+import { sportIndicator } from "@/lib/useful";
 import { unitPhrase } from "@/lib/display";
 import { recordKey, resolvedUnit } from "@/lib/unit";
 import { MUSCLE_LABEL } from "@/lib/exercises";
@@ -201,7 +201,7 @@ export function ProgressScreen() {
       <p className="fine">Les couleurs comptent des séries dures notées. Elles ne disent pas si un muscle a récupéré.</p>
       {lastRun?.cardio ? (
         <p className="fine">
-          Dernier {lastRun.cardio.sport.toLowerCase()} · {formatLong(lastRun.date)} · {cardioSummary(lastRun.cardio)}
+          Dernier {lastRun.cardio.sport.toLowerCase()} · {formatLong(lastRun.date)} · {sportIndicator(lastRun.cardio)}
         </p>
       ) : null}
       <div className="section-label">

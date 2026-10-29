@@ -34,7 +34,7 @@ export type Overlay =
   | { kind: "gesture"; sessionId: string; exerciseId: string }
   | { kind: "bilan"; id: string; fresh?: boolean }
   | { kind: "preview"; id: string };
-export type SheetName = null | "settings" | "import" | "edit" | "plates" | "library" | "partage" | "calendrier" | "diagnostic";
+export type SheetName = null | "settings" | "import" | "edit" | "plates" | "library" | "partage" | "calendrier" | "diagnostic" | "course" | "natation";
 
 type Api = {
   settings: Settings;

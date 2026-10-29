@@ -1,9 +1,14 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { AppProvider, useApp, useBoot } from "@/components/app-context";
 import { BilanScreen } from "@/components/bilan-screen";
-import { GestureScreen } from "@/components/gesture-screen";
+
+const GestureScreen = dynamic(() => import("@/components/gesture-screen").then((mod) => mod.GestureScreen), {
+  ssr: false,
+  loading: () => null,
+});
 import { HistoryScreen } from "@/components/history-screen";
 import { ProgressScreen } from "@/components/progress-screen";
 import { SessionScreen } from "@/components/session-screen";

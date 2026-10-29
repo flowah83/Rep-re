@@ -681,6 +681,8 @@ h1.title {
 .prchips span { display: block; margin-top: 1px; font-size: 0.6875rem; line-height: 1.25; color: var(--ink-soft); font-weight: 550; }
 
 .chips { display: flex; gap: 6px; margin: 12px 0; overflow-x: auto; scrollbar-width: none; }
+.chips.wrap { flex-wrap: wrap; overflow: visible; }
+.linkish:disabled { opacity: 0.35; }
 .chips button {
   flex: none;
   min-height: 44px;
