@@ -136,6 +136,8 @@ export type Settings = {
   storagePersistent?: boolean;
   /** Version des données déjà migrées sur ce téléphone. */
   schemaVersion?: number;
+  /** La proposition d’installation a été écartée. Elle ne revient pas. */
+  installDismissed?: boolean;
 };
 
 export type BackupFile = {

@@ -7,6 +7,7 @@ import { SettingsButton } from "@/components/settings-button";
 import { WeatherChip } from "@/components/weather-chip";
 import { factBody, factForDate, factKind, FACT_LABEL } from "@/lib/facts";
 import { unitPhrase } from "@/lib/display";
+import { weeklyCap } from "@/lib/identity";
 import { buildHome, type DayMark, type HomeModel, type LiftView } from "@/lib/home";
 import { formatKg, formatLong } from "@/lib/utils";
 
@@ -110,10 +111,12 @@ function EmptyHome({ days, onDay }: { days: DayMark[]; onDay: (iso: string) => v
 }
 
 function HeldCard({ model, onDay }: { model: HomeModel; onDay: (iso: string) => void }) {
+  const app = useApp();
+  const cap = weeklyCap(app.sessions, app.today);
   const held = model.sessions.total > 0 ? model.sessions.done : model.sessions.extra;
   const total = model.sessions.total;
   return (
-    <article className="home-card span2 held-card" aria-label={`${model.sessions.aria} ${model.heat.aria}`}>
+    <article className="home-card span2 held-card" aria-label={`${model.sessions.aria} ${model.heat.aria} ${cap.title}. ${cap.synthesis} ${cap.proposal}`}>
       <div className="held-top">
         <div className="ringwrap hero">
           <HeroRing ratio={model.sessions.ratio} />
@@ -143,6 +146,9 @@ function HeldCard({ model, onDay }: { model: HomeModel; onDay: (iso: string) => 
           ))}
         </div>
       </div>
+      <p className="cap" data-testid="weekly-cap">
+        <b>{cap.title}.</b> {cap.synthesis} {cap.proposal}
+      </p>
     </article>
   );
 }

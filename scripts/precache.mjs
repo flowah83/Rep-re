@@ -64,7 +64,7 @@ function prefixPublic(src, prefix) {
 
 function prefixHtml(dir, prefix) {
   if (!prefix) return;
-  const files = ["manifest.webmanifest", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "icon-maskable.png", "favicon.ico"];
+  const files = ["manifest.webmanifest", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "icon-maskable.png", "favicon.ico", "og.png"];
   for (const entry of readdirSync(dir)) {
     const full = path.join(dir, entry);
     if (statSync(full).isDirectory()) {

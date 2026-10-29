@@ -10,7 +10,8 @@ import { StartActions } from "@/components/start-actions";
 import { RestPill } from "@/components/rest-pill";
 import { buildAdjustments, keepsCoachPlan, loadProgression, revertAdjustment, saveProgression, type Adjustment } from "@/lib/progression";
 import type { Session } from "@/lib/types";
-import { backupReminder } from "@/lib/backup";
+import { INSTALL_LINE, backupReminder } from "@/lib/backup";
+import { dayRepere, installHelp, shouldOfferInstall } from "@/lib/identity";
 import { resumeGlance } from "@/lib/resume";
 import { addDays, formatKg, mondayOf, parseISODate, weekdayLetter } from "@/lib/utils";
 
@@ -111,27 +112,31 @@ export function TodayScreen() {
         ))
       )}
       {showReminder ? <p className="quiet" data-testid="backup-reminder">{reminder.text}</p> : null}
+      <InstallOffer />
     </div>
   );
 }
 
 function SessionCard({ session, primary, upcoming = false }: { session: Session; primary: boolean; upcoming?: boolean }) {
+  const app = useApp();
   const minutes = estimateMinutes(session);
   const shown = session.exercises.slice(0, 2);
   const rest = session.exercises.slice(2);
   const record = loadProgression(session.id);
   const canRevert =
     session.status === "active" && record?.mode === "applied" && record.items.some((item) => item.active);
+  const repere = dayRepere(session, app.sessions, app.today);
   if (session.status === "active") {
     return (
       <>
-        <ResumeBody session={session} />
+        <ResumeBody session={session} repere={repere} />
         {canRevert && record ? <RevertPlan session={session} record={record} /> : null}
       </>
     );
   }
   return (
     <>
+      {repere ? <DayRepereLine repere={repere} /> : null}
       <div className="kicker">
         <span>
           {upcoming
@@ -179,14 +184,24 @@ function SessionCard({ session, primary, upcoming = false }: { session: Session;
 }
 
 function ResumeCard({ session }: { session: Session }) {
+  const app = useApp();
+  const repere = dayRepere(session, app.sessions, app.today);
   return (
     <article className="card resume-card" data-testid="resume-card">
-      <ResumeBody session={session} />
+      <ResumeBody session={session} repere={repere} />
     </article>
   );
 }
 
-function ResumeBody({ session }: { session: Session }) {
+function DayRepereLine({ repere }: { repere: NonNullable<ReturnType<typeof dayRepere>> }) {
+  return (
+    <p className="day-repere" data-testid="day-repere">
+      <span>{repere.kicker}.</span> {repere.last}
+    </p>
+  );
+}
+
+function ResumeBody({ session, repere }: { session: Session; repere: ReturnType<typeof dayRepere> }) {
   const app = useApp();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -196,6 +211,7 @@ function ResumeBody({ session }: { session: Session }) {
   const glance = resumeGlance(session, now);
   return (
     <>
+      {repere ? <DayRepereLine repere={repere} /> : null}
       <div className="resume-status">
         <span className="resume-live"><i className="livedot" aria-hidden="true" />{glance.status}</span>
         <RestPill session={session} chip />
@@ -240,6 +256,29 @@ function RevertPlan({ session, record }: { session: Session; record: NonNullable
     >
       Revenir au plan
     </button>
+  );
+}
+
+function InstallOffer() {
+  const app = useApp();
+  const [standalone, setStandalone] = useState(false);
+  const [help, setHelp] = useState("");
+  useEffect(() => {
+    const native = (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    setStandalone(native || window.matchMedia("(display-mode: standalone)").matches);
+    setHelp(installHelp(navigator.userAgent));
+  }, []);
+  if (!shouldOfferInstall({ sessions: app.sessions, dismissed: app.settings.installDismissed === true, standalone })) return null;
+  return (
+    <aside className="card install-offer" data-testid="install-offer">
+      <p className="eyebrow">Repère</p>
+      <h2>Sur l’écran d’accueil</h2>
+      <p>{help}</p>
+      <p className="fine">{INSTALL_LINE}</p>
+      <button type="button" className="btn ghost" data-testid="install-dismiss" onClick={() => void app.updateSettings({ installDismissed: true })}>
+        Plus tard
+      </button>
+    </aside>
   );
 }
 

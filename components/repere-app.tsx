@@ -15,6 +15,7 @@ import { HomeScreen } from "@/components/home-screen";
 import { TodayScreen } from "@/components/today-screen";
 import { ImportSummary } from "@/components/sheets";
 import { Button } from "@/components/ui/button";
+import { PRESENTATION } from "@/lib/identity";
 
 export function RepereApp() {
   const boot = useBoot();
@@ -137,11 +138,12 @@ function Onboarding() {
   return (
     <div className="onboard" data-testid="app-ready">
       <div className="markr" aria-hidden="true">R</div>
+      <p className="eyebrow">Repère</p>
       {app.importPreview ? <ImportSummary preview={app.importPreview} /> : null}
-      <h1>Vos séances restent sur ce téléphone.</h1>
-      <p>Créez une séance, importez un plan, ou essayez avec un exemple. Rien ne change sans votre accord.</p>
+      <h1>{PRESENTATION}</h1>
+      <p>Vos séances restent sur ce téléphone. Rien ne change sans votre accord.</p>
       <div className="spacer" />
-      <p className="hint">L’exemple est fictif. Il reste à part de vos vraies séances.</p>
+      <p className="hint">Créez une séance, importez un plan, ou essayez avec un exemple. L’exemple est fictif. Il reste à part de vos vraies séances.</p>
       <Button data-testid="onboarding-create" onClick={() => void app.finishOnboarding("create")}>
         Créer une séance
       </Button>
