@@ -6,7 +6,8 @@
 - Course et natation ont chacune un formulaire (durée, distance, ressenti). Elles se rangent dans le même carnet. Pas de note de forme. Montre et synchro entre téléphones : plus tard.
 - Le coach vouvoie, comme le reste de l’app. Il n’ouvre le calendrier que pour créer, déplacer, supprimer, ou si la question porte sur un horaire. Le modèle le plus rapide est essayé en premier, avec 5 s pour le premier mot.
 - Les alertes npm (Vitest, PostCSS, sharp) concernent les outils de test et de construction, pas le site statique servi. Aucune mise à jour majeure n’a été forcée, et aucune exploitation n’a été montrée.
-- Content-Security-Policy dans la page : scripts et polices du site, connexions https seulement. Le corps 3D ne se charge qu’à l’ouverture du geste.
+- Content-Security-Policy dans la page : scripts et polices du site, connexions https seulement. Le décodeur du corps 3D peut compiler son WebAssembly (`wasm-unsafe-eval`). Les textures embarquées passent par `blob:` et `data:`, déjà permis pour les images. Le corps 3D ne se charge qu’à l’ouverture du geste.
+- Le service worker n’essaie plus de mettre en cache `.nojekyll` (GitHub Pages répond 404). Un fichier manquant n’empêche plus l’installation.
 
 ### Revenir à la version d’avant
 

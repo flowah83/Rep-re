@@ -3,10 +3,6 @@ const CACHE = /*__CACHE__*/ "repere-dev";
 const INDEX = `${BASE}/index.html`;
 const PRECACHE = /*__PRECACHE__*/ [];
 
-function isOptional(url) {
-  return String(url).endsWith(".glb") || String(url).includes("/models/");
-}
-
 function shouldStore(response) {
   return Boolean(response) && response.ok === true && response.status >= 200 && response.status < 300;
 }
@@ -15,15 +11,12 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE);
-      const required = PRECACHE.filter((url) => !isOptional(url));
-      const optional = PRECACHE.filter((url) => isOptional(url));
-      if (required.length) await cache.addAll(required);
       await Promise.all(
-        optional.map(async (url) => {
+        PRECACHE.map(async (url) => {
           try {
             await cache.add(url);
           } catch {
-            /* un modèle manquant n’empêche pas l’installation */
+            /* un fichier manquant n’empêche pas l’installation */
           }
         }),
       );
