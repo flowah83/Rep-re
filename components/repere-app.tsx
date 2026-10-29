@@ -43,6 +43,20 @@ function Shell() {
   if (!app.settings.onboarded) return <Onboarding />;
   return (
     <div className="app" data-testid="app-ready">
+      {app.unsaved ? (
+        <div className="banner" data-testid="unsaved-banner">
+          <b>Modifications non enregistrées</b>
+          <span>Elles sont encore dans la mémoire de cette page. Le téléphone ne les a pas écrites.</span>
+          <div className="outcome-split">
+            <button type="button" className="btn" data-testid="unsaved-retry" onClick={() => void app.retryUnsaved()}>
+              Réessayer
+            </button>
+            <button type="button" className="btn ghost" data-testid="unsaved-export" onClick={app.exportEmergency}>
+              Exporter maintenant
+            </button>
+          </div>
+        </div>
+      ) : null}
       <div className="shell" inert={app.overlay || app.sheet || app.coachOpen ? true : undefined}>
         {app.sessions.some((session) => session.source === "demo") ? (
           <p className="demobadge" data-testid="demo-badge">Démonstration</p>

@@ -285,7 +285,7 @@ describe("lot A, scénarios 1 à 23", () => {
   it("8 et 9. l’effort vide n’est pas un zéro, et le texte de clôture suit l’état", () => {
     expect(closeCopy({ status: "active" })).toEqual({ title: "Tout est noté.", action: "Terminer la séance" });
     expect(closeCopy({ status: "done" })).toEqual({ title: "Séance terminée", action: "Voir le bilan" });
-    const logged = exercise({ sets: [set({ loadKg: 60, reps: 8, rpe: null })] });
+    const logged = exercise({ name: "Développé couché barre", unit: "kg", sets: [set({ loadKg: 60, reps: 8, rpe: null, unit: "kg" })] });
     expect(logged.sets[0].rpe).toBeNull();
     expect(tonnage([logged])).toBe(480);
   });

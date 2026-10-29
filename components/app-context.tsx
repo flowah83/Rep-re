@@ -11,7 +11,9 @@ import {
   saveSession as putSession,
   saveSettings,
 } from "@/lib/db";
+import { applyBackupAdd, copyLog, emergencyBackup, planBackupAdd, UNSAVED_LABEL, type IdChoice } from "@/lib/backup";
 import { commitWrite } from "@/lib/commit";
+import { migrateStored } from "@/lib/migrate";
 import { importSummary, parseImport, previewImport, textFromLocation, withoutDuplicates, type ImportPreview } from "@/lib/history";
 import { mergePlans } from "@/lib/plan";
 import type { HistFilter } from "@/lib/display";
@@ -64,7 +66,7 @@ type Api = {
   toast: string | null;
   flash: (message: string) => void;
   saveSession: (session: Session, mode?: "optimistic" | "confirmed") => Promise<void>;
-  mergeBackup: (backup: BackupFile) => Promise<void>;
+  mergeBackup: (backup: BackupFile) => Promise<"pending" | "done">;
   updateSession: (id: string, updater: (session: Session) => Session) => Promise<void>;
   removeSession: (id: string) => Promise<void>;
   replaceSessions: (sessions: Session[], customs?: CustomExercise[]) => Promise<void>;
@@ -85,6 +87,12 @@ type Api = {
   setCoachOpen: (open: boolean) => void;
   setSportFocus: (focus: { sessionId: string; exerciseId?: string | null; setId?: string | null } | null) => void;
   readSportFocus: () => { sessionId: string; exerciseId?: string | null; setId?: string | null } | null;
+  unsaved: boolean;
+  retryUnsaved: () => Promise<void>;
+  exportEmergency: () => void;
+  backupPlan: { backup: BackupFile; collisions: { id: string; existing: Session; incoming: Session }[] } | null;
+  chooseBackupAdd: (choices: Record<string, IdChoice>) => Promise<boolean>;
+  dismissBackupAdd: () => void;
 };
 
 const Ctx = createContext<Api | null>(null);
@@ -143,6 +151,9 @@ export function AppProvider({
   const [coachOpen, setCoachOpen] = useState(false);
   const sportFocusRef = useRef<{ sessionId: string; exerciseId?: string | null; setId?: string | null } | null>(null);
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(initial.importPreview);
+  const [unsaved, setUnsaved] = useState(false);
+  const [backupPlan, setBackupPlan] = useState<Api["backupPlan"]>(null);
+  const dirtyRef = useRef<Session[]>([]);
   const sessionsRef = useRef(sessions);
   const settingsRef = useRef(settings);
   const customsRef = useRef(customs);
@@ -208,15 +219,52 @@ export function AppProvider({
       if (mode === "optimistic") writeSessions(nextList);
       const outcome = await commitWrite(session, putSession);
       if (!outcome.saved) {
-        flash("Pas enregistré. Les notes restent à l’écran. Réessayez.");
+        dirtyRef.current = [...dirtyRef.current.filter((item) => item.id !== session.id), session];
+        setUnsaved(true);
+        flash(`${UNSAVED_LABEL}. Elles restent à l’écran. Réessayez, ou exportez-les.`);
         throw new Error("pas-enregistre");
       }
+      dirtyRef.current = dirtyRef.current.filter((item) => item.id !== session.id);
+      if (dirtyRef.current.length === 0) setUnsaved(false);
       if (mode === "confirmed") writeSessions(nextList);
     };
     const updateSession = async (id: string, updater: (session: Session) => Session) => {
       const current = sessionsRef.current.find((session) => session.id === id);
       if (!current) return;
       await saveSession(updater(current));
+    };
+    const writeBackupAdd = async (
+      backup: BackupFile,
+      added: Session[],
+      collisions: { id: string; existing: Session; incoming: Session; choice: IdChoice }[],
+      choices: Record<string, IdChoice>,
+    ) => {
+      const nextSessions = applyBackupAdd(sessionsRef.current, added, collisions, choices);
+      const previous = new Map(sessionsRef.current.map((session) => [session.id, JSON.stringify(session)]));
+      const written = nextSessions.filter((session) => previous.get(session.id) !== JSON.stringify(session));
+      const customs = [...customsRef.current];
+      const created: CustomExercise[] = [];
+      for (const custom of backup.customExercises) {
+        if (!customs.some((item) => item.id === custom.id)) {
+          customs.push(custom);
+          created.push(custom);
+        }
+      }
+      try {
+        await putMany(written, created);
+      } catch {
+        setUnsaved(true);
+        flash(`${UNSAVED_LABEL}. L’ajout n’a pas été écrit. Le carnet de ce téléphone n’a pas changé.`);
+        return false;
+      }
+      sessionsRef.current = nextSessions;
+      customsRef.current = customs;
+      setSessions(nextSessions);
+      setCustoms(customs);
+      setBackupPlan(null);
+      flash("Séances ajoutées. Celles déjà présentes ont été conservées, sauf si vous avez choisi autrement.");
+      setSheet(null);
+      return true;
     };
     return {
       settings,
@@ -373,10 +421,14 @@ export function AppProvider({
         setSheet(null);
       },
       restoreBackup: async (backup) => {
+        const prior = copyLog(sessionsRef.current);
         try {
           await replaceAll(backup);
         } catch {
-          flash("La restauration a échoué. Le carnet de ce téléphone n’a pas changé.");
+          sessionsRef.current = prior;
+          setSessions(prior);
+          setUnsaved(true);
+          flash(`${UNSAVED_LABEL}. Le carnet de ce téléphone n’a pas changé. Exportez-le si besoin.`);
           return;
         }
         setSettings(backup.settings);
@@ -397,28 +449,22 @@ export function AppProvider({
       },
       mergeBackup: async (backup) => {
         const incomingSessions = backup.sessions.filter((session) => session.source !== "demo");
-        try {
-          await putMany(incomingSessions, backup.customExercises);
-        } catch {
-          flash("L’ajout a échoué. Le carnet de ce téléphone n’a pas changé.");
-          return;
+        const plan = planBackupAdd(sessionsRef.current, incomingSessions);
+        if (plan.collisions.length) {
+          setBackupPlan({ backup, collisions: plan.collisions });
+          return "pending";
         }
-        const byId = new Map(sessionsRef.current.map((session) => [session.id, session]));
-        for (const session of incomingSessions) byId.set(session.id, session);
-        const nextSessions = [...byId.values()];
-        const customs = [...customsRef.current];
-        for (const custom of backup.customExercises) {
-          const index = customs.findIndex((item) => item.id === custom.id);
-          if (index === -1) customs.push(custom);
-          else customs[index] = custom;
-        }
-        sessionsRef.current = nextSessions;
-        customsRef.current = customs;
-        setSessions(nextSessions);
-        setCustoms(customs);
-        flash("Séances ajoutées. Le carnet déjà présent est conservé.");
-        setSheet(null);
+        await writeBackupAdd(backup, plan.added, plan.collisions, {});
+        return "done";
       },
+      chooseBackupAdd: async (choices) => {
+        const pending = backupPlan;
+        if (!pending) return false;
+        const incomingSessions = pending.backup.sessions.filter((session) => session.source !== "demo");
+        const plan = planBackupAdd(sessionsRef.current, incomingSessions);
+        return writeBackupAdd(pending.backup, plan.added, plan.collisions, choices);
+      },
+      dismissBackupAdd: () => setBackupPlan(null),
       loadDemo: async () => {
         const demo = buildDemo();
         const kept = sessionsRef.current.filter((session) => session.source !== "demo");
@@ -488,6 +534,31 @@ export function AppProvider({
         sportFocusRef.current = focus;
       },
       readSportFocus: () => sportFocusRef.current,
+      unsaved,
+      retryUnsaved: async () => {
+        const pending = [...dirtyRef.current];
+        for (const session of pending) {
+          const outcome = await commitWrite(session, putSession);
+          if (!outcome.saved) {
+            setUnsaved(true);
+            flash(`${UNSAVED_LABEL}. L’écriture n’a pas abouti.`);
+            return;
+          }
+          dirtyRef.current = dirtyRef.current.filter((item) => item.id !== session.id);
+        }
+        if (dirtyRef.current.length === 0) setUnsaved(false);
+      },
+      exportEmergency: () => {
+        const file = emergencyBackup(sessionsRef.current, settingsRef.current, customsRef.current);
+        const blob = new Blob([JSON.stringify(file, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "repere-urgence.json";
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      backupPlan,
       beginSession: async (session, applySuggestion = false) => {
         if (session.status === "planned") rememberPlan(session);
         const existing = loadProgression(session.id);
@@ -535,6 +606,8 @@ export function AppProvider({
     pendingPlan,
     importPreview,
     coachOpen,
+    unsaved,
+    backupPlan,
   ]);
 
   return (
@@ -566,7 +639,22 @@ export function useBoot() {
       try {
         const loaded = await loadState();
         if (cancel) return;
+        const prepared = migrateStored(loaded);
+        const sessions = prepared.sessions;
+        const settings = prepared.settings;
+        const firstMigration = (loaded.settings.schemaVersion ?? 1) < 2;
         let notice: string | null = null;
+        if (prepared.changed) {
+          try {
+            if (prepared.sessions !== loaded.sessions) await putMany(prepared.sessions, []);
+            await saveSettings(prepared.settings);
+          } catch {
+            notice = `${UNSAVED_LABEL}. Le carnet affiché n’est pas encore écrit.`;
+          }
+        }
+        if (firstMigration && prepared.flags.length && !notice) {
+          notice = "Certaines charges anciennes n’ont pas d’unité claire. Elles n’ont pas été converties.";
+        }
         let preview: ImportPreview | null = null;
         const fromUrl = await textFromLocation(window.location.href);
         if (fromUrl.failed) notice = "Ce lien d’import est illisible.";
@@ -588,10 +676,10 @@ export function useBoot() {
         if (raw) {
           const parsed = parseImport(raw, loaded.customs);
           if ("error" in parsed) notice = parsed.error;
-          else preview = previewImport(parsed, loaded.sessions);
+          else preview = previewImport(parsed, sessions);
         }
-        applyTheme(loaded.settings.theme);
-        if (!cancel) setState({ ...loaded, pendingPlan: Boolean(preview) && !loaded.settings.onboarded, importPreview: preview, notice });
+        applyTheme(settings.theme);
+        if (!cancel) setState({ settings, sessions, customs: loaded.customs, pendingPlan: Boolean(preview) && !settings.onboarded, importPreview: preview, notice });
       } catch {
         if (!cancel) setError("Le stockage de ce navigateur ne répond pas. Le carnet n’a pas été ouvert.");
       }

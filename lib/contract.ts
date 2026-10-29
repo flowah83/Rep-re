@@ -66,6 +66,20 @@ export function isClock(value: string): boolean {
 
 export const TEXT_LIMIT = 4000;
 export const IMPORT_LIMIT = 2_000_000;
+export const MAX_SESSIONS = 500;
+export const MAX_EXERCISES = 40;
+export const MAX_SETS = 60;
+
+/** null reste inconnu. 0 reste 0. Un nombre impossible n’est pas converti en silence. */
+export function readStoredNumber(value: unknown): { ok: true; value: number | null } | { ok: false } {
+  if (value == null || value === "") return { ok: true, value: null };
+  if (typeof value === "number") return Number.isFinite(value) ? { ok: true, value } : { ok: false };
+  if (typeof value === "string") {
+    const numeric = Number(value.replace(",", ".").trim());
+    return Number.isFinite(numeric) ? { ok: true, value: numeric } : { ok: false };
+  }
+  return { ok: false };
+}
 
 /** Même lecture partout : écran, volume, import, export. Une chaîne inconnue reste telle quelle. */
 export function normalizeUnit(value: unknown): string | null {
@@ -77,5 +91,7 @@ export function normalizeUnit(value: unknown): string | null {
   if (key === "kg/jambe" || key.includes("par jambe")) return "kg/jambe";
   if (key === "kg") return "kg";
   if (key === "corps" || key.includes("pdc") || key.includes("poids du corps")) return "corps";
+  if (key === "ajoute" || key === "lest" || key.includes("poids ajoute")) return "ajoute";
+  if (key === "assistance" || key.includes("assiste")) return "assistance";
   return raw;
 }
