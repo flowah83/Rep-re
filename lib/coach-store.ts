@@ -55,13 +55,37 @@ export function maskSecret(token: string | null | undefined): string {
   return `•••• ${clean.slice(-4)}`;
 }
 
-export type CoachPhase = "non-configure" | "pret" | "en-cours" | "indisponible";
+export type CoachPhase = "non-configure" | "configure" | "verifie" | "en-cours" | "indisponible";
 
-export function coachPhase(input: { configured: boolean; busy: boolean; down: boolean }): { phase: CoachPhase; label: string } {
+export function coachPhase(input: { configured: boolean; verified?: boolean; busy: boolean; down: boolean }): { phase: CoachPhase; label: string } {
   if (!input.configured) return { phase: "non-configure", label: "Non configuré" };
   if (input.busy) return { phase: "en-cours", label: "Réponse en cours" };
   if (input.down) return { phase: "indisponible", label: "Indisponible" };
-  return { phase: "pret", label: "Prêt" };
+  if (input.verified) return { phase: "verifie", label: "Vérification réussie" };
+  return { phase: "configure", label: "Configuration présente" };
+}
+
+const VERIFIED_KEY = "repere-coach-verified";
+
+export function coachVerified(config = loadCoachConfig()): boolean {
+  try {
+    return localStorage.getItem(VERIFIED_KEY) === coachFingerprint(config);
+  } catch {
+    return false;
+  }
+}
+
+export function markCoachVerified(config: CoachConfig) {
+  try {
+    localStorage.setItem(VERIFIED_KEY, coachFingerprint(config));
+  } catch {
+    /* stockage privé */
+  }
+}
+
+function coachFingerprint(config: CoachConfig): string {
+  const token = normalizeCoachToken(config.token);
+  return `${normalizeCoachUrl(config.url)}|${token.length}|${token.slice(-4)}`;
 }
 
 export function normalizeCoachToken(raw: string | null | undefined): string {
@@ -214,7 +238,7 @@ export async function requestCoachStream(
       return await requestCoach("/coach", body, withTimeout(fetchImpl, COACH_FALLBACK_MS, signal));
     } catch (caught) {
       if (signal?.aborted) throw caught;
-      if (caught instanceof Error && caught.name === "AbortError") throw new Error("Le coach n’a pas pu répondre.");
+      if (caught instanceof Error && caught.name === "AbortError") throw new Error("Réponse non reçue.");
       throw caught;
     }
   };
@@ -233,7 +257,7 @@ export async function requestCoachStream(
     });
   } catch (caught) {
     if (signal?.aborted) throw caught;
-    if (caught instanceof Error && caught.name === "AbortError") throw new Error("Le coach n’a pas pu répondre.");
+    if (caught instanceof Error && caught.name === "AbortError") throw new Error("Réponse non reçue.");
     throw new Error(`Le coach n’est pas joignable. Adresse utilisée : ${url}`);
   } finally {
     clearTimeout(timer);
@@ -308,7 +332,7 @@ export async function requestCoachStream(
   }
   if (message) return { message };
   if (accumulated) return { message: { role: "assistant", content: accumulated } };
-  throw new Error("Le coach n’a pas pu répondre.");
+  throw new Error("Réponse non reçue.");
 }
 
 function finishSse(raw: string, onText: (text: string) => void): Record<string, unknown> {

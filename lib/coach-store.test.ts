@@ -145,7 +145,7 @@ describe("requestCoachStream", () => {
         else init?.signal?.addEventListener("abort", fail, { once: true });
       });
     });
-    await expect(requestCoachStream({ messages: [] }, () => undefined, undefined, { fetchImpl, firstByteMs: 40 })).rejects.toThrow(/pas pu répondre/);
+    await expect(requestCoachStream({ messages: [] }, () => undefined, undefined, { fetchImpl, firstByteMs: 40 })).rejects.toThrow(/Réponse non reçue/);
     expect(fetchImpl.mock.calls.map((call) => String(call[0]))).toEqual([`${DEFAULT_COACH_URL}/coach/stream`]);
   });
 
@@ -162,7 +162,7 @@ describe("requestCoachStream", () => {
       });
       return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
     });
-    await expect(requestCoachStream({ messages: [] }, () => undefined, undefined, { fetchImpl, inactivityMs: 40 })).rejects.toThrow(/pas pu répondre/);
+    await expect(requestCoachStream({ messages: [] }, () => undefined, undefined, { fetchImpl, inactivityMs: 40 })).rejects.toThrow(/Réponse non reçue/);
     expect(fetchImpl.mock.calls.map((call) => String(call[0]))).toEqual([`${DEFAULT_COACH_URL}/coach/stream`]);
   });
 

@@ -20,6 +20,7 @@ import {
 import {
   coachIsReady,
   coachPhase,
+  coachVerified,
   loadCoachChat,
   loadCoachMemo,
   recordCoachNotice,
@@ -31,7 +32,7 @@ import {
 } from "@/lib/coach-store";
 import { uid } from "@/lib/utils";
 
-const OFFLINE = "Vous êtes hors ligne. Le carnet marche. Le coach répondra avec le réseau.";
+const OFFLINE = "Aucune donnée envoyée. Vous êtes hors ligne. Le carnet marche.";
 const RATE = "Le coach souffle un peu. Réessayez dans une minute.";
 
 export function CoachLayer() {
@@ -522,7 +523,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
   const visible = turns.filter((turn) => turn.role !== "tool");
   const lastId = visible.at(-1)?.id;
   const trailing = Boolean(partial) || (busy && !partial);
-  const phase = coachPhase({ configured: ready, busy, down: !online || down });
+  const phase = coachPhase({ configured: ready, verified: coachVerified(), busy, down: !online || down });
 
   return (
     <>
@@ -544,7 +545,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
           <CoachFace state={face} />
           <div className="coach-id">
             <strong>Coach</strong>
-            <span data-testid="coach-status" className={phase.phase === "pret" ? "sage" : phase.phase === "non-configure" ? "" : "copper"}>{phase.label}</span>
+            <span data-testid="coach-status" className={phase.phase === "verifie" || phase.phase === "configure" ? "sage" : phase.phase === "non-configure" ? "" : "copper"}>{phase.label}</span>
           </div>
           <button type="button" className="coach-close" data-testid="coach-close" aria-label="Fermer" onClick={close}>
             <CloseMark />
@@ -577,6 +578,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
                         <RichText text={turn.content} />
                       </div>
                     ) : null}
+                    {turn.omitted && !turn.pending ? <p className="omit" data-testid="coach-omitted">{turn.omitted}</p> : null}
                     {turn.pending && turn.toolCalls?.length ? (
                       <ConfirmCard
                         turn={turn}
@@ -723,7 +725,10 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
         </form>
         {phase.phase === "indisponible" && ready ? (
           <div style={{ padding: "0 16px 16px" }}>
-            <button type="button" className="btn" data-testid="coach-retry" style={{ marginTop: 0 }} onClick={() => setDown(false)}>
+            <button type="button" className="btn" data-testid="coach-retry" style={{ marginTop: 0 }} onClick={() => {
+              setDown(false);
+              if (lastHistory.current?.length) void complete(lastHistory.current);
+            }}>
               Réessayer
             </button>
           </div>

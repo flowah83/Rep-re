@@ -13,7 +13,10 @@ export function settleApply(steps: ApplyStep[], applied: boolean): { kind: Apply
   }
   const phoneOk = steps.some((step) => step.scope === "phone" && step.ok);
   const calendarFailed = steps.some((step) => step.scope === "calendar" && !step.ok);
+  const anyOk = steps.some((step) => step.ok);
+  const anyFailed = steps.some((step) => !step.ok);
   if (phoneOk && calendarFailed) return { kind: "partial", headline: "Une moitié a réussi." };
+  if (anyOk && anyFailed) return { kind: "partial", headline: "Une partie a réussi." };
   if (steps.some((step) => !step.ok)) return { kind: "failed", headline: "Ça n’a pas été écrit." };
   return { kind: "ok", headline: "C’est noté." };
 }

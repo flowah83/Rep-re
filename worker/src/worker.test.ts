@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { basicHeader, buildIcs, parisDayToUtc, parseEvents } from "./caldav";
-import { handleRequest, resetAuthGuard, resetCalendarCache, type Env } from "./index";
+import { basicHeader, buildIcs, listRecurrenceIncomplete, parisDayToUtc, parseEvents, patchIcs } from "./caldav";
+import { handleRequest, resetAuthGuard, resetCalendarCache, resetCoachUsage, type Env } from "./index";
 
 const env: Env = {
   APP_TOKEN: "phone-token",
@@ -23,6 +23,7 @@ function post(path: string, body: unknown, token = "phone-token", origin?: strin
 afterEach(() => {
   resetCalendarCache();
   resetAuthGuard();
+  resetCoachUsage();
   vi.unstubAllGlobals();
 });
 
@@ -454,8 +455,18 @@ describe("worker", () => {
     expect(staleBody.conflict).toBe(true);
     expect(puts).toHaveLength(0);
 
-    const resumed = await handleRequest(
+    const reread = await handleRequest(
       post("/calendar", { action: "update", uid: "poussee-1", href: "/123/calendars/flo/poussee.ics", etag: '"old"', refresh: true, title: "Poussée", start: "2026-10-29T18:00", end: "2026-10-29T19:00" }),
+      env,
+      conflictFetch,
+    );
+    expect(reread.status).toBe(409);
+    const current = (await reread.json()) as { current?: { start?: string } };
+    expect(current.current?.start).toBe("2026-10-27T18:00");
+    expect(puts).toHaveLength(0);
+
+    const resumed = await handleRequest(
+      post("/calendar", { action: "update", uid: "poussee-1", href: "/123/calendars/flo/poussee.ics", etag: '"old"', refresh: true, confirm: true, title: "Poussée", start: "2026-10-29T18:00", end: "2026-10-29T19:00" }),
       env,
       conflictFetch,
     );
@@ -495,6 +506,113 @@ describe("worker", () => {
     const parsed = parseEvents(`<D:response><D:href>/x.ics</D:href><C:calendar-data>${ics.replace(/\r\n/g, "\n")}</C:calendar-data></D:response>`);
     expect(parsed[0].start).toBe("2026-10-25T18:15");
     expect(parsed[0].title).toBe("🏋️ Poussée");
+  });
+});
+
+describe("lot 2 calendrier", () => {
+  const master = [
+    "BEGIN:VCALENDAR",
+    "BEGIN:VTIMEZONE",
+    "TZID:Europe/Paris",
+    "BEGIN:DAYLIGHT",
+    "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU",
+    "END:DAYLIGHT",
+    "END:VTIMEZONE",
+    "BEGIN:VEVENT",
+    "UID:serie-1",
+    "DTSTART;TZID=Europe/Paris:20261102T180000",
+    "DTEND;TZID=Europe/Paris:20261102T190000",
+    "SUMMARY:Squat",
+    "DESCRIPTION:Note d’origine",
+    "RRULE:FREQ=WEEKLY",
+    "BEGIN:VALARM",
+    "ACTION:DISPLAY",
+    "DESCRIPTION:Alarme du téléphone",
+    "TRIGGER:-PT15M",
+    "END:VALARM",
+    "END:VEVENT",
+    "BEGIN:VEVENT",
+    "UID:serie-1",
+    "RECURRENCE-ID;TZID=Europe/Paris:20261109T180000",
+    "DTSTART;TZID=Europe/Paris:20261109T183000",
+    "DTEND;TZID=Europe/Paris:20261109T193000",
+    "SUMMARY:Squat décalé",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+
+  it("garde la description de l’alarme et l’heure de l’exception", () => {
+    const next = patchIcs(master, { title: "Squat", start: "2026-11-16T18:00", end: "2026-11-16T19:00" });
+    expect(next).toContain("DESCRIPTION:Alarme du téléphone");
+    expect(next).toContain("DESCRIPTION:Note d’origine");
+    expect(next).toContain("RECURRENCE-ID;TZID=Europe/Paris:20261109T180000");
+    expect(next).toContain("DTSTART;TZID=Europe/Paris:20261109T183000");
+    expect(next).toContain("DTSTART;TZID=Europe/Paris:20261116T180000");
+    const moved = next.split("BEGIN:VEVENT").filter((part) => part.includes("RECURRENCE-ID"));
+    expect(moved.join("")).not.toContain("20261116");
+  });
+
+  it("ne déclare pas une répétition RDATE comme entièrement lue", () => {
+    const xml = `<D:response><C:calendar-data>BEGIN:VEVENT\nUID:a\nSUMMARY:Cours\nRDATE;TZID=Europe/Paris:20261102T180000\nEND:VEVENT</C:calendar-data></D:response>`;
+    expect(listRecurrenceIncomplete(xml)).toBe(true);
+  });
+
+  it("refuse une heure qui n’existe pas au changement d’heure", async () => {
+    const response = await handleRequest(
+      post("/calendar", {
+        action: "create",
+        title: "Squat",
+        start: "2026-03-29T02:30",
+        end: "2026-03-29T03:30",
+        idempotencyKey: "dst",
+      }),
+      env,
+      vi.fn(async () => new Response("", { status: 500 })),
+    );
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { error?: string };
+    expect(body.error).toMatch(/heure|existe pas/);
+  });
+
+  it("réessaie une création sans deuxième écriture ni écrasement", async () => {
+    const stored = new Map<string, string>();
+    const puts: string[] = [];
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method || "GET";
+      const href = String(url);
+      if (method === "PROPFIND" && href === "https://caldav.icloud.com/") {
+        return new Response(`<D:response><D:current-user-principal><D:href>/123/principal/</D:href></D:current-user-principal></D:response>`, { status: 207 });
+      }
+      if (method === "PROPFIND" && href.includes("/principal")) {
+        return new Response(`<D:calendar-home-set><D:href>/123/calendars/</D:href></D:calendar-home-set>`, { status: 207 });
+      }
+      if (method === "PROPFIND") {
+        return new Response(`<D:response><D:href>/123/calendars/flo/</D:href><D:displayname>Entraînement</D:displayname></D:response>`, { status: 207 });
+      }
+      if (method === "GET") {
+        const body = stored.get(href);
+        if (!body) return new Response("missing", { status: 404 });
+        return new Response(body, { status: 200, headers: { ETag: '"e1"' } });
+      }
+      if (method === "PUT") {
+        puts.push(String(init?.body ?? ""));
+        stored.set(href, String(init?.body ?? ""));
+        return new Response(null, { status: 204, headers: { ETag: '"e1"' } });
+      }
+      return new Response("no", { status: 500 });
+    });
+    const body = { action: "create", title: "Squat", start: "2026-11-02T18:00", end: "2026-11-02T19:00", idempotencyKey: "clef-une" };
+    const first = await handleRequest(post("/calendar", body), env, fetchImpl);
+    expect(first.status).toBe(200);
+    const only = [...stored.keys()][0];
+    stored.set(only, (stored.get(only) ?? "").replace("SUMMARY:Squat", "SUMMARY:Squat modifié ailleurs"));
+    const second = await handleRequest(post("/calendar", body), env, fetchImpl);
+    expect(second.status).toBe(409);
+    expect(puts).toHaveLength(1);
+    const other = await handleRequest(post("/calendar", { ...body, idempotencyKey: "clef-deux", title: "Autre" }), env, fetchImpl);
+    expect(other.status).toBe(200);
+    expect(puts).toHaveLength(2);
+    expect(puts[1]).toContain("clef-deux");
   });
 });
 

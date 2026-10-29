@@ -148,7 +148,10 @@ export function extractHref(xml: string, parentLocal: string): string | null {
 
 export function eventRecurrenceOpen(ics: string): boolean {
   const unfolded = unfold(ics);
-  return unfolded.split("BEGIN:VEVENT").slice(1).some((event) => /^RRULE[:;]/m.test(event.split("END:VEVENT")[0] ?? ""));
+  return unfolded.split("BEGIN:VEVENT").slice(1).some((event) => {
+    const body = event.split("END:VEVENT")[0] ?? "";
+    return /^RRULE[:;]/m.test(body) || /^RDATE[:;]/m.test(body);
+  });
 }
 
 export function listRecurrenceIncomplete(xml: string): boolean {
@@ -160,63 +163,108 @@ export function listRecurrenceIncomplete(xml: string): boolean {
   });
 }
 
-export function summaryOf(ics: string): string {
-  const unfolded = unfold(ics);
-  const event = unfolded.split("BEGIN:VEVENT").pop()?.split("END:VEVENT")[0] ?? "";
-  return icsField(event, "SUMMARY");
+export function masterEvent(ics: string): { title: string; start: string; end: string } {
+  const tree = parseIcsTree(ics);
+  const calendar = tree.children.find((node) => node.name === "VCALENDAR") ?? tree;
+  const vevent = calendar.children.find((node) => node.name === "VEVENT" && !node.props.some((line) => line.startsWith("RECURRENCE-ID")));
+  const props = vevent?.props ?? [];
+  const field = (key: string) => {
+    const line = props.find((item) => item.startsWith(key));
+    if (!line) return "";
+    return line.slice(line.indexOf(":") + 1);
+  };
+  const when = (key: string) => icsWhen(props.find((item) => item.startsWith(key)) ?? "");
+  return { title: unescapeIcs(field("SUMMARY")), start: when("DTSTART"), end: when("DTEND") };
 }
 
-/** Remplace seulement le titre, les horaires et la note. Alarmes, répétition et fuseau restent. */
-export function patchIcs(existing: string, event: { title: string; start: string; end: string; notes?: string }): string {
-  const lines = unfold(existing).split(/\r?\n/);
-  let inEvent = false;
-  let sawSummary = false;
-  let sawStart = false;
-  let sawEnd = false;
-  let sawDesc = false;
-  const next: string[] = [];
-  for (const line of lines) {
-    if (line === "BEGIN:VEVENT") {
-      inEvent = true;
-      next.push(line);
+export function summaryOf(ics: string): string {
+  return masterEvent(ics).title || icsField(unfold(ics).split("BEGIN:VEVENT").pop()?.split("END:VEVENT")[0] ?? "", "SUMMARY");
+}
+
+type IcsNode = { name: string; props: string[]; children: IcsNode[] };
+
+function parseIcsTree(ics: string): IcsNode {
+  const root: IcsNode = { name: "ROOT", props: [], children: [] };
+  const stack = [root];
+  for (const line of unfold(ics).split(/\r?\n/)) {
+    if (!line) continue;
+    if (line.startsWith("BEGIN:")) {
+      const node: IcsNode = { name: line.slice(6).trim(), props: [], children: [] };
+      stack[stack.length - 1].children.push(node);
+      stack.push(node);
       continue;
     }
-    if (line === "END:VEVENT") {
-      if (!sawSummary) next.push(`SUMMARY:${escapeIcs(event.title)}`);
-      if (!sawStart) next.push(`DTSTART;TZID=Europe/Paris:${toIcsLocal(event.start)}`);
-      if (!sawEnd) next.push(`DTEND;TZID=Europe/Paris:${toIcsLocal(event.end)}`);
-      if (event.notes && !sawDesc) next.push(`DESCRIPTION:${escapeIcs(event.notes)}`);
-      inEvent = false;
-      next.push(line);
+    if (line.startsWith("END:")) {
+      if (stack.length > 1) stack.pop();
       continue;
     }
-    if (!inEvent) {
-      next.push(line);
-      continue;
-    }
-    if (line.startsWith("SUMMARY")) {
-      next.push(`SUMMARY:${escapeIcs(event.title)}`);
-      sawSummary = true;
-      continue;
-    }
-    if (line.startsWith("DTSTART")) {
-      next.push(`DTSTART;TZID=Europe/Paris:${toIcsLocal(event.start)}`);
-      sawStart = true;
-      continue;
-    }
-    if (line.startsWith("DTEND")) {
-      next.push(`DTEND;TZID=Europe/Paris:${toIcsLocal(event.end)}`);
-      sawEnd = true;
-      continue;
-    }
-    if (line.startsWith("DESCRIPTION")) {
-      if (event.notes) next.push(`DESCRIPTION:${escapeIcs(event.notes)}`);
-      sawDesc = true;
-      continue;
-    }
-    next.push(line);
+    stack[stack.length - 1].props.push(line);
   }
-  return `${next.filter((line) => line !== "").join("\r\n")}\r\n`;
+  return root;
+}
+
+function serializeNode(node: IcsNode): string[] {
+  if (node.name === "ROOT") return node.children.flatMap(serializeNode);
+  return [`BEGIN:${node.name}`, ...node.props, ...node.children.flatMap(serializeNode), `END:${node.name}`];
+}
+
+function replaceOwnProp(node: IcsNode, key: string, line: string) {
+  const index = node.props.findIndex((item) => item.startsWith(key));
+  if (index === -1) node.props.push(line);
+  else node.props[index] = line;
+}
+
+/** Remplace le titre et l’horaire du composant principal. L’exception, l’alarme et la note inchangée restent. */
+export function patchIcs(existing: string, event: { title: string; start: string; end: string; notes?: string }): string {
+  const tree = parseIcsTree(existing);
+  const calendar = tree.children.find((node) => node.name === "VCALENDAR") ?? tree;
+  for (const vevent of calendar.children.filter((node) => node.name === "VEVENT")) {
+    if (vevent.props.some((line) => line.startsWith("RECURRENCE-ID"))) continue;
+    replaceOwnProp(vevent, "SUMMARY", `SUMMARY:${escapeIcs(event.title)}`);
+    replaceOwnProp(vevent, "DTSTART", `DTSTART;TZID=Europe/Paris:${toIcsLocal(event.start)}`);
+    replaceOwnProp(vevent, "DTEND", `DTEND;TZID=Europe/Paris:${toIcsLocal(event.end)}`);
+    if (event.notes !== undefined) {
+      if (event.notes) replaceOwnProp(vevent, "DESCRIPTION", `DESCRIPTION:${escapeIcs(event.notes)}`);
+      else vevent.props = vevent.props.filter((line) => !line.startsWith("DESCRIPTION"));
+    }
+  }
+  return `${serializeNode(tree).join("\r\n")}\r\n`;
+}
+
+/** Heure locale de Paris : une heure inexistante ou inversée est refusée. */
+export function scheduleIssue(start: string, end: string): string | null {
+  if (!isParisLocal(start) || !isParisLocal(end)) return "L’horaire n’est pas une date réelle.";
+  if (parisRoundTrip(start) !== start || parisRoundTrip(end) !== end) return "Cette heure n’existe pas à Paris.";
+  if (start >= end) return "La fin doit être après le début.";
+  return null;
+}
+
+function isParisLocal(value: string): boolean {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+function parisRoundTrip(value: string): string {
+  const utc = zonedToUtc(value, "Europe/Paris");
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(utc);
+  const read = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${read("year")}-${read("month")}-${read("day")}T${read("hour")}:${read("minute")}`;
 }
 
 export function parseEvents(xml: string): CalendarEvent[] {
@@ -333,4 +381,8 @@ function decodeXml(value: string): string {
 
 function escapeIcs(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+}
+
+function unescapeIcs(value: string): string {
+  return value.replace(/\\n/g, "\n").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\");
 }

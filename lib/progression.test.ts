@@ -42,7 +42,7 @@ function exercise(partial: Partial<ExerciseLog> = {}): ExerciseLog {
     muscles: ["pectoraux"],
     unit: partial.unit,
     note: partial.note,
-    planned: partial.planned ?? { sets: 4, reps: 6, loadKg: 80, restSec: 180, rpe: 8 },
+    planned: partial.planned ?? { sets: partial.sets?.length || 4, reps: 6, loadKg: 80, restSec: 180, rpe: 8 },
     sets: partial.sets ?? [],
   };
 }
@@ -72,7 +72,7 @@ describe("double progression", () => {
     const history = [doneSession("2026-10-01", exercise({ sets: [set({ loadKg: 80, reps: 6, rpe: 8 })] }))];
     const planned = doneSession("2026-10-24", exercise(), { id: "today", status: "planned" });
     const offer = startOffer(planned, history);
-    expect(offer).toMatchObject({ kind: "choice", upLabel: "Commencer à 82,5 kg", keepLabel: "Garder 80 kg" });
+    expect(offer).toMatchObject({ kind: "choice", upLabel: "Commencer à 7 répétitions", keepLabel: "Garder le plan" });
   });
 
   it("monte la charge quand toutes les séries atteignent l’objectif", () => {
@@ -82,16 +82,16 @@ describe("double progression", () => {
       })),
     ];
     const suggestion = suggestForExercise(exercise(), history, "today");
-    expect(suggestion?.loadKg).toBe(82.5);
-    expect(suggestion?.reps).toBe(6);
-    expect(suggestion?.reason).toMatch(/Objectif de répétitions atteint/);
+    expect(suggestion?.loadKg).toBe(80);
+    expect(suggestion?.reps).toBe(7);
+    expect(suggestion?.reason).toMatch(/répétitions/);
     expect(suggestion?.changesPlan).toBe(true);
   });
 
   it("mentionne l’aisance quand le RIR est d’au moins 2", () => {
     const history = [
       doneSession("2026-10-01", exercise({
-        sets: [set({ loadKg: 80, reps: 6, rir: 2, rpe: 7 }), set({ loadKg: 80, reps: 6, rir: 3 })],
+        sets: [set({ loadKg: 80, reps: 8, rir: 2, rpe: 7 }), set({ loadKg: 80, reps: 8, rir: 3 })],
       })),
     ];
     const suggestion = suggestForExercise(exercise(), history);
@@ -143,8 +143,8 @@ describe("double progression", () => {
     }));
     const planned = exercise({ stepKg: 1, planned: { sets: 3, reps: 10, loadKg: 28, restSec: 90, rpe: 8 } });
     const suggestion = suggestForExercise(planned, [older, newer]);
-    expect(suggestion?.loadKg).toBe(29);
-    expect(suggestion?.reps).toBe(10);
+    expect(suggestion?.loadKg).toBe(28);
+    expect(suggestion?.reps).toBe(11);
   });
 
   it("ne transforme pas une charge inconnue en poids du corps", () => {
@@ -172,8 +172,9 @@ describe("double progression", () => {
       planned: { sets: 3, reps: 10, loadKg: 14, restSec: 90, rpe: 8 },
     });
     const suggestion = suggestForExercise(planned, history);
-    expect(suggestion?.loadKg).toBe(15);
-    expect(suggestion?.reason).toMatch(/15 kg\/main/);
+    expect(suggestion?.loadKg).toBe(14);
+    expect(suggestion?.reps).toBe(11);
+    expect(suggestion?.reason).toMatch(/14 kg\/main/);
     expect(suggestion?.reason).not.toMatch(/30/);
   });
 
@@ -183,7 +184,8 @@ describe("double progression", () => {
       sets: [set({ loadKg: 80, reps: 6, rpe: 8 })],
     }))];
     const suggestion = suggestForExercise(exercise({ name: "Développé couché barre" }), history);
-    expect(suggestion?.loadKg).toBe(82.5);
+    expect(suggestion?.loadKg).toBe(80);
+    expect(suggestion?.reps).toBe(7);
   });
 
   it("propose une suggestion par exercice et l’accepter ne touche pas les séries faites", () => {
@@ -210,9 +212,10 @@ describe("double progression", () => {
     expect(suggestions.map((item) => item.exerciseId)).toEqual(["a", "b"]);
     const next = applySuggestion(planned, suggestions[0]);
     const updated = next.exercises[0];
-    expect(updated.planned.loadKg).toBe(82.5);
+    expect(updated.planned.loadKg).toBe(80);
+    expect(updated.planned.reps).toBe(7);
     expect(updated.sets[0].loadKg).toBe(60);
-    expect(updated.sets[1].loadKg).toBe(82.5);
+    expect(updated.sets[1].loadKg).toBe(80);
     expect(updated.sets[1].done).toBe(false);
   });
 });
@@ -247,12 +250,12 @@ describe("ajustement groupé", () => {
 
   function history(): Session[] {
     return [
-      doneSession("2026-10-01", exercise({ sets: [set({ loadKg: 80, reps: 6, rpe: 8 })] })),
+      doneSession("2026-10-01", exercise({ sets: [set({ loadKg: 80, reps: 8, rpe: 8 })] })),
       doneSession("2026-10-01", exercise({
         name: "Écarté poulie",
         stepKg: 2.5,
         planned: { sets: 3, reps: 12, loadKg: 15, restSec: 90, rpe: 8 },
-        sets: [set({ loadKg: 15, reps: 12, rpe: 8 })],
+        sets: [set({ loadKg: 15, reps: 14, rpe: 8 }), set({ loadKg: 15, reps: 14, rpe: 8 }), set({ loadKg: 15, reps: 14, rpe: 8 })],
       }), { id: "fly" }),
     ];
   }
@@ -372,7 +375,7 @@ describe("plan de reprise", () => {
     const history = [
       doneSession("2026-10-18", exercise({
         name: "Développé couché barre",
-        sets: [set({ loadKg: 52.5, reps: 8, rpe: 8 })],
+        sets: [set({ loadKg: 52.5, reps: 10, rpe: 8 })],
       })),
     ];
     const started = startWithProgression(normal, history, null);
@@ -404,7 +407,7 @@ describe("plan de reprise", () => {
 describe("suite sur plusieurs séances", () => {
   function bench(date: string, load: number, reps: number, plannedReps = reps) {
     return doneSession(date, exercise({
-      planned: { sets: 4, reps: plannedReps, loadKg: load, restSec: 180, rpe: 8 },
+      planned: { sets: 2, reps: plannedReps, loadKg: load, restSec: 180, rpe: 8 },
       sets: [set({ loadKg: load, reps, rpe: 8 }), set({ loadKg: load, reps, rpe: 8 })],
     }), { id: date });
   }
@@ -415,11 +418,11 @@ describe("suite sur plusieurs séances", () => {
     const preview = programPreview(planned.exercises[0], history, { skipSessionId: "today" });
     expect(preview?.sentence).toMatch(/Règle de Repère/);
     expect(preview?.sentence).toMatch(/pas une obligation/);
-    expect(preview?.upcoming.map((step) => step.label)).toEqual(["82,5 kg × 6", "82,5 kg × 7", "82,5 kg × 8"]);
+    expect(preview?.upcoming.map((step) => step.label)).toEqual(["80 kg × 7", "80 kg × 8", "82,5 kg × 6"]);
     expect(startOffer(planned, history)).toMatchObject({
       kind: "choice",
-      upLabel: "Commencer à 82,5 kg",
-      keepLabel: "Garder 80 kg",
+      upLabel: "Commencer à 7 répétitions",
+      keepLabel: "Garder le plan",
     });
   });
 
@@ -455,7 +458,8 @@ describe("suite sur plusieurs séances", () => {
       bench("2026-10-01", 100, 6),
     ];
     const today = doneSession("2026-10-24", exercise(), { id: "today", status: "planned" });
-    expect(suggestForExercise(today.exercises[0], heavyThenLight, "today")?.loadKg).toBe(82.5);
+    expect(suggestForExercise(today.exercises[0], heavyThenLight, "today")?.loadKg).toBe(80);
+    expect(suggestForExercise(today.exercises[0], heavyThenLight, "today")?.reps).toBe(7);
   });
 
   it("ne modifie pas un plan de Chef sport en montrant la suite", () => {
@@ -465,7 +469,7 @@ describe("suite sur plusieurs séances", () => {
     const preview = programPreview(planned.exercises[0], history, { coachPlan: true, skipSessionId: "today" });
     expect(JSON.stringify(planned)).toBe(before);
     expect(preview?.sentence).toMatch(/Chef sport reste prioritaire/);
-    expect(preview?.upcoming[0].label).toBe("82,5 kg × 6");
+    expect(preview?.upcoming[0].label).toBe("80 kg × 7");
     expect(planned.exercises[0].planned.loadKg).toBe(80);
     expect(startOffer(planned, history).kind).toBe("choice");
   });

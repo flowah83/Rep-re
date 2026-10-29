@@ -30,6 +30,8 @@ import {
   putCall,
   reportCall,
   resolveHref,
+  scheduleIssue,
+  masterEvent,
   summaryOf,
   type HttpCall,
 } from "./caldav";
@@ -61,6 +63,10 @@ export async function handleRequest(request: Request, env: Env, fetchImpl: Fetch
   if (request.method !== "POST") return cors(json({ error: "Méthode refusée." }, 405), origin, allowed);
   const denied = await authorize(request, env);
   if (denied) return cors(denied, origin, allowed);
+  const declared = Number(request.headers.get("content-length") || 0);
+  if (Number.isFinite(declared) && declared > MAX_REQUEST_BYTES) return cors(json({ error: "La requête est trop longue." }, 413), origin, allowed);
+  const limited = noteCoachUsage(request);
+  if (limited) return cors(limited, origin, allowed);
 
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "") || "/";
@@ -334,6 +340,14 @@ async function calendar(request: Request, env: Env, fetchImpl: FetchLike): Promi
     return json({ error: "Adresse de calendrier refusée." }, 400);
   }
   const auth = basicHeader(env.CALDAV_USER, env.ICLOUD_APP_PASSWORD);
+  if (action === "create" || action === "update") {
+    const start = text(body.start);
+    const end = text(body.end);
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(start) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(end)) {
+      const timing = scheduleIssue(start, end);
+      if (timing) return json({ error: timing }, 400);
+    }
+  }
   const calendarUrl = await findCalendar(env, auth, fetchImpl);
   if (action === "list") {
     const start = typeof body.start === "string" ? body.start : "";
@@ -352,6 +366,8 @@ async function calendar(request: Request, env: Env, fetchImpl: FetchLike): Promi
     if (!title || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(end)) {
       return json({ error: "L’événement est incomplet." }, 400);
     }
+    const timing = scheduleIssue(start, end);
+    if (timing) return json({ error: timing }, 400);
     const uid = action === "update" && text(body.uid) ? text(body.uid) : calendarObjectName(text(body.idempotencyKey) || crypto.randomUUID());
     const href = action === "create" ? `${calendarUrl}${uid}.ics` : text(body.href) || `${calendarUrl}${uid}.ics`;
     const target = guardedHref(calendarUrl, href);
@@ -366,7 +382,21 @@ async function calendar(request: Request, env: Env, fetchImpl: FetchLike): Promi
       if (body.refresh !== true && clientEtag && remoteEtag && clientEtag !== remoteEtag) {
         return json({ error: "Le calendrier a changé entre-temps. Rien n’a été écrasé.", conflict: true }, 409);
       }
-      const ics = patchIcs(current.ics, { title, start, end, notes: text(body.notes) });
+      if (body.refresh === true && body.confirm !== true) {
+        const remote = masterEvent(current.ics);
+        const same = remote.title === title && remote.start === start && remote.end === end;
+        if (!same) {
+          return json(
+            {
+              error: "Le calendrier a une autre version. Relisez-la avant de décider.",
+              conflict: true,
+              current: { title: remote.title, start: remote.start, end: remote.end, etag: current.etag },
+            },
+            409,
+          );
+        }
+      }
+      const ics = patchIcs(current.ics, { title, start, end, notes: text(body.notes) ? text(body.notes) : undefined });
       const call = putCall(target, ics, auth, body.refresh === true ? current.etag : text(body.etag) || current.etag);
       const response = await fetchImpl(call.url, { method: call.method, headers: call.headers, body: call.body, redirect: "manual" });
       if (response.status >= 300 && response.status < 400) return json({ error: "Adresse de calendrier refusée." }, 400);
@@ -375,6 +405,18 @@ async function calendar(request: Request, env: Env, fetchImpl: FetchLike): Promi
       return json({ ok: true, uid, href: call.url }, 200);
     }
     const ics = buildIcs({ uid, title, start, end, notes: text(body.notes) });
+    const prior = await fetchImpl(target, { method: "GET", headers: { Authorization: auth }, redirect: "manual" });
+    if (prior.status === 200) {
+      const raw = await prior.text();
+      if (raw.includes("BEGIN:VEVENT")) {
+        const remote = masterEvent(raw);
+        if (remote.title === title && remote.start === start && remote.end === end) return json({ ok: true, uid, href: target, replayed: true }, 200);
+        return json(
+          { error: "Cet événement a changé depuis. Rien n’a été écrasé.", conflict: true, current: { title: remote.title, start: remote.start, end: remote.end } },
+          409,
+        );
+      }
+    }
     const call = putCall(target, ics, auth, "");
     const response = await fetchImpl(call.url, { method: call.method, headers: call.headers, body: call.body, redirect: "manual" });
     if (response.status >= 300 && response.status < 400) return json({ error: "Adresse de calendrier refusée." }, 400);
@@ -484,12 +526,42 @@ async function send(call: HttpCall, fetchImpl: FetchLike): Promise<string> {
   return response.text();
 }
 
+const MAX_REQUEST_BYTES = 48_000;
+const COACH_HOURLY_CAP = 30;
+const coachUsage = new Map<string, { start: number; count: number }>();
+
+export function resetCoachUsage() {
+  coachUsage.clear();
+}
+
+function noteCoachUsage(request: Request): Response | null {
+  const path = new URL(request.url).pathname;
+  if (!path.endsWith("/coach") && !path.endsWith("/coach/stream")) return null;
+  const token = bearer(request);
+  if (!token) return null;
+  let hash = 0;
+  for (const char of token) hash = (hash * 33 + char.charCodeAt(0)) >>> 0;
+  const key = String(hash);
+  const now = Date.now();
+  const row = coachUsage.get(key);
+  if (!row || now - row.start > 60 * 60 * 1000) {
+    coachUsage.set(key, { start: now, count: 1 });
+    return null;
+  }
+  row.count += 1;
+  if (row.count > COACH_HOURLY_CAP) return json({ error: "Le coach souffle un peu, réessayez dans une minute." }, 429);
+  return null;
+}
+
 async function readJson(request: Request): Promise<Record<string, unknown>> {
   try {
-    const value = (await request.json()) as unknown;
+    const raw = await request.text();
+    if (raw.length > MAX_REQUEST_BYTES) throw new Error("trop long");
+    const value = raw ? (JSON.parse(raw) as unknown) : {};
     if (!value || typeof value !== "object" || Array.isArray(value)) return {};
     return value as Record<string, unknown>;
-  } catch {
+  } catch (caught) {
+    if (caught instanceof Error && caught.message === "trop long") throw caught;
     return {};
   }
 }
