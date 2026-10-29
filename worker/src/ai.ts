@@ -1,4 +1,4 @@
-import { TOOLS, buildSystemPrompt, sanitizeMessages } from "../../lib/coach";
+import { TOOLS, buildSystemPrompt, sanitizeMessages, visibleCoachText } from "../../lib/coach";
 
 export const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
 export const DEFAULT_GEMINI_CHAIN = ["gemini-3.8-flash", "gemini-3-flash-preview", "gemini-flash-lite-latest"];
@@ -136,7 +136,7 @@ export function messageFromGeminiBody(raw: string): { role: "assistant"; content
       let state: StreamFold = { text: "", calls: [] };
       for (const item of data) state = foldGeminiChunk(state, item);
       if (!state.text && state.calls.length === 0) return null;
-      return { role: "assistant", content: state.text, tool_calls: state.calls };
+      return { role: "assistant", content: visibleCoachText(state.text), tool_calls: state.calls };
     }
     if (!data || typeof data !== "object" || "error" in data) return null;
     return readAiMessage("gemini", data);
@@ -159,12 +159,12 @@ function readOpenAi(data: unknown) {
       arguments: item.function?.arguments || "{}",
     }))
     .filter((item) => item.id && item.name);
-  return { role: "assistant" as const, content: message?.content ?? "", tool_calls: toolCalls };
+  return { role: "assistant" as const, content: visibleCoachText(message?.content ?? ""), tool_calls: toolCalls };
 }
 
 function readGemini(data: unknown) {
   const parts = (data as { candidates?: { content?: { parts?: GeminiPart[] } }[] })?.candidates?.[0]?.content?.parts ?? [];
-  const text = parts.map((part) => part.text || "").filter(Boolean).join("\n");
+  const text = visibleCoachText(parts.map((part) => part.text || "").filter(Boolean).join("\n"));
   const toolCalls = parts
     .filter((part) => part.functionCall?.name)
     .map((part, index) => ({

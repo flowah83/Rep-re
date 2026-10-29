@@ -15,6 +15,7 @@ import {
   fitCoachContext,
   parseToolArgs,
   partitionToolCalls,
+  visibleCoachText,
   type ToolCall,
 } from "@/lib/coach";
 import {
@@ -575,7 +576,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
                   <div className="coach-stack">
                     {turn.content ? (
                       <div className="coach-copy" aria-live={turn.id === lastId ? "polite" : undefined}>
-                        <RichText text={turn.content} />
+                        <RichText text={visibleCoachText(turn.content)} />
                       </div>
                     ) : null}
                     {turn.omitted && !turn.pending ? <p className="omit" data-testid="coach-omitted">{turn.omitted}</p> : null}
@@ -624,7 +625,7 @@ function CoachSheet({ onClose }: { onClose: () => void }) {
                   <CoachFace state="speaking" />
                 </span>
                 <div className="coach-copy" aria-live="polite">
-                  <RichText text={partial} />
+                  <RichText text={visibleCoachText(partial, false)} />
                 </div>
               </div>
             ) : null}
