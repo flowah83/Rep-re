@@ -47,11 +47,17 @@ function Dashboard({ model, onDay }: { model: HomeModel; onDay: (iso: string) =>
       <HeldCard model={model} onDay={onDay} />
       {lifts.map((lift) => (
         <button type="button" key={lift.name} className={`home-card lift${lifts.length === 1 ? " span2" : ""}`} aria-label={lift.aria} onClick={() => openLift(lift.name)}>
-          <p className="home-k">{lift.short}</p>
+          <p className="home-k">
+            {lift.short}
+            {lift.kg != null ? <span className="estbadge">max estimé</span> : null}
+          </p>
           <p className={`home-num${lift.short === "Squat" ? " sage" : ""}`}>
             {lift.kg == null ? "—" : formatKg(lift.kg)}
             {lift.kg != null ? <small> kg</small> : null}
           </p>
+          {lift.bestSet ? (
+            <p className="home-sub">Meilleure série {formatKg(lift.bestSet.loadKg)} × {lift.bestSet.reps}</p>
+          ) : null}
           <p className="home-sub">{lift.caption}</p>
           {lift.curve ? <Sparkline values={lift.points} tone={lift.short === "Squat" ? "sage" : "copper"} /> : <LevelMark />}
         </button>
@@ -200,7 +206,7 @@ function RecordCard({ record, onOpen }: { record: NonNullable<HomeModel["record"
         {formatKg(record.loadKg)}
         <small> × {record.reps}</small>
       </p>
-      {record.e1rm != null ? <p className="home-sub">{formatKg(Math.round(record.e1rm))} kg estimés{record.unit && record.unit !== "kg" ? ` · ${unitPhrase(record.unit)}` : ""}</p> : null}
+      {record.e1rm != null ? <p className="home-sub">max estimé {formatKg(Math.round(record.e1rm))} kg{record.unit && record.unit !== "kg" ? ` · ${unitPhrase(record.unit)}` : ""}</p> : null}
       {record.points.length >= 3 ? <Sparkline values={record.points} tone="sage" /> : <LevelMark />}
     </button>
   );

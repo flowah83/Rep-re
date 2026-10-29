@@ -5,6 +5,98 @@ import { formatKg, parseISODate } from "@/lib/utils";
 
 const GAP_DAYS = 19;
 
+export function BestSetChart({
+  points,
+  from,
+  to,
+  note,
+}: {
+  points: { date: string; loadKg: number; reps: number }[];
+  from: string;
+  to: string;
+  note: string;
+}) {
+  const width = 360;
+  const height = 168;
+  const pad = { l: 36, r: 12, t: 16, b: 32 };
+  if (points.length === 0) {
+    return <p className="chartnote">Pas encore de série de travail sur cette période.</p>;
+  }
+  const values = points.map((point) => point.loadKg);
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+  if (max - min < 8) {
+    const mid = (max + min) / 2;
+    min = mid - 4;
+    max = mid + 4;
+  }
+  min = Math.max(0, min - 2);
+  max += 2;
+  const t0 = parseISODate(from).getTime();
+  const t1 = Math.max(parseISODate(to).getTime(), t0 + 86400000);
+  const xOf = (date: string) => pad.l + ((parseISODate(date).getTime() - t0) / (t1 - t0)) * (width - pad.l - pad.r);
+  const yOf = (value: number) => pad.t + (1 - (value - min) / (max - min)) * (height - pad.t - pad.b);
+  const ticks = [min, (min + max) / 2, max];
+  const last = points[points.length - 1];
+  return (
+    <div className="chartwrap">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Meilleure série de chaque séance. Une séance plus légère n’est pas un recul.">
+        {ticks.map((tick) => (
+          <g key={tick}>
+            <line x1={pad.l} x2={width - pad.r} y1={yOf(tick)} y2={yOf(tick)} stroke="var(--line)" />
+            <text x={0} y={yOf(tick) + 4} fill="var(--ink-soft)" fontSize="11">
+              {formatKg(Math.round(tick))}
+            </text>
+          </g>
+        ))}
+        {points.slice(1).map((point, index) => {
+          const prev = points[index];
+          return (
+            <line
+              key={`${point.date}-${index}`}
+              x1={xOf(prev.date)}
+              y1={yOf(prev.loadKg)}
+              x2={xOf(point.date)}
+              y2={yOf(point.loadKg)}
+              stroke="var(--copper-bright)"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+          );
+        })}
+        {points.map((point) => (
+          <g key={point.date}>
+            <circle cx={xOf(point.date)} cy={yOf(point.loadKg)} r={point === last ? 4.5 : 3} fill={point === last ? "var(--copper-bright)" : "var(--bg-elev)"} stroke="var(--copper-bright)" strokeWidth="2" />
+            <text x={xOf(point.date)} y={yOf(point.loadKg) - 8} textAnchor="middle" fill="var(--ink-soft)" fontSize="11">
+              {point === last || point.loadKg === Math.max(...values) ? `${formatKg(point.loadKg)} × ${point.reps}` : ""}
+            </text>
+          </g>
+        ))}
+        {[from, midDate(from, to), to].map((iso, index) => (
+          <text
+            key={iso + index}
+            x={index === 0 ? pad.l : index === 2 ? width - pad.r : (pad.l + width - pad.r) / 2}
+            y={height - 8}
+            textAnchor={index === 0 ? "start" : index === 2 ? "end" : "middle"}
+            fill="var(--ink-soft)"
+            fontSize="11"
+          >
+            {axisDate(iso)}
+          </text>
+        ))}
+      </svg>
+      <p className="chartnote" data-testid="dip-note">{note}</p>
+      <ul className="vh">
+        {points.map((point) => (
+          <li key={point.date}>
+            {axisDate(point.date)} : {formatKg(point.loadKg)} kg × {point.reps}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function E1Chart({
   points,
   from,

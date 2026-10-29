@@ -1,4 +1,4 @@
-import { countsForProgress, e1rmSeries, epley, hardSetCount, isHardSet, muscleTotals, samplesForExercise, tonnage } from "./calc";
+import { countsForProgress, e1rmSeries, epley, hardSetCount, heaviestSet, isHardSet, muscleTotals, samplesForExercise, tonnage } from "./calc";
 import { unitOfExercise } from "./display";
 import { canonicalUnit, recordKey, resolvedUnit } from "./unit";
 import { MUSCLE_LABEL } from "./exercises";
@@ -26,6 +26,8 @@ export type LiftView = {
   /** Pourcentage du record tenu sur 4 semaines. Jamais négatif. Null si l’historique ne le porte pas. */
   delta: number | null;
   caption: string;
+  /** Plus lourde série de travail réellement notée, à côté du max estimé. */
+  bestSet: { loadKg: number; reps: number } | null;
   aria: string;
 };
 
@@ -243,7 +245,9 @@ function liftView(sessions: Session[], today: string, match: (name: string) => b
   }
   const caption = liftCaption(dates.size, curve, delta);
   const short = shortLift(name, fallback);
-  const view: LiftView = { name, short, kg, points: series.slice(-8).map((point) => point.bestSoFar), sessions: dates.size, curve, delta, caption, aria: "" };
+  const held = heaviestSet(sessions, name);
+  const bestSet = held ? { loadKg: held.loadKg, reps: held.reps } : null;
+  const view: LiftView = { name, short, kg, points: series.slice(-8).map((point) => point.bestSoFar), sessions: dates.size, curve, delta, caption, bestSet, aria: "" };
   view.aria = liftAria(view);
   return view;
 }
@@ -260,11 +264,12 @@ function liftCaption(sessions: number, curve: boolean, delta: number | null): st
 }
 
 function liftAria(view: LiftView): string {
-  if (view.kg == null) return `${view.short}, pas encore d’estimation.`;
-  const kg = `${formatKg(view.kg)} kilogrammes estimés`;
-  if (view.curve && view.delta != null && view.delta > 0) return `${view.short}, ${kg}, plus ${view.delta} % en quatre semaines.`;
-  if (view.curve && view.delta === 0) return `${view.short}, ${kg}, stable sur quatre semaines.`;
-  return `${view.short}, ${kg}, ${view.caption}.`;
+  const bits = [view.short];
+  bits.push(view.kg == null ? "pas encore de max estimé" : `max estimé ${formatKg(view.kg)} kilogrammes`);
+  if (view.bestSet) bits.push(`meilleure série ${formatKg(view.bestSet.loadKg)} fois ${view.bestSet.reps}`);
+  if (view.curve && view.delta != null && view.delta > 0) bits.push(`plus ${view.delta} % en quatre semaines`);
+  else if (view.caption) bits.push(view.caption);
+  return `${bits.join(", ")}.`;
 }
 
 function exerciseName(sessions: Session[], match: (name: string) => boolean): string | null {
@@ -319,7 +324,7 @@ function recentRecord(sessions: Session[], today: string): RecordView | null {
   const point = [...series].reverse().find((item) => item.date <= hit.date);
   const e1rm = epley(hit.loadKg, hit.reps) ?? point?.bestSoFar ?? null;
   const short = shortLift(hit.name, hit.name);
-  const aria = `${formatKg(hit.loadKg)} kilogrammes fois ${hit.reps} à ${short.toLowerCase()}.${e1rm != null ? ` ${formatKg(e1rm)} kilogrammes estimés.` : ""}`;
+  const aria = `${formatKg(hit.loadKg)} kilogrammes fois ${hit.reps} à ${short.toLowerCase()}.${e1rm != null ? ` Max estimé ${formatKg(e1rm)} kilogrammes.` : ""}`;
   return { ...hit, short, e1rm, points: series.slice(-8).map((item) => item.bestSoFar), aria };
 }
 

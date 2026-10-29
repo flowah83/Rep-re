@@ -447,6 +447,110 @@ describe("worker", () => {
     expect(text).toContain('"message"');
   });
 
+  it("relaye un tableau JSON au fil de l’eau, avant la fin du flux", async () => {
+    const encoder = new TextEncoder();
+    let release: () => void = () => undefined;
+    const hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async () => {
+      const stream = new ReadableStream({
+        async start(controller) {
+          controller.enqueue(encoder.encode('[{"candidates":[{"content":{"parts":[{"text":"Bon"}]}}]}'));
+          await hold;
+          controller.enqueue(encoder.encode(',{"candidates":[{"content":{"parts":[{"text":"jour"}]}}]}]\n'));
+          controller.close();
+        },
+      });
+      return new Response(stream, { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+    const response = await handleRequest(
+      post("/coach/stream", { messages: [{ role: "user", content: "Salut" }] }, "phone-token", "https://flowah83.github.io"),
+      { ...env, AI_MODEL_FALLBACKS: "gemini-a" },
+      fetchImpl,
+    );
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("pas de flux");
+    const decoder = new TextDecoder();
+    let seen = "";
+    const early = await Promise.race([
+      (async () => {
+        while (!seen.includes('"text":"Bon"')) {
+          const step = await reader.read();
+          if (step.done) return "closed";
+          seen += decoder.decode(step.value);
+        }
+        return "bon";
+      })(),
+      new Promise<string>((resolve) => setTimeout(() => resolve("timeout"), 500)),
+    ]);
+    try {
+      expect(early).toBe("bon");
+      expect(seen).not.toContain("jour");
+    } finally {
+      release();
+    }
+    let rest = "";
+    while (true) {
+      const step = await reader.read();
+      if (step.done) break;
+      rest += decoder.decode(step.value);
+    }
+    expect(`${seen}${rest}`).toContain("Bonjour");
+    expect(`${seen}${rest}`).not.toContain("FIN_CONTEXTE");
+  });
+
+  it("retire un marqueur CONTEXTE coupé entre deux objets JSON", async () => {
+    const encoder = new TextEncoder();
+    const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('[{"candidates":[{"content":{"parts":[{"text":"CON"}]}}]}'));
+          controller.enqueue(encoder.encode(',{"candidates":[{"content":{"parts":[{"text":"TEXTE {}\\nFIN_CONT"}]}}]}'));
+          controller.enqueue(encoder.encode(',{"candidates":[{"content":{"parts":[{"text":"EXTE\\nOK"}]}}]}]\n'));
+          controller.close();
+        },
+      });
+      return new Response(stream, { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+    const response = await handleRequest(
+      post("/coach/stream", { messages: [{ role: "user", content: "Salut" }] }, "phone-token", "https://flowah83.github.io"),
+      { ...env, AI_MODEL_FALLBACKS: "gemini-a" },
+      fetchImpl,
+    );
+    const text = await response.text();
+    expect(text).toContain('"text":"OK"');
+    expect(text).not.toContain("FIN_CONTEXTE");
+    expect(text).not.toContain('"text":"CON');
+  });
+
+  it("change de modèle si le flux JSON n’a encore envoyé aucun texte", async () => {
+    const encoder = new TextEncoder();
+    const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async (url) => {
+      if (String(url).includes("gemini-a")) {
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode("["));
+          },
+        });
+        return new Response(stream, { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      return new Response('data: {"candidates":[{"content":{"parts":[{"text":"Deuxième."}]}}]}\n\n', {
+        status: 200,
+        headers: { "Content-Type": "text/event-stream" },
+      });
+    });
+    const started = Date.now();
+    const response = await handleRequest(
+      post("/coach/stream", { messages: [{ role: "user", content: "Salut" }] }, "phone-token", "https://flowah83.github.io"),
+      { ...env, AI_MODEL_FALLBACKS: "gemini-a, gemini-b", STREAM_DEADLINE_MS: "40" },
+      fetchImpl,
+    );
+    const text = await response.text();
+    expect(text).toContain("Deuxième.");
+    expect(Date.now() - started).toBeLessThan(1_000);
+  });
+
   it("ferme le flux avec une erreur claire si tout échoue", async () => {
     const fetchImpl = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async () => new Response("quota", { status: 429 }));
     const response = await handleRequest(

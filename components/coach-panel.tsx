@@ -38,16 +38,7 @@ const RATE = "Le coach souffle un peu. Réessayez dans une minute.";
 
 export function CoachLayer() {
   const app = useApp();
-  return (
-    <>
-      {app.coachOpen || app.tab === "home" ? null : (
-        <button type="button" className="coach-fab" data-testid="coach-button" aria-label="Ouvrir le coach" onClick={() => app.setCoachOpen(true)}>
-          <CoachFace />
-        </button>
-      )}
-      {app.coachOpen ? <CoachSheet onClose={() => app.setCoachOpen(false)} /> : null}
-    </>
-  );
+  return app.coachOpen ? <CoachSheet onClose={() => app.setCoachOpen(false)} /> : null;
 }
 
 function CoachSheet({ onClose }: { onClose: () => void }) {

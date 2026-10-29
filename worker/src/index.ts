@@ -4,6 +4,7 @@ import {
   foldGeminiChunk,
   messageFromGeminiBody,
   modelChain,
+  takeJsonValues,
   modelName,
   providerName,
   readAiMessage,
@@ -198,17 +199,18 @@ async function tryGeminiStream(
     timer = undefined;
     if (!response.ok || !response.body) return { ok: false, status: response.status || 502 };
     const type = response.headers.get("content-type") ?? "";
-    if (!type.includes("text/event-stream")) {
-      const message = messageFromGeminiBody(await response.text());
-      if (!message) return { ok: false, status: 502 };
-      if (message.content) push({ text: message.content });
-      return { ok: true, message };
-    }
-    const folded = await readGeminiSse(response.body, push, deadline);
+    let sent = false;
+    const relay = (payload: unknown) => {
+      if (payload && typeof payload === "object" && typeof (payload as { text?: unknown }).text === "string" && (payload as { text: string }).text) {
+        sent = true;
+      }
+      push(payload);
+    };
+    const folded = await readModelBody(response.body, type, relay, () => (sent ? quietAfterText(deadline) : deadline));
     const visible = visibleCoachText(folded.state.text);
-    if (folded.timedOut) {
+    if ((folded.timedOut || folded.failed) && !visible && folded.state.calls.length === 0) {
       attempt.abort();
-      if (!visible && folded.state.calls.length === 0) return { ok: false, status: 504 };
+      return { ok: false, status: folded.timedOut ? 504 : 502 };
     }
     return { ok: true, message: { role: "assistant", content: visible, tool_calls: folded.state.calls } };
   } catch (caught) {
@@ -220,31 +222,82 @@ async function tryGeminiStream(
   }
 }
 
-async function readGeminiSse(body: ReadableStream<Uint8Array>, push: (payload: unknown) => void, deadline: number) {
+/** Après le premier texte visible, on ne change plus de modèle : on laisse le flux finir. */
+function quietAfterText(attempt: number): number {
+  if (attempt < 1_000) return attempt * 8;
+  return 25_000;
+}
+
+/**
+ * Relaye chaque morceau dès qu’il est lisible.
+ * Le SSE Gemini et le tableau JSON (streamGenerateContent) partent au fil de l’eau,
+ * sans attendre la fin de la réponse.
+ */
+async function readModelBody(
+  body: ReadableStream<Uint8Array>,
+  contentType: string,
+  push: (payload: unknown) => void,
+  quietMs: () => number,
+) {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let pending = "";
+  let mode: "sse" | "json" = contentType.includes("text/event-stream") ? "sse" : "json";
   let state: StreamFold = { text: "", calls: [] };
+  let failed = false;
   while (true) {
     const reading = reader.read();
-    const step = await raceRead(reading, deadline);
+    const step = await raceRead(reading, quietMs());
     if (step === "timeout") {
       reading.catch(() => undefined);
       await reader.cancel().catch(() => undefined);
-      return { timedOut: true, state };
+      return { timedOut: true, state, failed };
     }
     if (step.done) break;
     if (step.value) pending += decoder.decode(step.value, { stream: true });
-    let cut = pending.indexOf("\n");
-    while (cut >= 0) {
-      const line = pending.slice(0, cut).trim();
-      pending = pending.slice(cut + 1);
-      state = consumeGeminiLine(state, line, push);
-      cut = pending.indexOf("\n");
+    if (!contentType.includes("text/event-stream") && mode === "json" && pending.trimStart().startsWith("data:")) mode = "sse";
+    if (mode === "sse") {
+      let cut = pending.indexOf("\n");
+      while (cut >= 0) {
+        const line = pending.slice(0, cut).trim();
+        pending = pending.slice(cut + 1);
+        state = consumeGeminiLine(state, line, push);
+        cut = pending.indexOf("\n");
+      }
+    } else {
+      const taken = takeJsonValues(pending);
+      pending = taken.rest;
+      for (const value of taken.values) {
+        if (isGeminiError(value)) failed = true;
+        state = publishChunk(state, value, push);
+      }
     }
   }
-  if (pending.trim()) state = consumeGeminiLine(state, pending.trim(), push);
-  return { timedOut: false, state };
+  pending += decoder.decode();
+  if (mode === "sse") {
+    if (pending.trim()) state = consumeGeminiLine(state, pending.trim(), push);
+  } else if (pending.trim()) {
+    const taken = takeJsonValues(pending);
+    for (const value of taken.values) state = publishChunk(state, value, push);
+    if (!taken.values.length) {
+      const whole = messageFromGeminiBody(pending);
+      if (whole?.content) push({ text: whole.content });
+      if (whole) state = { text: whole.content, calls: whole.tool_calls };
+    }
+  }
+  return { timedOut: false, state, failed };
+}
+
+function publishChunk(state: StreamFold, value: unknown, push: (payload: unknown) => void): StreamFold {
+  const next = foldGeminiChunk(state, value);
+  const shown = peelContextEcho(next.text, false);
+  const previous = peelContextEcho(state.text, false);
+  if (shown.visible && shown.visible !== previous.visible) push({ text: shown.visible });
+  return next;
+}
+
+function isGeminiError(value: unknown): boolean {
+  return Boolean(value && typeof value === "object" && "error" in value && !("candidates" in value));
 }
 
 async function raceRead(reading: Promise<ReadableStreamReadResult<Uint8Array>>, ms: number) {
@@ -306,11 +359,7 @@ function consumeGeminiLine(state: StreamFold, line: string, push: (payload: unkn
   const raw = line.slice(5).trim();
   if (!raw || raw === "[DONE]") return state;
   try {
-    const next = foldGeminiChunk(state, JSON.parse(raw) as unknown);
-    const shown = peelContextEcho(next.text, false);
-    const previous = peelContextEcho(state.text, false);
-    if (shown.visible && shown.visible !== previous.visible) push({ text: shown.visible });
-    return next;
+    return publishChunk(state, JSON.parse(raw) as unknown, push);
   } catch {
     return state;
   }

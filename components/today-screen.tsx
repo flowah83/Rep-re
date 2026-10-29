@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useApp } from "@/components/app-context";
 import { SettingsButton } from "@/components/settings-button";
 import { cardioSummary } from "@/lib/history";
@@ -11,6 +11,7 @@ import { RestPill } from "@/components/rest-pill";
 import { buildAdjustments, keepsCoachPlan, loadProgression, revertAdjustment, saveProgression, type Adjustment } from "@/lib/progression";
 import type { Session } from "@/lib/types";
 import { backupReminder } from "@/lib/backup";
+import { resumeGlance } from "@/lib/resume";
 import { addDays, formatKg, mondayOf, parseISODate, weekdayLetter } from "@/lib/utils";
 
 export function TodayScreen() {
@@ -66,13 +67,7 @@ export function TodayScreen() {
           ›
         </button>
       </div>
-      {showBand && active ? (
-        <button type="button" className="liveband" data-testid="resume-band" onClick={() => app.openSession(active.id)}>
-          <span>{active.title} en cours</span>
-          <RestPill session={active} bare />
-          <span>Reprendre</span>
-        </button>
-      ) : null}
+      {showBand && active ? <ResumeCard session={active} /> : null}
       {visible.length === 0 && upcoming ? (
         <article className="card">
           <SessionCard session={upcoming} primary upcoming />
@@ -121,13 +116,20 @@ export function TodayScreen() {
 }
 
 function SessionCard({ session, primary, upcoming = false }: { session: Session; primary: boolean; upcoming?: boolean }) {
-  const app = useApp();
   const minutes = estimateMinutes(session);
   const shown = session.exercises.slice(0, 2);
   const rest = session.exercises.slice(2);
   const record = loadProgression(session.id);
   const canRevert =
     session.status === "active" && record?.mode === "applied" && record.items.some((item) => item.active);
+  if (session.status === "active") {
+    return (
+      <>
+        <ResumeBody session={session} />
+        {canRevert && record ? <RevertPlan session={session} record={record} /> : null}
+      </>
+    );
+  }
   return (
     <>
       <div className="kicker">
@@ -150,7 +152,6 @@ function SessionCard({ session, primary, upcoming = false }: { session: Session;
           ? cardioSummary(session.cardio)
           : `${session.intention ? `${capitalize(session.intention)} · ` : ""}environ ${minutes} min · ${session.exercises.length} exercice${session.exercises.length > 1 ? "s" : ""}`}
       </p>
-      {session.status === "active" ? <RestPill session={session} /> : null}
       <HoldNote session={session} />
       {session.cardio ? null : (
         <>
@@ -173,22 +174,72 @@ function SessionCard({ session, primary, upcoming = false }: { session: Session;
         </>
       )}
       <StartActions session={session} place="card" primary={primary} allowEdit={!upcoming} />
-      {canRevert && record ? (
-        <button
-          type="button"
-          className="btn ghost"
-          data-testid="progression-revert-plan"
-          onClick={() => {
-            const active = record.items.filter((item) => item.active);
-            void app.updateSession(session.id, (current) => active.reduce((next, item) => revertAdjustment(next, item), current));
-            saveProgression(session.id, { ...record, choice: "reverted", items: record.items.map((item) => ({ ...item, active: false })) });
-            app.flash("Le plan de Chef sport est remis.");
-          }}
-        >
-          Revenir au plan
-        </button>
+    </>
+  );
+}
+
+function ResumeCard({ session }: { session: Session }) {
+  return (
+    <article className="card resume-card" data-testid="resume-card">
+      <ResumeBody session={session} />
+    </article>
+  );
+}
+
+function ResumeBody({ session }: { session: Session }) {
+  const app = useApp();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 15000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const glance = resumeGlance(session, now);
+  return (
+    <>
+      <div className="resume-status">
+        <span className="resume-live"><i className="livedot" aria-hidden="true" />{glance.status}</span>
+        <RestPill session={session} chip />
+      </div>
+      <h2>{session.title}</h2>
+      {glance.nextLine ? <p className="meta">{glance.nextLine}</p> : null}
+      {glance.target ? <p className="resume-target">{glance.target}</p> : null}
+      {glance.dots.length ? (
+        <div className="dots" aria-hidden="true">
+          {glance.dots.map((dot, index) => (
+            <i key={`${dot}-${index}`} className={dot} />
+          ))}
+        </div>
+      ) : null}
+      <p className="meta">{glance.saved}</p>
+      <button type="button" className="btn" data-testid="resume-session" onClick={() => app.openSession(session.id)}>
+        Reprendre la séance
+      </button>
+      {glance.after ? (
+        <div className="after-row">
+          <span>Après</span>
+          <b>{glance.after}</b>
+        </div>
       ) : null}
     </>
+  );
+}
+
+function RevertPlan({ session, record }: { session: Session; record: NonNullable<ReturnType<typeof loadProgression>> }) {
+  const app = useApp();
+  return (
+    <button
+      type="button"
+      className="btn ghost"
+      data-testid="progression-revert-plan"
+      onClick={() => {
+        const active = record.items.filter((item) => item.active);
+        void app.updateSession(session.id, (current) => active.reduce((next, item) => revertAdjustment(next, item), current));
+        saveProgression(session.id, { ...record, choice: "reverted", items: record.items.map((item) => ({ ...item, active: false })) });
+        app.flash("Le plan de Chef sport est remis.");
+      }}
+    >
+      Revenir au plan
+    </button>
   );
 }
 
