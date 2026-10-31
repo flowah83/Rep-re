@@ -17,7 +17,9 @@ import {
 import { recallPlan } from "@/lib/snapshot";
 import { closeCopy } from "@/lib/close";
 import { parseDecimalDraft } from "@/lib/contract";
-import { lastPerformance, completeSet, firstOpenSlot, noteSetRpe, patchSet, sessionFullyLogged, setSettled, skipSet } from "@/lib/session";
+import { KeepCard, NumberPad, SetChips, StepperCard } from "@/components/set-entry";
+import { keepPrompt, loggedPair, stepField, type FieldDraft } from "@/lib/set-entry";
+import { carryLoadForward, lastPerformance, completeSet, firstOpenSlot, noteSetRpe, patchSet, sessionFullyLogged, setSettled, skipSet, stepFor } from "@/lib/session";
 import type { ExerciseLog, Session, SetLog } from "@/lib/types";
 import { formatClock, formatKg } from "@/lib/utils";
 
@@ -31,8 +33,13 @@ export function SessionScreen({ id }: { id: string }) {
   const [review, setReview] = useState(false);
   const [abandon, setAbandon] = useState(false);
   const [closeAsk, setCloseAsk] = useState(false);
-  const [editing, setEditing] = useState<null | "load" | "reps">(null);
-  const [draft, setDraft] = useState("");
+  const [entry, setEntry] = useState<{ setId: string } & FieldDraft>({ setId: "" });
+  const [pad, setPad] = useState<null | "load" | "reps">(null);
+  const [padTarget, setPadTarget] = useState<"main" | "fix">("main");
+  const [padText, setPadText] = useState("");
+  const [correctId, setCorrectId] = useState<string | null>(null);
+  const [fix, setFix] = useState<{ setId: string } & FieldDraft>({ setId: "" });
+  const [keep, setKeep] = useState<{ exerciseId: string; fromSetId: string; loadKg: number } | null>(null);
   const [warmNote, setWarmNote] = useState(false);
   const [wakeFail, setWakeFail] = useState(false);
   const [wakeTry, setWakeTry] = useState(0);
@@ -92,45 +99,84 @@ export function SessionScreen({ id }: { id: string }) {
 
   const change = (updater: (currentSession: Session) => Session) => void app.updateSession(session.id, updater);
 
-  const openEdit = (field: "load" | "reps") => {
-    if (!exercise || !current) return;
-    setEditing(field);
-    const value = field === "load" ? (current.loadKg ?? exercise.planned.loadKg) : (current.reps ?? exercise.planned.reps);
-    setDraft(value == null ? "" : String(value).replace(".", ","));
-  };
+  const corrected = exercise && correctId ? exercise.sets.find((set) => set.id === correctId && set.done) : undefined;
+  const mainDraft = current && entry.setId === current.id ? entry : {};
+  const fixDraft = corrected && fix.setId === corrected.id ? fix : {};
+  const mainPair = exercise && current ? loggedPair(current, exercise.planned, mainDraft) : { loadKg: null, reps: null };
+  const fixPair = exercise && corrected ? loggedPair(corrected, exercise.planned, fixDraft) : null;
+  const shownLoad = mainPair.loadKg;
+  const shownReps = mainPair.reps;
 
-  const stepEdit = (direction: number) => {
-    if (!exercise) return;
-    const step = editing === "reps" ? 1 : exercise.stepKg || 2.5;
-    const base = editing === "reps" ? shownReps : shownLoad;
-    const next = Math.max(0, Math.round(((base ?? 0) + direction * step) * 100) / 100);
-    setDraft(String(next).replace(".", ","));
-  };
-
-  const shownLoad = exercise && current ? (editing === "load" && draft !== "" ? readNumber(draft) : (current.loadKg ?? exercise.planned.loadKg)) : null;
-  const shownReps = exercise && current ? (editing === "reps" && draft !== "" ? readNumber(draft) : (current.reps ?? exercise.planned.reps)) : null;
-
-  const commitValues = (loadKg: number | null, reps: number | null) => {
-    if (!exercise || !current) return;
-    unlockChime();
-    if (current.done) {
-      change((item) => patchSet(item, exercise.id, current.id, { loadKg, reps }));
+  const writeDraft = (target: "main" | "fix", field: "loadKg" | "reps", value: number) => {
+    const setId = target === "fix" ? corrected?.id : current?.id;
+    if (!setId) return;
+    if (target === "fix") {
+      setFix((prev) => ({ ...prev, setId, [field]: value }));
       return;
     }
-    const warmup = current.warmup;
-    change((item) => completeSet(patchSet(item, exercise.id, current.id, { loadKg, reps }), exercise.id, current.id));
-    setWarmNote(warmup);
-    setEditing(null);
-    setExerciseId(null);
-    setReview(false);
+    setEntry((prev) => ({ ...(prev.setId === setId ? prev : { setId }), setId, [field]: value }));
   };
 
-  const commit = () => commitValues(shownLoad, shownReps);
-
-  const asPlanned = () => {
+  const stepFieldOf = (target: "main" | "fix", field: "load" | "reps", direction: number) => {
     if (!exercise) return;
-    setEditing(null);
-    commitValues(exercise.planned.loadKg, exercise.planned.reps);
+    const step = field === "reps" ? 1 : stepFor(exercise);
+    const source = target === "fix" ? fixPair : mainPair;
+    const base = field === "reps" ? source?.reps ?? null : source?.loadKg ?? null;
+    writeDraft(target, field === "reps" ? "reps" : "loadKg", stepField(base, direction, step));
+  };
+
+  const openPad = (target: "main" | "fix", field: "load" | "reps") => {
+    const source = target === "fix" ? fixPair : mainPair;
+    const value = field === "load" ? source?.loadKg : source?.reps;
+    setPad(field);
+    setPadTarget(target);
+    setPadText(value == null ? "" : String(value).replace(".", ","));
+  };
+
+  const acceptPad = () => {
+    if (!pad) return;
+    const parsed = readNumber(padText);
+    if (parsed != null) writeDraft(padTarget, pad === "load" ? "loadKg" : "reps", parsed);
+    setPad(null);
+  };
+
+  const commitValues = (set: SetLog, loadKg: number | null, reps: number | null) => {
+    if (!exercise) return;
+    unlockChime();
+    if (set.done) {
+      change((item) => patchSet(item, exercise.id, set.id, { loadKg, reps, origin: "saisie" }));
+      setCorrectId(null);
+      setPad(null);
+      return;
+    }
+    const prompt = keepPrompt(exercise, set.id, loadKg);
+    change((item) => completeSet(patchSet(item, exercise.id, set.id, { loadKg, reps }), exercise.id, set.id));
+    setWarmNote(set.warmup);
+    setEntry({ setId: "" });
+    setPad(null);
+    setExerciseId(null);
+    setReview(false);
+    if (prompt && loadKg != null) setKeep({ exerciseId: exercise.id, fromSetId: set.id, loadKg });
+  };
+
+  const commit = () => {
+    if (current) commitValues(current, shownLoad, shownReps);
+  };
+
+  const commitFix = () => {
+    if (corrected && fixPair) commitValues(corrected, fixPair.loadKg, fixPair.reps);
+  };
+
+  const revertField = (target: "main" | "fix", field: "load" | "reps") => {
+    if (!exercise) return;
+    const planned = field === "load" ? exercise.planned.loadKg : exercise.planned.reps;
+    if (planned == null) return;
+    writeDraft(target, field === "load" ? "loadKg" : "reps", planned);
+  };
+
+  const answerKeep = (yes: boolean) => {
+    if (keep && yes) change((item) => carryLoadForward(item, keep.exerciseId, keep.fromSetId, keep.loadKg));
+    setKeep(null);
   };
 
   const undo = (set: SetLog) => {
@@ -158,7 +204,9 @@ export function SessionScreen({ id }: { id: string }) {
   const jump = (nextId: string) => {
     setExerciseId(nextId);
     setReview(true);
-    setEditing(null);
+    setEntry({ setId: "" });
+    setCorrectId(null);
+    setPad(null);
     setMenu(false);
     setList(false);
     setWarmNote(false);
@@ -254,13 +302,17 @@ export function SessionScreen({ id }: { id: string }) {
             record={record}
             list={list}
             menu={menu}
-            editing={editing}
-            draft={draft}
             warmNote={warmNote}
             resting={resting}
             wakeFail={wakeFail}
             shownLoad={shownLoad}
             shownReps={shownReps}
+            corrected={corrected}
+            fixLoad={fixPair?.loadKg ?? null}
+            fixReps={fixPair?.reps ?? null}
+            keepText={keep && keep.exerciseId === exercise.id ? `Garder ${formatKg(keep.loadKg)} kg pour les séries suivantes ?` : null}
+            pad={pad}
+            padText={padText}
             nextName={handoff ? undefined : nextExercise?.name}
             handoff={handoff}
             barKg={app.settings.barKg}
@@ -268,16 +320,32 @@ export function SessionScreen({ id }: { id: string }) {
             onMenu={() => { setMenu((value) => !value); setList(false); }}
             onJump={jump}
             onSkip={() => {
+              if (!current || current.done) return;
               change((item) => skipSet(item, exercise.id, current.id));
+              setEntry({ setId: "" });
               setList(false);
               setExerciseId(null);
               setReview(false);
             }}
-            onEdit={openEdit}
-            onDraft={setDraft}
-            onStep={stepEdit}
+            onStep={stepFieldOf}
+            onOpenPad={openPad}
+            onPadText={setPadText}
+            onAcceptPad={acceptPad}
+            onClosePad={() => setPad(null)}
             onCommit={commit}
+            onCommitFix={commitFix}
+            onRevertField={revertField}
+            onCorrect={(set) => {
+              setCorrectId(set.id);
+              setFix({
+                setId: set.id,
+                loadKg: set.loadKg ?? exercise.planned.loadKg ?? undefined,
+                reps: set.reps ?? exercise.planned.reps ?? undefined,
+              });
+              setPad(null);
+            }}
             onUndo={undo}
+            onKeep={answerKeep}
             onRevertExercise={revertExercise}
             onRevertPlan={revertPlan}
             onPlates={() => {
@@ -295,10 +363,8 @@ export function SessionScreen({ id }: { id: string }) {
             onSkipRest={() => change((item) => ({ ...item, restEndsAt: null }))}
             onWake={() => setWakeTry((value) => value + 1)}
             correcting={correcting}
-            lastDone={[...exercise.sets].reverse().find((set) => set.done)}
             delta={setDelta(record?.items.find((item) => item.exerciseId === exercise.id), current)}
             previous={lastPerformance(app.sessions, exercise.name, session.id, resolvedUnit({ unit: exercise.unit }, exercise))}
-            onAsPlanned={asPlanned}
             onReapply={() => {
               if (!record) return;
               const item = record.items.find((entry) => entry.exerciseId === exercise.id && !entry.active);
@@ -356,13 +422,17 @@ function ActiveSet({
   record,
   list,
   menu,
-  editing,
-  draft,
   warmNote,
   resting,
   wakeFail,
   shownLoad,
   shownReps,
+  corrected,
+  fixLoad,
+  fixReps,
+  keepText,
+  pad,
+  padText,
   nextName,
   handoff,
   barKg,
@@ -370,12 +440,17 @@ function ActiveSet({
   onMenu,
   onJump,
   onSkip,
-  onEdit,
-  onDraft,
   onStep,
+  onOpenPad,
+  onPadText,
+  onAcceptPad,
+  onClosePad,
   onCommit,
-  onAsPlanned,
+  onCommitFix,
+  onRevertField,
+  onCorrect,
   onUndo,
+  onKeep,
   onRevertExercise,
   onRevertPlan,
   onPlates,
@@ -385,7 +460,6 @@ function ActiveSet({
   onSkipRest,
   onWake,
   correcting,
-  lastDone,
   delta,
   previous,
   onReapply,
@@ -396,13 +470,17 @@ function ActiveSet({
   record: ProgressionRecord | null;
   list: boolean;
   menu: boolean;
-  editing: null | "load" | "reps";
-  draft: string;
   warmNote: boolean;
   resting: boolean;
   wakeFail: boolean;
   shownLoad: number | null;
   shownReps: number | null;
+  corrected?: SetLog;
+  fixLoad: number | null;
+  fixReps: number | null;
+  keepText: string | null;
+  pad: null | "load" | "reps";
+  padText: string;
   nextName?: string;
   handoff: string | null;
   barKg: number;
@@ -410,12 +488,17 @@ function ActiveSet({
   onMenu: () => void;
   onJump: (id: string) => void;
   onSkip: () => void;
-  onEdit: (field: "load" | "reps") => void;
-  onDraft: (value: string) => void;
-  onStep: (direction: number) => void;
+  onStep: (target: "main" | "fix", field: "load" | "reps", direction: number) => void;
+  onOpenPad: (target: "main" | "fix", field: "load" | "reps") => void;
+  onPadText: (value: string) => void;
+  onAcceptPad: () => void;
+  onClosePad: () => void;
   onCommit: () => void;
-  onAsPlanned: () => void;
+  onCommitFix: () => void;
+  onRevertField: (target: "main" | "fix", field: "load" | "reps") => void;
+  onCorrect: (set: SetLog) => void;
   onUndo: (set: SetLog) => void;
+  onKeep: (yes: boolean) => void;
   onRevertExercise: () => void;
   onRevertPlan: () => void;
   onPlates: () => void;
@@ -425,7 +508,6 @@ function ActiveSet({
   onSkipRest: () => void;
   onWake: () => void;
   correcting: boolean;
-  lastDone?: SetLog;
   delta: ReturnType<typeof setDelta>;
   previous: string | null;
   onReapply: () => void;
@@ -435,8 +517,6 @@ function ActiveSet({
   const workIndex = current.warmup ? 0 : Math.max(1, work.indexOf(current) + 1);
   const seriesLabel = current.warmup && !current.done ? "Échauffement" : `Série ${Math.min(workIndex || 1, work.length)} sur ${work.length}`;
   const crumbLabel = `Exercice ${index} sur ${session.exercises.length}, ${seriesLabel}`;
-  const cueLines = exercise.cues.filter((line) => line.trim());
-  const cue = cueLines.length > 1 ? cueLines[1] : (cueLines[0] ?? "");
   const plates = plateGlance(shownLoad, unitOfExercise(exercise), barKg);
   const doneWork = lastDoneWork(session);
   return (
@@ -464,14 +544,7 @@ function ActiveSet({
           ···
         </button>
       </div>
-      {exercise.planned.rpe != null ? <p className="last num">RPE visé {formatKg(exercise.planned.rpe)}</p> : null}
-      <p className="last num">
-        {exercise.planned.loadKg != null || exercise.planned.reps != null
-          ? `Cible · ${exercise.planned.loadKg != null ? `${formatKg(exercise.planned.loadKg)} ${unitPhrase(unitOfExercise(exercise))}` : "sans charge"} × ${exercise.planned.reps ?? "—"}`
-          : "Pas de cible écrite."}
-      </p>
-      <p className="last num">{previous ? `La dernière fois · ${previous}` : "Pas encore d’historique pour cet exercice."}</p>
-      {exercise.note ? <p className="exnote">{exercise.note}</p> : null}
+      <SetChips exercise={exercise} currentId={current.id} onCorrect={onCorrect} />
       {list ? (
         <div className="menu listmenu" role="menu" data-testid="exercise-list">
           {session.exercises.map((item) => (
@@ -497,6 +570,15 @@ function ActiveSet({
           <button type="button" role="menuitem" onClick={onPlates}>
             Calculer les disques
           </button>
+          {previous ? (
+            <p className="menunote">La dernière fois · {previous}</p>
+          ) : null}
+          {exercise.planned.loadKg != null || exercise.planned.reps != null ? (
+            <p className="menunote">
+              Cible · {exercise.planned.loadKg != null ? `${formatKg(exercise.planned.loadKg)} ${unitPhrase(unitOfExercise(exercise))}` : "sans charge"} × {exercise.planned.reps ?? "—"}
+              {exercise.planned.rpe != null ? ` · RPE ${formatKg(exercise.planned.rpe)}` : ""}
+            </p>
+          ) : null}
           <button type="button" role="menuitem" data-testid="open-gesture" onClick={onGesture}>
             L’exercice
           </button>
@@ -508,68 +590,105 @@ function ActiveSet({
         </div>
       ) : null}
       <div className="sessbody">
-        <div className="bigpair">
-          <button type="button" className="bigcard" data-testid="edit-load" onClick={() => onEdit("load")}>
-            <span>Charge</span>
-            <b className="num">{shownLoad == null ? "—" : formatKg(shownLoad)}</b>
-            <small>{unitPhrase(unitOfExercise(exercise))}</small>
-            {delta?.place === "load" ? (
-              <small>
-                <span className="delta" data-testid="progression-delta" onClick={(event) => { event.stopPropagation(); onRevertExercise(); }}>
-                  {delta.text}
-                </span>
-              </small>
-            ) : null}
+        {keepText ? <KeepCard prompt={keepText} onNo={() => onKeep(false)} onYes={() => onKeep(true)} /> : null}
+        {delta?.place === "load" ? (
+          <button type="button" className="delta" data-testid="progression-delta" onClick={onRevertExercise}>
+            {delta.text}
           </button>
-          <button type="button" className="bigcard" data-testid="edit-reps" onClick={() => onEdit("reps")}>
-            <span>Reps</span>
-            <b className="num">{shownReps == null ? "—" : shownReps}</b>
-            <small>{shownReps != null && shownReps === exercise.planned.reps ? "comme le plan" : "répétitions"}</small>
+        ) : null}
+        <StepperCard
+          kind="load"
+          label="Charge"
+          value={shownLoad}
+          planned={current.warmup ? current.loadKg : exercise.planned.loadKg}
+          unit={gearUnit(exercise)}
+          stepLabel={`± ${formatKg(stepFor(exercise))} kg`}
+          aside={resting ? null : shortPlates(plates)}
+          onStep={(direction) => onStep("main", "load", direction)}
+          onOpen={() => onOpenPad("main", "load")}
+          onRevert={() => onRevertField("main", "load")}
+        />
+        <StepperCard
+          kind="reps"
+          label="Répétitions"
+          value={shownReps}
+          planned={current.warmup ? current.reps : exercise.planned.reps}
+          unit="répétitions"
+          stepLabel="± 1"
+          onStep={(direction) => onStep("main", "reps", direction)}
+          onOpen={() => onOpenPad("main", "reps")}
+          onRevert={() => onRevertField("main", "reps")}
+        />
+        <div className="thumb">
+          <button type="button" className="btn" data-testid="complete-set" onClick={onCommit}>
+            <b>{current.warmup ? "Valider l’échauffement" : `Valider la série ${Math.max(1, workIndex || 1)}`}</b>
+            <small>{shownLoad == null ? "sans charge" : `${formatKg(shownLoad)} kg`} × {shownReps ?? "—"}</small>
           </button>
+          {current.done ? null : (
+            <button type="button" className="undoline" data-testid="skip-set-inline" onClick={onSkip}>
+              Passer cette série
+            </button>
+          )}
         </div>
-        {plates && !resting ? <p className="platesline num">{plates}</p> : null}
-        {editing ? (
-          <div className="nudges">
-            <button type="button" aria-label="Diminuer" onClick={() => onStep(-1)}>
-              −
-            </button>
-            <input
-              inputMode="decimal"
-              aria-label={editing === "load" ? "Charge" : "Répétitions"}
-              value={draft}
-              onChange={(event) => onDraft(event.target.value)}
-            />
-            <button type="button" aria-label="Augmenter" onClick={() => onStep(1)}>
-              +
-            </button>
-          </div>
-        ) : null}
-        {!current.done && exercise.planned.loadKg != null && exercise.planned.reps != null ? (
-          <button type="button" className="btn ghost as-planned" data-testid="as-planned" onClick={onAsPlanned}>
-            Comme prévu
-          </button>
-        ) : null}
-        <button type="button" className="btn" data-testid="complete-set" onClick={onCommit}>
-          {current.done ? "Enregistrer" : "C’est fait"}
-        </button>
-        {lastDone ? (
-          <button type="button" className="undoline" data-testid="undo-set" onClick={() => onUndo(lastDone)}>
-            {undoLabel(exercise, lastDone)}
-          </button>
-        ) : null}
-        {warmNote ? <p className="exnote">Échauffement noté.</p> : null}
-        {cue ? <p className="cue">{cue}</p> : null}
+        {warmNote && !resting ? <p className="exnote">Échauffement noté.</p> : null}
         {reviewBack(record, exercise) ? (
           <button type="button" className="linkish" onClick={onReapply}>
             Remettre la hausse
           </button>
         ) : null}
       </div>
+      {corrected ? (
+        <div className="dimsheet" role="dialog" aria-modal="true" aria-label={`Corriger la série ${workIndexOf(exercise, corrected)}`} data-testid="correct-sheet">
+          <div className="dimcard correctcard">
+            <h2>Corriger la série {workIndexOf(exercise, corrected)}</h2>
+            <p className="fine">Notée {corrected.loadKg == null ? "sans charge" : `${formatKg(corrected.loadKg)} kg`} × {corrected.reps ?? "—"}</p>
+            <StepperCard
+              kind="load"
+              label="Charge"
+              value={fixLoad}
+              planned={corrected.warmup ? corrected.loadKg : exercise.planned.loadKg}
+              unit={gearUnit(exercise)}
+              stepLabel={`± ${formatKg(stepFor(exercise))} kg`}
+              onStep={(direction) => onStep("fix", "load", direction)}
+              onOpen={() => onOpenPad("fix", "load")}
+              onRevert={() => onRevertField("fix", "load")}
+            />
+            <StepperCard
+              kind="reps"
+              label="Répétitions"
+              value={fixReps}
+              planned={corrected.warmup ? corrected.reps : exercise.planned.reps}
+              unit="répétitions"
+              stepLabel="± 1"
+              onStep={(direction) => onStep("fix", "reps", direction)}
+              onOpen={() => onOpenPad("fix", "reps")}
+              onRevert={() => onRevertField("fix", "reps")}
+            />
+            <button type="button" className="btn" data-testid="save-correction" onClick={onCommitFix}>
+              Enregistrer la correction
+            </button>
+            <button type="button" className="undoline" data-testid="undo-set" onClick={() => onUndo(corrected)}>
+              Annuler cette série
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {pad ? (
+        <NumberPad
+          title={pad === "load" ? "Charge" : "Répétitions"}
+          hint={pad === "load" ? `Pas de ${formatKg(stepFor(exercise))} kg` : "Pas de 1"}
+          value={padText}
+          unit={pad === "load" ? gearUnit(exercise) : "répétitions"}
+          step={pad === "load" ? stepFor(exercise) : 1}
+          onChange={onPadText}
+          onClose={(accepted) => (accepted ? onAcceptPad() : onClosePad())}
+        />
+      ) : null}
       {resting && session.restEndsAt ? (
         <RestBand
           endsAt={session.restEndsAt}
-          line={handoff ?? sameRestLine(exercise, current)}
-          plates={plates}
+          line={handoff ?? restCaption(exercise, current)}
+          plates={null}
           rpe={doneWork?.set.rpe ?? null}
           onRpe={onRpe}
           onSkip={onSkipRest}
@@ -657,12 +776,31 @@ function loggedLine(session: Session): string {
   return `${done.length} séries sont déjà notées, dont ${bit}.`;
 }
 
-function undoLabel(exercise: ExerciseLog, set: SetLog): string {
-  if (set.warmup) return "Annuler l’échauffement";
-  const number = exercise.sets.filter((item) => !item.warmup).indexOf(set) + 1;
-  const load = set.loadKg == null ? "charge libre" : `${formatKg(set.loadKg)} ${unitPhrase(set.unit ?? unitOfExercise(exercise))}`;
-  const reps = set.reps == null ? "—" : String(set.reps);
-  return `Annuler la série ${number} · ${load} × ${reps}`;
+function gearUnit(exercise: ExerciseLog): string {
+  const unit = unitOfExercise(exercise);
+  if (unit === "kg/main") return "kg/main";
+  if (unit === "kg/jambe") return "kg/jambe";
+  if (unit === "corps" || unit === "poids du corps") return "kg";
+  return "kg · barre";
+}
+
+function workIndexOf(exercise: ExerciseLog, set: SetLog): number {
+  const work = exercise.sets.filter((item) => !item.warmup);
+  const index = work.indexOf(set);
+  return Math.max(1, index + 1);
+}
+
+function shortPlates(glance: string | null): string | null {
+  if (!glance) return null;
+  const match = glance.match(/^(.+?) kg de chaque côté/);
+  return match ? `${match[1]} de chaque côté` : null;
+}
+
+function restCaption(exercise: ExerciseLog, current: SetLog): string {
+  if (current.warmup) return "Repos · échauffement";
+  const number = workIndexOf(exercise, current);
+  const load = current.loadKg ?? exercise.planned.loadKg;
+  return `Puis la série ${number}${load != null ? ` · ${formatKg(load)} kg` : ""}`;
 }
 
 function shortName(name: string) {
@@ -684,15 +822,6 @@ function lastDoneWork(session: Session): { exercise: ExerciseLog; set: SetLog } 
   return found;
 }
 
-function sameRestLine(exercise: ExerciseLog, current: SetLog): string {
-  if (current.warmup) return "Échauffement";
-  const work = exercise.sets.filter((set) => !set.warmup);
-  const number = Math.max(1, work.indexOf(current) + 1);
-  const load = current.loadKg ?? exercise.planned.loadKg;
-  const unit = unitPhrase(unitOfExercise(exercise));
-  return `Série ${number}${load != null ? ` · ${formatKg(load)} ${unit}` : ""}`;
-}
-
 function transitionLine(session: Session, exercise: ExerciseLog): string | null {
   const index = session.exercises.findIndex((item) => item.id === exercise.id);
   if (index <= 0) return null;
@@ -709,7 +838,6 @@ function transitionLine(session: Session, exercise: ExerciseLog): string | null 
 function RestBand({
   endsAt,
   line,
-  plates,
   rpe,
   onRpe,
   onSkip,
@@ -749,20 +877,19 @@ function RestBand({
   const left = Math.max(0, (endsAt - now) / 1000);
   return (
     <section className="restband" data-testid="rest-timer" aria-live="polite">
-      <div>
+      <div className="resttop">
         <b className="num">{formatClock(left)}</b>
         <p>{line}</p>
-        {plates ? <p className="num">{plates}</p> : null}
-        <EffortRow rpe={rpe} onRpe={onRpe} />
+        <button type="button" className="pass" onClick={onSkip}>
+          Passer
+        </button>
       </div>
-      <button type="button" className="pass" onClick={onSkip}>
-        Passer
-      </button>
+      <EffortRow rpe={rpe} onRpe={onRpe} help={false} />
     </section>
   );
 }
 
-function EffortRow({ rpe, onRpe }: { rpe: number | null; onRpe: (rpe: number) => void }) {
+function EffortRow({ rpe, onRpe, help = true }: { rpe: number | null; onRpe: (rpe: number) => void; help?: boolean }) {
   return (
     <div className="rperow" data-testid="effort-row">
       <span>Effort</span>
@@ -771,7 +898,7 @@ function EffortRow({ rpe, onRpe }: { rpe: number | null; onRpe: (rpe: number) =>
           {value}
         </button>
       ))}
-      <p className="fine">6 facile, 10 maximal. Non renseigné n’est ni facile ni nul.</p>
+      {help && rpe == null ? <p className="fine">6 facile, 10 maximal.</p> : null}
     </div>
   );
 }

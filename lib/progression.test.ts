@@ -17,6 +17,7 @@ import {
   suggestForExercise,
   suggestionsForSession,
 } from "./progression";
+import { epley, heaviestSet } from "./calc";
 import type { ExerciseLog, Session, SetLog } from "./types";
 
 function set(partial: Partial<SetLog> & { loadKg: number | null; reps: number | null }): SetLog {
@@ -460,6 +461,24 @@ describe("suite sur plusieurs séances", () => {
     const today = doneSession("2026-10-24", exercise(), { id: "today", status: "planned" });
     expect(suggestForExercise(today.exercises[0], heavyThenLight, "today")?.loadKg).toBe(80);
     expect(suggestForExercise(today.exercises[0], heavyThenLight, "today")?.reps).toBe(7);
+  });
+
+  it("part de la charge réellement notée, même si le plan disait plus lourd", () => {
+    const logged = exercise({
+      planned: { sets: 1, reps: 6, loadKg: 80, restSec: 180, rpe: 8 },
+      sets: [set({ id: "a", loadKg: 77.5, reps: 5, rpe: 8, done: true })],
+    });
+    const history = [doneSession("2026-10-20", logged, { id: "past" })];
+    const today = doneSession("2026-10-24", exercise({
+      planned: { sets: 1, reps: 6, loadKg: 80, restSec: 180, rpe: 8 },
+      sets: [],
+    }), { id: "today", status: "planned" });
+    const suggestion = suggestForExercise(today.exercises[0], history, "today");
+    expect(suggestion?.loadKg).toBe(77.5);
+    expect(suggestion?.reason).toMatch(/77,5/);
+    expect(heaviestSet(history, logged.name)?.loadKg).toBe(77.5);
+    expect(epley(77.5, 5)).toBe(90.4);
+    expect(epley(80, 5)).toBe(93.3);
   });
 
   it("ne modifie pas un plan de Chef sport en montrant la suite", () => {
