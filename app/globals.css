@@ -1501,7 +1501,7 @@ h1.title {
   place-items: center;
 }
 .coach-mini .coach-face { width: 28px; height: 28px; }
-.sport-mode .sessbody { overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
+.sport-mode .sessbody { overflow: hidden; display: flex; flex-direction: column; gap: 12px; }
 .sport-mode .restband {
   flex: none;
   display: block;
@@ -1528,7 +1528,7 @@ h1.title {
 .resttop { display: flex; align-items: center; gap: 10px; }
 .resttop b { flex: none; }
 .resttop p { flex: 1; min-width: 0; margin: 0; }
-.setchips { display: flex; gap: 6px; overflow: hidden; margin: 4px 0 2px; }
+.setchips { display: flex; gap: 6px; overflow: hidden; margin: 8px 0 12px; }
 .setchip {
   flex: 1 1 0;
   min-width: 0;
@@ -1559,11 +1559,17 @@ h1.title {
 .stepcard header, .stepcard footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
 .stepcard header span { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
 .stepcard header small, .stepcard .quiet { color: var(--ink-soft); font-size: 0.75rem; min-width: 0; }
-.steprow { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.steprow {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr) 68px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
 .steprow > button {
-  flex: none;
   width: 68px;
   height: 68px;
+  justify-self: center;
   border-radius: 18px;
   border: 0;
   background: var(--bg-elev-2);
@@ -1571,9 +1577,10 @@ h1.title {
   font-size: 2rem;
   font-weight: 500;
 }
-.stepvalue {
-  flex: 1;
+.steprow > .stepvalue {
+  width: auto;
   min-width: 0;
+  justify-self: stretch;
   height: 68px;
   border: 0;
   background: transparent;
@@ -1584,7 +1591,7 @@ h1.title {
   align-items: center;
   justify-content: center;
 }
-.stepvalue b { display: block; font-size: clamp(1.75rem, 8vw, 2.6rem); line-height: 1; letter-spacing: -0.04em; font-weight: 560; white-space: nowrap; }
+.stepvalue b { display: block; font-size: clamp(64px, 17vw, 72px); line-height: 1; letter-spacing: -0.04em; font-weight: 560; white-space: nowrap; }
 .stepvalue small { color: var(--ink-soft); font-size: 0.75rem; }
 .stepcard footer em { color: var(--copper); font-style: normal; font-weight: 680; font-size: 0.8125rem; }
 .stepcard .revert, .thumb .undoline {
@@ -1636,9 +1643,10 @@ h1.title {
 .padjumps button, .padkeys button { min-height: 44px; border-radius: 12px; border: 0; background: var(--bg-elev-2); color: var(--ink); font-size: 1.25rem; font-weight: 650; }
 .correctcard { max-height: 100dvh; overflow: hidden; }
 .correctcard h2 { font-size: 1.25rem; margin: 4px 0; }
-.correctcard .stepvalue b { font-size: 1.75rem; }
-.correctcard .steprow > button, .correctcard .stepvalue { height: 48px; width: auto; }
-.correctcard .steprow > button { width: 48px; font-size: 1.5rem; }
+.correctcard .steprow { grid-template-columns: 48px minmax(0, 1fr) 48px; }
+.correctcard .steprow > button:not(.stepvalue) { width: 48px; height: 48px; font-size: 1.5rem; }
+.correctcard .stepvalue { height: 48px; }
+.correctcard .stepvalue b { font-size: 40px; }
 .sport-mode.resting .puis,
 .sport-mode.resting .cue,
 .sport-mode.resting .exnote { display: none; }
