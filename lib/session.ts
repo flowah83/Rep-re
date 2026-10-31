@@ -2,11 +2,48 @@ import { epley, hardSetCount, isHardSet, tonnage } from "./calc";
 import { unitPhrase } from "./display";
 import type { ExerciseLog, Session, SetLog } from "./types";
 import { canonicalUnit, resolvedUnit } from "./unit";
-import { formatKg, formatLong, uid } from "./utils";
+import { formatKg, formatLong, stripAccents, uid } from "./utils";
 
 export function blankExercise(partial: Omit<ExerciseLog, "id" | "sets"> & { sets?: SetLog[] }): ExerciseLog {
   const sets = partial.sets ?? buildSets(partial.planned.sets, partial.planned.loadKg, false);
   return { ...partial, id: uid(), sets };
+}
+
+/** Pas du bouton +/− : 2,5 kg pour une barre, 1 ou 2 kg par haltère, 0,5 kg au poids du corps. */
+export function stepFor(exercise: { stepKg: number; unit?: string | null; name?: string }): number {
+  const unit = exercise.unit ?? inferredGearUnit(exercise.name);
+  if (unit === "corps" || unit === "poids du corps") return 0.5;
+  if (unit === "kg/main" || unit === "kg/jambe") {
+    const step = exercise.stepKg > 0 ? exercise.stepKg : 1;
+    return step <= 2 ? step : 1;
+  }
+  return exercise.stepKg > 0 ? exercise.stepKg : 2.5;
+}
+
+function inferredGearUnit(name?: string): string | null {
+  const key = stripAccents(name ?? "");
+  if (key.includes("haltere")) return "kg/main";
+  if (key.includes("traction") || key.includes("poids du corps")) return "corps";
+  return null;
+}
+
+/** Met la charge choisie sur les séries de travail suivantes encore ouvertes. */
+export function carryLoadForward(session: Session, exerciseId: string, fromSetId: string, loadKg: number): Session {
+  return {
+    ...session,
+    exercises: session.exercises.map((exercise) => {
+      if (exercise.id !== exerciseId) return exercise;
+      const from = exercise.sets.findIndex((set) => set.id === fromSetId);
+      if (from < 0) return exercise;
+      return {
+        ...exercise,
+        sets: exercise.sets.map((set, index) => {
+          if (index <= from || set.warmup || set.done || set.skipped) return set;
+          return { ...set, loadKg, origin: "saisie" as const };
+        }),
+      };
+    }),
+  };
 }
 
 export function buildSets(count: number, loadKg: number | null, warmup: boolean): SetLog[] {

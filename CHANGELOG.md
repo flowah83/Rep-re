@@ -1,5 +1,12 @@
 # Journal
 
+## 2026-10-31 — Saisie en séance
+
+- Charge et répétitions ont chacune leur brouillon. 75 kg puis 5 répétitions sont notés 75 kg × 5.
+- Cartes avec boutons − / + de 68 pt, pas selon le matériel, écart en cuivre et « Revenir à ». Un appui sur le chiffre ouvre un pavé, sans le clavier de l’iPhone.
+- Une pastille faite ouvre la correction, sans relancer le repos. Si la charge change, une seule question propose de la garder pour les séries suivantes.
+- La bande de repos reste compacte. La séance suit le thème clair ou sombre du téléphone.
+
 ## 2026-10-29 — Fonctions utiles
 
 - Modèles de séance, ordre des exercices, matériel disponible et substitution du même geste. La recherche par exercice, « Reprendre le plan » et la comparaison du bilan ou de Progrès existaient déjà : elles restent, avec le mot Comparer sur la recherche.
