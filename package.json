@@ -30,7 +30,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.170.0",
-    "eslint": "^9",
+    "eslint": "^10",
     "eslint-config-next": "^15.5.28",
     "playwright-core": "^1.55.0",
     "tailwindcss": "^4",
