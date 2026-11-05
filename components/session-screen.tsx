@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/app-context";
 import { CoachFace } from "@/components/coach-face";
-import { plateGlance, unitOfExercise, unitPhrase } from "@/lib/display";
+import { loadReadout, loadUnitLabel, sessionPlates } from "@/lib/display";
 import { resolvedUnit } from "@/lib/unit";
 import { playChime, unlockChime } from "@/lib/chime";
 import {
@@ -310,7 +310,7 @@ export function SessionScreen({ id }: { id: string }) {
             corrected={corrected}
             fixLoad={fixPair?.loadKg ?? null}
             fixReps={fixPair?.reps ?? null}
-            keepText={keep && keep.exerciseId === exercise.id ? `Garder ${formatKg(keep.loadKg)} kg pour les séries suivantes ?` : null}
+            keepText={keep && keep.exerciseId === exercise.id ? keepPrompt(exercise, keep.fromSetId, keep.loadKg, { label: loadUnitLabel(exercise) }) : null}
             pad={pad}
             padText={padText}
             nextName={handoff ? undefined : nextExercise?.name}
@@ -517,7 +517,7 @@ function ActiveSet({
   const workIndex = current.warmup ? 0 : Math.max(1, work.indexOf(current) + 1);
   const seriesLabel = current.warmup && !current.done ? "Échauffement" : `Série ${Math.min(workIndex || 1, work.length)} sur ${work.length}`;
   const crumbLabel = `Exercice ${index} sur ${session.exercises.length}, ${seriesLabel}`;
-  const plates = plateGlance(shownLoad, unitOfExercise(exercise), barKg);
+  const plates = sessionPlates(shownLoad, exercise, barKg);
   const doneWork = lastDoneWork(session);
   return (
     <>
@@ -575,7 +575,7 @@ function ActiveSet({
           ) : null}
           {exercise.planned.loadKg != null || exercise.planned.reps != null ? (
             <p className="menunote">
-              Cible · {exercise.planned.loadKg != null ? `${formatKg(exercise.planned.loadKg)} ${unitPhrase(unitOfExercise(exercise))}` : "sans charge"} × {exercise.planned.reps ?? "—"}
+              Cible · {exercise.planned.loadKg != null ? `${formatKg(exercise.planned.loadKg)} ${loadUnitLabel(exercise)}` : "sans charge"} × {exercise.planned.reps ?? "—"}
               {exercise.planned.rpe != null ? ` · RPE ${formatKg(exercise.planned.rpe)}` : ""}
             </p>
           ) : null}
@@ -601,9 +601,9 @@ function ActiveSet({
           label="Charge"
           value={shownLoad}
           planned={current.warmup ? current.loadKg : exercise.planned.loadKg}
-          unit={gearUnit(exercise)}
+          unit={loadUnitLabel(exercise)}
           stepLabel={`± ${formatKg(stepFor(exercise))} kg`}
-          aside={resting ? null : shortPlates(plates)}
+          aside={resting ? null : gearAside(exercise, plates)}
           onStep={(direction) => onStep("main", "load", direction)}
           onOpen={() => onOpenPad("main", "load")}
           onRevert={() => onRevertField("main", "load")}
@@ -622,7 +622,7 @@ function ActiveSet({
         <div className="thumb">
           <button type="button" className="btn" data-testid="complete-set" onClick={onCommit}>
             <b>{current.warmup ? "Valider l’échauffement" : `Valider la série ${Math.max(1, workIndex || 1)}`}</b>
-            <small>{shownLoad == null ? "sans charge" : `${formatKg(shownLoad)} kg`} × {shownReps ?? "—"}</small>
+            <small>{loadReadout(shownLoad, exercise)} × {shownReps ?? "—"}</small>
           </button>
           {current.done ? null : (
             <button type="button" className="undoline" data-testid="skip-set-inline" onClick={onSkip}>
@@ -641,13 +641,13 @@ function ActiveSet({
         <div className="dimsheet" role="dialog" aria-modal="true" aria-label={`Corriger la série ${workIndexOf(exercise, corrected)}`} data-testid="correct-sheet">
           <div className="dimcard correctcard">
             <h2>Corriger la série {workIndexOf(exercise, corrected)}</h2>
-            <p className="fine">Notée {corrected.loadKg == null ? "sans charge" : `${formatKg(corrected.loadKg)} kg`} × {corrected.reps ?? "—"}</p>
+            <p className="fine">Notée {loadReadout(corrected.loadKg, exercise)} × {corrected.reps ?? "—"}</p>
             <StepperCard
               kind="load"
               label="Charge"
               value={fixLoad}
               planned={corrected.warmup ? corrected.loadKg : exercise.planned.loadKg}
-              unit={gearUnit(exercise)}
+              unit={loadUnitLabel(exercise)}
               stepLabel={`± ${formatKg(stepFor(exercise))} kg`}
               onStep={(direction) => onStep("fix", "load", direction)}
               onOpen={() => onOpenPad("fix", "load")}
@@ -678,7 +678,7 @@ function ActiveSet({
           title={pad === "load" ? "Charge" : "Répétitions"}
           hint={pad === "load" ? `Pas de ${formatKg(stepFor(exercise))} kg` : "Pas de 1"}
           value={padText}
-          unit={pad === "load" ? gearUnit(exercise) : "répétitions"}
+          unit={pad === "load" ? loadUnitLabel(exercise) : "répétitions"}
           step={pad === "load" ? stepFor(exercise) : 1}
           integer={pad === "reps"}
           onChange={onPadText}
@@ -771,18 +771,19 @@ function loggedLine(session: Session): string {
   );
   if (!done.length) return "Aucune série n’est encore notée.";
   const first = done[0];
-  const load = first.set.loadKg == null ? "charge libre" : `${formatKg(first.set.loadKg)} ${unitPhrase(first.set.unit ?? unitOfExercise(first.exercise))}`;
+  const load = first.set.loadKg == null ? "charge libre" : loadReadout(first.set.loadKg, first.exercise);
   const bit = `${shortName(first.exercise.name)}, ${load} × ${first.set.reps ?? "—"}`;
   if (done.length === 1) return `Une série est déjà notée : ${bit}.`;
   return `${done.length} séries sont déjà notées, dont ${bit}.`;
 }
 
-function gearUnit(exercise: ExerciseLog): string {
-  const unit = unitOfExercise(exercise);
-  if (unit === "kg/main") return "kg/main";
-  if (unit === "kg/jambe") return "kg/jambe";
-  if (unit === "corps" || unit === "poids du corps") return "kg";
-  return "kg · barre";
+function gearAside(exercise: ExerciseLog, plates: string | null): string | null {
+  if (equipmentAside(exercise)) return equipmentAside(exercise);
+  return shortPlates(plates);
+}
+
+function equipmentAside(exercise: ExerciseLog): string | null {
+  return loadUnitLabel(exercise) === "kg par haltère" ? "une main" : null;
 }
 
 function workIndexOf(exercise: ExerciseLog, set: SetLog): number {
@@ -801,7 +802,7 @@ function restCaption(exercise: ExerciseLog, current: SetLog): string {
   if (current.warmup) return "Repos · échauffement";
   const number = workIndexOf(exercise, current);
   const load = current.loadKg ?? exercise.planned.loadKg;
-  return `Puis la série ${number}${load != null ? ` · ${formatKg(load)} kg` : ""}`;
+  return `Puis la série ${number}${load != null ? ` · ${loadReadout(load, exercise)}` : ""}`;
 }
 
 function shortName(name: string) {
@@ -827,8 +828,7 @@ function transitionLine(session: Session, exercise: ExerciseLog): string | null 
   if (!previous.sets.some((set) => set.done)) return null;
   const open = exercise.sets.find((set) => !setSettled(set));
   const load = open?.loadKg ?? exercise.planned.loadKg;
-  const unit = unitPhrase(open?.unit ?? unitOfExercise(exercise));
-  return `${shortName(previous.name)} terminé. Puis ${shortName(exercise.name).toLowerCase()}${load != null ? ` · ${formatKg(load)} ${unit}` : ""}`;
+  return `${shortName(previous.name)} terminé. Puis ${shortName(exercise.name).toLowerCase()}${load != null ? ` · ${loadReadout(load, exercise)}` : ""}`;
 }
 
 function RestBand({

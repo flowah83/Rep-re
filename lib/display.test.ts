@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { bestLoads } from "./calc";
-import { describePlan, estimateMinutes, historyBucket, plateGlance, runFacts, seriesWord, unitOfExercise, unitPhrase } from "./display";
+import { describePlan, estimateMinutes, historyBucket, loadReadout, loadUnitLabel, plateGlance, runFacts, seriesWord, sessionPlates, unitOfExercise, unitPhrase } from "./display";
+import { stepFor } from "./session";
+import { resolvedUnit } from "./unit";
 import type { ExerciseLog, Session } from "./types";
 
 function exercise(partial: Partial<ExerciseLog> = {}): ExerciseLog {
@@ -79,6 +81,38 @@ describe("lignes de plan", () => {
     expect(estimateMinutes(plannedRun)).toBe(48);
     expect(runFacts(plannedRun).duration).toBe("45–50 min");
     expect(runFacts(plannedRun).distance).toBeNull();
+  });
+
+  it("affiche le matériel sans changer l’unité enregistrée", () => {
+    const bar = { name: "Développé couché barre", unit: "kg", stepKg: 2.5 };
+    const dumbbell = { name: "Développé incliné haltères", unit: "kg/main", stepKg: 1 };
+    const cable = { name: "Écarté poulie", unit: "kg", stepKg: 2.5 };
+    const machine = { name: "Presse à cuisses", unit: "kg", stepKg: 5 };
+    expect(loadUnitLabel(bar)).toBe("kg · barre");
+    expect(loadUnitLabel(dumbbell)).toBe("kg par haltère");
+    expect(loadUnitLabel(cable)).toBe("kg · poulie");
+    expect(loadUnitLabel(machine)).toBe("kg · machine");
+    expect(loadReadout(80, bar)).toBe("80 kg · barre");
+    expect(loadReadout(28, dumbbell)).toBe("28 kg par haltère");
+    expect(loadReadout(15, cable)).toBe("15 kg · poulie");
+    expect(loadReadout(120, machine)).toBe("120 kg · machine");
+    expect(loadReadout(null, cable)).toBe("sans charge");
+    expect(sessionPlates(80, bar, 20)).toMatch(/de chaque côté/);
+    expect(sessionPlates(15, cable, 20)).toBeNull();
+    expect(sessionPlates(120, machine, 20)).toBeNull();
+    expect(sessionPlates(28, dumbbell, 20)).toBeNull();
+    expect(plateGlance(120, "kg", 20)).toMatch(/de chaque côté/);
+    expect(stepFor(bar)).toBe(2.5);
+    expect(stepFor(dumbbell)).toBe(1);
+    expect(stepFor(cable)).toBe(2.5);
+    expect(stepFor(machine)).toBe(5);
+    expect(resolvedUnit({ unit: "kg" }, cable)).toBe("kg");
+    expect(resolvedUnit({ unit: "kg" }, machine)).toBe("kg");
+    expect(cable.unit).toBe("kg");
+    expect(machine.unit).toBe("kg");
+    expect(loadUnitLabel({ name: "Tirage vertical", unit: "kg" })).toBe("kg · poulie");
+    expect(loadUnitLabel({ name: "Mollets debout", unit: "kg" })).toBe("kg · machine");
+    expect(loadUnitLabel({ name: "Soulevé de terre", unit: "kg" })).toBe("kg · barre");
   });
 
   it("nomme l’haltère", () => {

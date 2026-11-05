@@ -1,5 +1,9 @@
 # Journal
 
+## 2026-11-05 — Unité affichée
+
+- La charge dit le matériel : barre, haltère, poulie ou machine. Les disques ne s’affichent que pour une barre. Les kilos déjà notés ne changent pas, ni le pas de chaque exercice.
+
 ## 2026-11-05 — Effort et pavé
 
 - Hors du bandeau noir, les chiffres d’effort sont en encre sur le papier. Dans le repos, ils restent clairs sur noir. Le chiffre choisi reste cuivré.
