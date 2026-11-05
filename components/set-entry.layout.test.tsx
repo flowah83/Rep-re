@@ -77,7 +77,7 @@ describe("mise en page iPhone 15", () => {
   it("tient dans 393×852, en clair, en sombre, et en grand texte", async () => {
     const browser = await chromium.launch({
       executablePath: process.env.CHROME_PATH || "/usr/bin/google-chrome",
-      args: ["--no-sandbox", "--disable-dev-shm-usage"],
+      args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
     });
     try {
       const page = await browser.newPage({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2 });
@@ -86,6 +86,12 @@ describe("mise en page iPhone 15", () => {
         for (const size of [16, 20]) {
           for (const [name, html] of Object.entries(scenes)) {
             await page.setContent(`<!doctype html><html class="${theme}" style="font-size:${size}px"><head><style>${css}</style></head><body>${html}</body></html>`, { waitUntil: "domcontentloaded" });
+            await page.evaluate(() => {
+              for (const animation of document.getAnimations()) {
+                const iterations = animation.effect?.getTiming().iterations;
+                if (iterations !== Infinity) animation.finish();
+              }
+            });
             const report = await page.evaluate(() => {
               const root = document.querySelector("[data-testid=session-screen]") as HTMLElement;
               const bad: string[] = [];
@@ -95,7 +101,10 @@ describe("mise en page iPhone 15", () => {
                 if (rect.width < 1 || rect.height < 1) continue;
                 const label = (el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 32);
                 if (rect.right > 393.5 || rect.left < -0.5) bad.push(`${label} sort à droite (${Math.round(rect.right)})`);
-                if (rect.width < 44 || rect.height < 44) bad.push(`${label} ${Math.round(rect.width)}×${Math.round(rect.height)}`);
+                // offsetWidth est la boîte en pixels CSS entiers. Un rectangle à 43,98 px
+                // pour un min-height de 44 px reste un contrôle de 44 px, et un contrôle de 43 px échoue.
+                const box = el as HTMLElement;
+                if (box.offsetWidth < 44 || box.offsetHeight < 44) bad.push(`${label} ${box.offsetWidth}×${box.offsetHeight}`);
               }
               return bad;
             });
@@ -112,7 +121,7 @@ describe("mise en page iPhone 15", () => {
   it("laisse l’effort lisible sur le papier, et dans le bandeau noir", async () => {
     const browser = await chromium.launch({
       executablePath: process.env.CHROME_PATH || "/usr/bin/google-chrome",
-      args: ["--no-sandbox", "--disable-dev-shm-usage"],
+      args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
     });
     try {
       const page = await browser.newPage({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2 });
