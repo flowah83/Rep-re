@@ -1,5 +1,16 @@
 # Journal
 
+## 2026-11-05 — Fil d’Ariane de la séance
+
+- Le fil « Exercice · Série » ne se comprime plus quand la colonne est pleine. Il reste au moins à 44 px.
+- Le test iPhone mesure cette boîte en pixels entiers, après l’animation d’entrée. Un contrôle de 43 px échoue toujours.
+
+## 2026-11-05 — Jour, focus et carnet
+
+- Le jour se met à jour à minuit, ou quand l’application revient au premier plan. Si l’on regardait aujourd’hui, on suit le nouveau jour.
+- Abandonner et Clore gardent le focus. Échap les ferme sans valider.
+- Le coach écrit le carnet en une seule fois. Si l’écriture échoue, l’écran ne change pas et la séance n’est pas annoncée comme retirée.
+
 ## 2026-11-05 — Semaine, courbe et corps
 
 - Mardi s’écrit Ma, mercredi Me. Aujourd’hui nomme le jour en entier. Progrès et Carnet annoncent l’onglet ouvert.
