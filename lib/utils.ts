@@ -10,6 +10,19 @@ export function uid(): string {
   return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/** Le jour affiché suit l’horloge du téléphone. Si l’on regardait « aujourd’hui », on suit le nouveau jour. */
+export function rollDay(currentToday: string, now: Date, selectedDate: string): { today: string; selectedDate: string } {
+  const next = localDate(now);
+  if (next === currentToday) return { today: currentToday, selectedDate };
+  return { today: next, selectedDate: selectedDate === currentToday ? next : selectedDate };
+}
+
+export function msUntilNextMidnight(now: Date): number {
+  const next = new Date(now.getTime());
+  next.setHours(24, 0, 0, 0);
+  return Math.max(1000, next.getTime() - now.getTime());
+}
+
 export function localDate(d = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");

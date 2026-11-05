@@ -7,6 +7,7 @@ import {
   loadState,
   putMany,
   replaceAll,
+  replaceNotebook,
   saveCustom,
   saveSession as putSession,
   saveSettings,
@@ -23,7 +24,7 @@ import { saveCoachConfig, loadCoachConfig } from "@/lib/coach-store";
 import type { BackupFile, CustomExercise, Session, Settings } from "@/lib/types";
 import { publicBase } from "@/lib/base-path";
 import { duplicateAsPlan } from "@/lib/session";
-import { localDate } from "@/lib/utils";
+import { localDate, msUntilNextMidnight, rollDay } from "@/lib/utils";
 
 export type Tab = "home" | "today" | "progress" | "history";
 export type RangeKey = 28 | 84 | 365;
@@ -133,12 +134,16 @@ export function AppProvider({
     notice: string | null;
   };
 }) {
-  const today = localDate();
+  const [today, setToday] = useState(() => localDate());
   const [settings, setSettings] = useState(initial.settings);
   const [sessions, setSessions] = useState(initial.sessions);
   const [customs, setCustoms] = useState(initial.customs);
   const [tab, setTab] = useState<Tab>("home");
   const [selectedDate, setSelectedDate] = useState(today);
+  const selectedRef = useRef(selectedDate);
+  const todayRef = useRef(today);
+  selectedRef.current = selectedDate;
+  todayRef.current = today;
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [sheet, setSheet] = useState<SheetName>(initial.importPreview && initial.settings.onboarded ? "import" : null);
   const [editId, setEditId] = useState<string | null>(null);
@@ -198,6 +203,35 @@ export function AppProvider({
       const base = publicBase();
       void navigator.serviceWorker.register(`${base}/sw.js`, { scope: base ? `${base}/` : "/" });
     }
+  }, []);
+
+  useEffect(() => {
+    let timer = 0;
+    const refresh = () => {
+      const now = new Date();
+      const rolled = rollDay(todayRef.current, now, selectedRef.current);
+      if (rolled.today !== todayRef.current) {
+        todayRef.current = rolled.today;
+        setToday(rolled.today);
+      }
+      if (rolled.selectedDate !== selectedRef.current) {
+        selectedRef.current = rolled.selectedDate;
+        setSelectedDate(rolled.selectedDate);
+      }
+      window.clearTimeout(timer);
+      timer = window.setTimeout(refresh, msUntilNextMidnight(new Date()));
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", refresh);
+    refresh();
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", refresh);
+      window.clearTimeout(timer);
+    };
   }, []);
 
   useEffect(() => {
@@ -298,27 +332,17 @@ export function AppProvider({
       saveSession,
       updateSession,
       removeSession: async (id) => {
+        await deleteSession(id);
         sessionsRef.current = sessionsRef.current.filter((session) => session.id !== id);
         setSessions(sessionsRef.current);
-        await deleteSession(id);
       },
       replaceSessions: async (nextSessions, nextCustoms) => {
         const previous = sessionsRef.current;
-        const ids = new Set(nextSessions.map((session) => session.id));
-        for (const session of previous) {
-          if (!ids.has(session.id)) await deleteSession(session.id);
-        }
-        const previousJson = new Map(previous.map((session) => [session.id, JSON.stringify(session)]));
-        for (const session of nextSessions) {
-          if (previousJson.get(session.id) !== JSON.stringify(session)) await putSession(session);
-        }
+        const customs = customsRef.current;
+        await replaceNotebook(previous, nextSessions, customs, nextCustoms);
         sessionsRef.current = nextSessions;
         setSessions(nextSessions);
         if (nextCustoms) {
-          for (const custom of nextCustoms) {
-            const known = customsRef.current.find((item) => item.id === custom.id);
-            if (!known || known.name !== custom.name || known.pattern !== custom.pattern) await saveCustom(custom);
-          }
           customsRef.current = nextCustoms;
           setCustoms(nextCustoms);
         }

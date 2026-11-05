@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
+import { applyNotebookWrites, notebookWrites, type NotebookTx } from "./notebook";
 import { resolvedUnit } from "./unit";
 import type { BackupFile, CustomExercise, Session, Settings } from "./types";
 
@@ -43,6 +44,37 @@ export async function saveSettings(settings: Settings) {
 export async function saveSession(session: Session) {
   const database = await db();
   await database.put("sessions", session);
+}
+
+/** Remplace le carnet d’un seul tenant. L’écran ne doit changer qu’après ce retour. */
+export async function replaceNotebook(
+  previous: Session[],
+  nextSessions: Session[],
+  currentCustoms: CustomExercise[],
+  nextCustoms?: CustomExercise[],
+): Promise<void> {
+  const writes = notebookWrites(previous, nextSessions, currentCustoms, nextCustoms);
+  if (!writes.length) return;
+  const database = await db();
+  const tx = database.transaction(["sessions", "customs"], "readwrite");
+  const adapter: NotebookTx = {
+    async apply(write) {
+      if (write.op === "delete-session") await tx.objectStore("sessions").delete(write.id);
+      else if (write.op === "put-session") await tx.objectStore("sessions").put(write.session);
+      else await tx.objectStore("customs").put(write.custom);
+    },
+    async commit() {
+      await tx.done;
+    },
+    async abort() {
+      tx.abort();
+    },
+  };
+  try {
+    await applyNotebookWrites(writes, adapter);
+  } catch {
+    throw new Error("Le carnet n’a pas été enregistré. Rien n’a changé sur ce téléphone.");
+  }
 }
 
 export async function deleteSession(id: string) {

@@ -858,9 +858,12 @@ function EditSheet() {
             <Button
               variant="ghost"
               onClick={() => {
-                void app.removeSession(existing.id);
-                app.setSheet(null);
-                app.flash("Séance retirée.");
+                void app.removeSession(existing.id).then(() => {
+                  app.setSheet(null);
+                  app.flash("Séance retirée.");
+                }).catch(() => {
+                  app.flash("La séance n’a pas été retirée. Elle est encore sur ce téléphone.");
+                });
               }}
             >
               Oui, supprimer

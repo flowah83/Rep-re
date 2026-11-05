@@ -1,5 +1,11 @@
 # Journal
 
+## 2026-11-05 — Jour, focus et carnet
+
+- Le jour se met à jour à minuit, ou quand l’application revient au premier plan. Si l’on regardait aujourd’hui, on suit le nouveau jour.
+- Abandonner et Clore gardent le focus. Échap les ferme sans valider.
+- Le coach écrit le carnet en une seule fois. Si l’écriture échoue, l’écran ne change pas et la séance n’est pas annoncée comme retirée.
+
 ## 2026-11-05 — Semaine, courbe et corps
 
 - Mardi s’écrit Ma, mercredi Me. Aujourd’hui nomme le jour en entier. Progrès et Carnet annoncent l’onglet ouvert.

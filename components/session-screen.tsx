@@ -18,7 +18,7 @@ import { recallPlan } from "@/lib/snapshot";
 import { closeCopy } from "@/lib/close";
 import { closureFor, restAlertOn } from "@/lib/identity";
 import { KeepCard, NumberPad, SetChips, StepperCard } from "@/components/set-entry";
-import { acceptPadDraft, keepPrompt, loggedPair, stepField, type FieldDraft } from "@/lib/set-entry";
+import { acceptPadDraft, keepPrompt, loggedPair, padKeyAction, stepField, type FieldDraft } from "@/lib/set-entry";
 import { carryLoadForward, lastPerformance, completeSet, firstOpenSlot, noteSetRpe, patchSet, sessionFullyLogged, setSettled, skipSet, stepFor } from "@/lib/session";
 import type { ExerciseLog, Session, SetLog } from "@/lib/types";
 import { formatClock, formatKg } from "@/lib/utils";
@@ -33,6 +33,8 @@ export function SessionScreen({ id }: { id: string }) {
   const [review, setReview] = useState(false);
   const [abandon, setAbandon] = useState(false);
   const [closeAsk, setCloseAsk] = useState(false);
+  const abandonRef = useDismissDialog(abandon, () => setAbandon(false));
+  const closeAskRef = useDismissDialog(closeAsk, () => setCloseAsk(false));
   const [entry, setEntry] = useState<{ setId: string } & FieldDraft>({ setId: "" });
   const [pad, setPad] = useState<null | "load" | "reps">(null);
   const [padTarget, setPadTarget] = useState<"main" | "fix">("main");
@@ -377,7 +379,7 @@ export function SessionScreen({ id }: { id: string }) {
         ) : null}
       </div>
       {abandon ? (
-        <div className="dimsheet sport-mode" role="dialog" aria-modal="true" aria-label="Abandonner cette séance" data-testid="abandon-sheet">
+        <div ref={abandonRef} className="dimsheet sport-mode" role="dialog" aria-modal="true" aria-label="Abandonner cette séance" tabIndex={-1} data-testid="abandon-sheet">
           <div className="dimcard">
             <div className="grab" />
             <h2>Abandonner cette séance ?</h2>
@@ -398,7 +400,7 @@ export function SessionScreen({ id }: { id: string }) {
         </div>
       ) : null}
       {closeAsk ? (
-        <div className="dimsheet sport-mode" role="dialog" aria-modal="true" aria-label="Clore la séance">
+        <div ref={closeAskRef} className="dimsheet sport-mode" role="dialog" aria-modal="true" aria-label="Clore la séance" tabIndex={-1} data-testid="close-sheet">
           <div className="dimcard">
             <div className="grab" />
             <h2>Clore la séance ?</h2>
@@ -900,6 +902,40 @@ function EffortRow({ rpe, onRpe, help = true }: { rpe: number | null; onRpe: (rp
       {help && rpe == null ? <p className="fine">6 facile, 10 maximal.</p> : null}
     </div>
   );
+}
+
+function useDismissDialog(open: boolean, onDismiss: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  const dismissRef = useRef(onDismiss);
+  dismissRef.current = onDismiss;
+  useEffect(() => {
+    if (!open) return;
+    const node = ref.current;
+    if (!node) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const buttons = () => [...node.querySelectorAll<HTMLElement>("button:not(:disabled)")];
+    buttons()[0]?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      const list = buttons();
+      const index = list.indexOf(document.activeElement as HTMLElement);
+      const action = padKeyAction(event.key, event.shiftKey, index, list.length);
+      if (action === "close") {
+        event.preventDefault();
+        dismissRef.current();
+        return;
+      }
+      if (typeof action === "number") {
+        event.preventDefault();
+        list[action]?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      previous?.focus();
+    };
+  }, [open]);
+  return ref;
 }
 
 function Elapsed({ from }: { from?: string }) {
