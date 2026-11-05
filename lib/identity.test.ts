@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayRepere, installHelp, keepsake, PRESENTATION, shouldOfferInstall, weeklyCap } from "./identity";
+import { closureFor, conservationLine, countsAsPartial, dayRepere, downloadHonesty, installHelp, keepsake, PRESENTATION, restAlertOn, shouldOfferInstall, weeklyCap } from "./identity";
 import type { ExerciseLog, Session, SetLog } from "./types";
 
 const BANNED = /bravo|félicit|record|tonnage|cycle|en retard|faute/i;
@@ -114,6 +114,30 @@ describe("moments", () => {
     expect(week.synthesis).toMatch(/partielle/);
     expect(week.proposal).toBe("La prochaine est Dos, vendredi.");
     expect(`${week.synthesis} ${week.proposal}`).not.toMatch(BANNED);
+    const early = session({
+      date: "2026-10-28",
+      closed: "full",
+      id: "early",
+      exercises: [exercise({ sets: [set({ id: "a", done: true }), set({ id: "b", done: false, reps: null, rpe: null })] })],
+    });
+    expect(closureFor(early)).toBe("partial");
+    expect(countsAsPartial(early)).toBe(true);
+    expect(closureFor(session({ date: "2026-10-28", closed: "full" }))).toBe("full");
+    const told = weeklyCap([early], "2026-10-29");
+    expect(told.synthesis).toMatch(/partielle/);
+    expect(told.synthesis).not.toMatch(BANNED);
+    expect(keepsake(early).facts.join(" ")).toMatch(/partielle/);
+    expect(conservationLine(true)).toMatch(/accepté de garder/);
+    expect(conservationLine(false)).toMatch(/n’a pas garanti/);
+    expect(conservationLine(undefined)).toMatch(/n’a pas garanti/);
+    expect(downloadHonesty(null)).toMatch(/Aucune copie/);
+    expect(downloadHonesty("jeudi 5 novembre")).toMatch(/téléchargement lancé/);
+    expect(downloadHonesty("jeudi 5 novembre")).not.toMatch(/téléchargée ici/);
+    expect(restAlertOn(undefined, "granted")).toBe(true);
+    expect(restAlertOn(false, "granted")).toBe(false);
+    expect(restAlertOn(true, "granted")).toBe(true);
+    expect(restAlertOn(true, "denied")).toBe(false);
+    expect(restAlertOn(undefined, "default")).toBe(false);
     expect(PRESENTATION).toBe("Retrouvez vos charges. Notez votre séance. Voyez ce qui progresse.");
   });
 });

@@ -134,6 +134,8 @@ export type Settings = {
   lastDownloadAt?: string;
   /** Résultat de la demande de conservation. Ce n’est pas une garantie. */
   storagePersistent?: boolean;
+  /** `false` : l’alerte de fin de repos a été coupée, même si le téléphone l’autorise. */
+  restAlert?: boolean;
   /** Version des données déjà migrées sur ce téléphone. */
   schemaVersion?: number;
   /** La proposition d’installation a été écartée. Elle ne revient pas. */

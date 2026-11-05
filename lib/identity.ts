@@ -37,16 +37,43 @@ export function dayRepere(session: Session, history: Session[], today: string): 
   return { kicker: "Mon repère du jour", last, action };
 }
 
+export function openWorkSets(session: Pick<Session, "exercises">): number {
+  return session.exercises.reduce(
+    (count, exercise) => count + exercise.sets.filter((set) => !set.warmup && !set.done && !set.skipped).length,
+    0,
+  );
+}
+
+/** Une séance close avec des séries encore ouvertes n’est pas complète. */
+export function closureFor(session: Pick<Session, "exercises">): "full" | "partial" {
+  return openWorkSets(session) > 0 ? "partial" : "full";
+}
+
+export function countsAsPartial(session: Pick<Session, "closed" | "exercises">): boolean {
+  return session.closed === "partial" || openWorkSets(session) > 0;
+}
+
+export function conservationLine(persistent: boolean | undefined): string {
+  if (persistent === true) return "Le téléphone a accepté de garder les séances. La copie fichier reste le filet.";
+  return "Le téléphone n’a pas garanti la conservation. La copie fichier est le filet.";
+}
+
+export function downloadHonesty(when: string | null): string {
+  if (!when) return "Aucune copie téléchargée depuis ce téléphone.";
+  return `${when}, téléchargement lancé. Le fichier n’est confirmé que s’il est dans Fichiers.`;
+}
+
+export function restAlertOn(choice: boolean | undefined, permission: "granted" | "denied" | "default" | "unsupported"): boolean {
+  if (choice === false || permission !== "granted") return false;
+  return true;
+}
+
 export type Keepsake = { title: "Ce que je retiens"; facts: string[] };
 
 /** Bilan factuel. Une séance partielle est dite, sans en faire une faute. */
 export function keepsake(session: Session): Keepsake {
   const noted = hardNoted(session);
-  const open = session.exercises.reduce(
-    (count, exercise) => count + exercise.sets.filter((set) => !set.warmup && !set.done && !set.skipped).length,
-    0,
-  );
-  const partial = session.closed === "partial" || open > 0;
+  const partial = countsAsPartial(session);
   const facts: string[] = [];
   if (session.cardio && noted === 0) {
     facts.push(partial ? "Séance partielle. Ce qui est noté reste." : "La séance est notée.");
@@ -68,7 +95,7 @@ export function weeklyCap(sessions: Session[], today: string): WeeklyCap {
   const start = mondayOf(today);
   const end = addDays(start, 6);
   const done = pool.filter((session) => session.status === "done" && session.date >= start && session.date <= end && session.date <= today);
-  const partial = done.filter((session) => session.closed === "partial");
+  const partial = done.filter((session) => countsAsPartial(session));
   const next = pool
     .filter((session) => (session.status === "planned" || session.status === "active") && session.date >= today && session.date <= end)
     .sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? ""))[0];
@@ -105,8 +132,7 @@ function sharesWork(current: Session, prior: Session): boolean {
 function comparableLine(session: Session): string {
   const when = dayMonth(session.date);
   const noted = hardNoted(session);
-  const open = session.exercises.some((exercise) => exercise.sets.some((set) => !set.warmup && !set.done && !set.skipped));
-  if (session.closed === "partial" || open) {
+  if (countsAsPartial(session)) {
     return `La dernière ${session.title}, le ${when}, est partielle : ${series(noted)} notée${noted > 1 ? "s" : ""}.`;
   }
   const detail = firstNoted(session);
