@@ -13,7 +13,7 @@ import type { Session } from "@/lib/types";
 import { INSTALL_LINE, backupReminder } from "@/lib/backup";
 import { dayRepere, installHelp, shouldOfferInstall } from "@/lib/identity";
 import { resumeGlance } from "@/lib/resume";
-import { addDays, formatKg, mondayOf, parseISODate, weekdayLetter } from "@/lib/utils";
+import { addDays, formatKg, formatLong, mondayOf, parseISODate, weekdayLetter } from "@/lib/utils";
 
 export function TodayScreen() {
   const app = useApp();
@@ -55,6 +55,7 @@ export function TodayScreen() {
                 type="button"
                 key={iso}
                 className={`day${iso === app.today ? " today" : ""}${iso === app.selectedDate ? " selected" : ""}${mark}`}
+                aria-label={daySpoken(iso, live, done, plan)}
                 onClick={() => app.setSelectedDate(iso)}
               >
                 <span className="wd">{weekdayLetter(iso)}</span>
@@ -350,6 +351,11 @@ function readImportedOn() {
   } catch {
     return null;
   }
+}
+
+function daySpoken(iso: string, live: boolean, done: boolean, plan: boolean): string {
+  const state = live ? "en cours" : done ? "faite" : plan ? "prévue" : "repos";
+  return `${formatLong(iso)}, ${state}.`;
 }
 
 function longDate(iso: string) {

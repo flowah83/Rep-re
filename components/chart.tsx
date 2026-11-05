@@ -1,7 +1,8 @@
 "use client";
 
 import type { E1Point } from "@/lib/calc";
-import { formatKg, parseISODate } from "@/lib/utils";
+import { heldLoads } from "@/lib/progress-board";
+import { calendarMidpoint, daysBetween, formatKg, parseISODate } from "@/lib/utils";
 
 const GAP_DAYS = 19;
 
@@ -37,7 +38,9 @@ export function BestSetChart({
   const xOf = (date: string) => pad.l + ((parseISODate(date).getTime() - t0) / (t1 - t0)) * (width - pad.l - pad.r);
   const yOf = (value: number) => pad.t + (1 - (value - min) / (max - min)) * (height - pad.t - pad.b);
   const ticks = [min, (min + max) / 2, max];
-  const last = points[points.length - 1];
+  const held = heldLoads(points.map((point) => point.loadKg));
+  const peak = Math.max(...values);
+  const peakIndex = points.reduce((found, point, index) => (point.loadKg === peak ? index : found), 0);
   return (
     <div className="chartwrap">
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Meilleure série de chaque séance. Une séance plus légère n’est pas un recul.">
@@ -51,28 +54,37 @@ export function BestSetChart({
         ))}
         {points.slice(1).map((point, index) => {
           const prev = points[index];
+          const dotted = daysBetween(prev.date, point.date) >= GAP_DAYS;
           return (
             <line
-              key={`${point.date}-${index}`}
+              key={`record-${point.date}-${index}`}
               x1={xOf(prev.date)}
-              y1={yOf(prev.loadKg)}
+              y1={yOf(held[index])}
               x2={xOf(point.date)}
-              y2={yOf(point.loadKg)}
+              y2={yOf(held[index + 1])}
               stroke="var(--copper-bright)"
-              strokeWidth="2.4"
+              strokeOpacity="0.45"
+              strokeWidth="2"
               strokeLinecap="round"
+              strokeDasharray={dotted ? "4 5" : undefined}
             />
           );
         })}
-        {points.map((point) => (
-          <g key={point.date}>
-            <circle cx={xOf(point.date)} cy={yOf(point.loadKg)} r={point === last ? 4.5 : 3} fill={point === last ? "var(--copper-bright)" : "var(--bg-elev)"} stroke="var(--copper-bright)" strokeWidth="2" />
-            <text x={xOf(point.date)} y={yOf(point.loadKg) - 8} textAnchor="middle" fill="var(--ink-soft)" fontSize="11">
-              {point === last || point.loadKg === Math.max(...values) ? `${formatKg(point.loadKg)} × ${point.reps}` : ""}
-            </text>
-          </g>
-        ))}
-        {[from, midDate(from, to), to].map((iso, index) => (
+        {points.map((point, index) => {
+          const heldHere = index === peakIndex;
+          const showLabel = heldHere || index === points.length - 1;
+          return (
+            <g key={`${point.date}-${index}`}>
+              <circle cx={xOf(point.date)} cy={yOf(point.loadKg)} r={heldHere ? 4.5 : 3.2} fill={heldHere ? "var(--copper-bright)" : "var(--bg-elev)"} stroke="var(--copper-bright)" strokeWidth="2" />
+              {showLabel ? (
+                <text x={xOf(point.date)} y={yOf(point.loadKg) - 8} textAnchor="middle" fill="var(--ink-soft)" fontSize="11">
+                  {formatKg(point.loadKg)} × {point.reps}
+                </text>
+              ) : null}
+            </g>
+          );
+        })}
+        {[from, calendarMidpoint(from, to), to].map((iso, index) => (
           <text
             key={iso + index}
             x={index === 0 ? pad.l : index === 2 ? width - pad.r : (pad.l + width - pad.r) / 2}
@@ -87,8 +99,8 @@ export function BestSetChart({
       </svg>
       <p className="chartnote" data-testid="dip-note">{note}</p>
       <ul className="vh">
-        {points.map((point) => (
-          <li key={point.date}>
+        {points.map((point, index) => (
+          <li key={`${point.date}-${index}`}>
             {axisDate(point.date)} : {formatKg(point.loadKg)} kg × {point.reps}
           </li>
         ))}
@@ -170,7 +182,7 @@ export function E1Chart({
               strokeWidth="2"
             />
           ))}
-        {[from, midDate(from, to), to].map((iso, index) => (
+        {[from, calendarMidpoint(from, to), to].map((iso, index) => (
           <text
             key={iso + index}
             x={index === 0 ? pad.l : index === 2 ? width - pad.r : (pad.l + width - pad.r) / 2}
@@ -201,22 +213,16 @@ export function E1Chart({
   );
 }
 
-function midDate(from: string, to: string) {
-  const t0 = parseISODate(from).getTime();
-  const t1 = parseISODate(to).getTime();
-  return new Date(t0 + (t1 - t0) / 2).toISOString().slice(0, 10);
-}
-
 function axisDate(iso: string) {
   return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" }).format(parseISODate(iso)).replace(".", "");
 }
 
 export function heatFill(count: number): string {
   if (count <= 0) return "var(--heat-0)";
-  if (count < 8) return "#E0C2A8";
-  if (count < 12) return "#E0A67A";
-  if (count < 16) return "#E08A4A";
-  return "#F0B27A";
+  if (count < 8) return "var(--heat-1)";
+  if (count < 12) return "var(--heat-2)";
+  if (count < 16) return "var(--heat-3)";
+  return "var(--heat-4)";
 }
 
 export function BodyMap({

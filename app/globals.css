@@ -32,6 +32,10 @@ html.light {
   --stone: #c4b5a4;
   --muscle: #c4622d;
   --heat-0: #e4d9cc;
+  --heat-1: #c4a48a;
+  --heat-2: #a86b45;
+  --heat-3: #9a3e12;
+  --heat-4: #6e2c0c;
   --stage-a: #efe6da;
   --stage-b: #d9d0c4;
   --rest-bg: #1b1916;
@@ -61,6 +65,10 @@ html.dark {
   --stone: #8d847b;
   --muscle: #e8925a;
   --heat-0: #3a342c;
+  --heat-1: #6a4a38;
+  --heat-2: #a86b45;
+  --heat-3: #e8a06a;
+  --heat-4: #f3c7a4;
   --stage-a: #262a32;
   --stage-b: #12141a;
   --rest-bg: #1a1d23;
@@ -664,7 +672,7 @@ h1.title {
   width: 108px;
   height: 6px;
   border-radius: 99px;
-  background: linear-gradient(90deg, var(--heat-0), #e0a67a 45%, #e08a4a 72%, #f0b27a);
+  background: linear-gradient(90deg, var(--heat-0), var(--heat-1) 28%, var(--heat-2) 52%, var(--heat-3) 76%, var(--heat-4));
 }
 .callout { margin: 8px 2px 0; font-size: 0.8438rem; line-height: 1.35; letter-spacing: -0.015em; }
 .prchips { display: flex; flex-direction: column; gap: 8px; }

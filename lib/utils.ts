@@ -75,7 +75,18 @@ export function mondayOf(iso: string): string {
 }
 
 export function weekdayLetter(iso: string): string {
-  return ["D", "L", "M", "M", "J", "V", "S"][parseISODate(iso).getDay()];
+  return ["D", "L", "Ma", "Me", "J", "V", "S"][parseISODate(iso).getDay()];
+}
+
+/** Milieu de calendrier local. Ne passe pas par l’heure universelle. */
+export function calendarMidpoint(from: string, to: string): string {
+  const t0 = parseISODate(from).getTime();
+  const t1 = parseISODate(to).getTime();
+  return localDate(new Date(t0 + (t1 - t0) / 2));
+}
+
+export function daysBetween(from: string, to: string): number {
+  return Math.round((parseISODate(to).getTime() - parseISODate(from).getTime()) / 86400000);
 }
 
 /** null, vide ou illisible restent inconnus. Ne jamais transformer null en 0. */
