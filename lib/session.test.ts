@@ -85,6 +85,8 @@ describe("fin de série", () => {
     expect(stepFor({ stepKg: 1, unit: "kg/main", name: "Développé incliné haltères" })).toBe(1);
     expect(stepFor({ stepKg: 2, unit: "kg/main" })).toBe(2);
     expect(stepFor({ stepKg: 2.5, unit: "corps" })).toBe(0.5);
+    expect(stepFor({ stepKg: 2.5, unit: "kg", name: "Écarté poulie" })).toBe(2.5);
+    expect(stepFor({ stepKg: 5, unit: "kg", name: "Presse à cuisses" })).toBe(5);
   });
 
   it("une série passée ne bloque pas la fin", () => {

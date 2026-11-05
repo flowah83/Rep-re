@@ -2,7 +2,58 @@ import type { ExerciseLog, Session } from "./types";
 import { platesPerSide } from "./calc";
 import { CATALOG } from "./exercises";
 import { cardioSummary, formatMinutes } from "./history";
+import { canonicalUnit } from "./unit";
 import { formatKg, formatRestLabel, stripAccents } from "./utils";
+
+export type Gear = "barre" | "halteres" | "poulie" | "machine" | "corps" | "jambe";
+
+/**
+ * Matériel pour l’affichage. L’unité stockée (`kg`, `kg/main`) n’est pas réécrite :
+ * une poulie reste en kg dans le carnet, et s’écrit « kg · poulie » à l’écran.
+ */
+export function equipmentOf(exercise: { name?: string; unit?: string | null }): Gear | null {
+  const unit = exercise.unit ? canonicalUnit(exercise.unit) : "";
+  if (unit === "kg/main") return "halteres";
+  if (unit === "kg/jambe") return "jambe";
+  if (unit === "corps") return "corps";
+  const key = stripAccents(exercise.name ?? "");
+  if (key.includes("haltere")) return "halteres";
+  if (key.includes("poulie")) return "poulie";
+  if (key.includes("machine")) return "machine";
+  const catalog = CATALOG.find((item) => stripAccents(item.name) === key);
+  if (catalog) return catalog.equipment;
+  if (key.includes("barre")) return "barre";
+  return null;
+}
+
+/** Libellé sous le grand chiffre, sur Valider et sur le pavé. */
+export function loadUnitLabel(exercise: { name?: string; unit?: string | null }): string {
+  switch (equipmentOf(exercise)) {
+    case "halteres":
+      return "kg par haltère";
+    case "jambe":
+      return "kg par jambe";
+    case "poulie":
+      return "kg · poulie";
+    case "machine":
+      return "kg · machine";
+    case "barre":
+      return "kg · barre";
+    default:
+      return "kg";
+  }
+}
+
+export function loadReadout(loadKg: number | null, exercise: { name?: string; unit?: string | null }): string {
+  if (loadKg == null) return "sans charge";
+  return `${formatKg(loadKg)} ${loadUnitLabel(exercise)}`;
+}
+
+/** Disques seulement pour une barre. La charge affichée n’est pas modifiée. */
+export function sessionPlates(loadKg: number | null, exercise: { name?: string; unit?: string | null }, barKg: number): string | null {
+  if (equipmentOf(exercise) !== "barre") return null;
+  return plateGlance(loadKg, "kg", barKg);
+}
 
 export type HistFilter = "all" | "upper" | "lower" | "cardio" | "other";
 

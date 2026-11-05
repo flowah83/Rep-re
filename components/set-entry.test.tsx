@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
 import { NumberPad, SetChips, StepperCard } from "./set-entry";
-import { acceptPadDraft, chipOpensCorrection, loggedPair, padConfirmLabel, padKeyAction, padKeys, shownLoad, shownReps, stepField, typePadKey, type FieldDraft } from "@/lib/set-entry";
+import { acceptPadDraft, chipOpensCorrection, keepPrompt, loggedPair, padConfirmLabel, padKeyAction, padKeys, shownLoad, shownReps, stepField, typePadKey, type FieldDraft } from "@/lib/set-entry";
 import { stepFor } from "@/lib/session";
 import type { ExerciseLog, SetLog } from "@/lib/types";
 
@@ -71,6 +71,26 @@ describe("saisie d’une série", () => {
     expect(html).toContain("set-chip-a");
   });
 
+  it("garde la charge suivante avec le libellé du matériel", () => {
+    const exercise: ExerciseLog = {
+      id: "e",
+      name: "Écarté poulie",
+      pattern: "hpush",
+      stepKg: 2.5,
+      cues: [],
+      muscles: [],
+      unit: "kg",
+      planned: { sets: 3, reps: 12, loadKg: 15, restSec: 90, rpe: 8 },
+      sets: [
+        { id: "a", loadKg: 15, reps: 12, rpe: null, warmup: false, done: true },
+        { id: "b", loadKg: 15, reps: null, rpe: null, warmup: false, done: false },
+      ],
+    };
+    expect(keepPrompt(exercise, "a", 12.5, { label: "kg · poulie" })).toBe("Garder 12,5 kg · poulie pour les séries suivantes ?");
+    expect(exercise.sets[1].loadKg).toBe(15);
+    expect(exercise.unit).toBe("kg");
+  });
+
   it("refuse un pavé au-dessus de 1 000 et les répétitions à virgule", () => {
     expect(acceptPadDraft("82,5")).toEqual({ action: "apply", value: 82.5 });
     expect(acceptPadDraft("1000")).toEqual({ action: "apply", value: 1000 });
@@ -104,6 +124,12 @@ describe("saisie d’une série", () => {
     );
     expect(load).toContain("Valider · 82,5 kg · barre");
     expect(load).toContain(">,<");
+    for (const unit of ["kg · barre", "kg par haltère", "kg · poulie", "kg · machine"]) {
+      const html = renderToStaticMarkup(
+        <NumberPad title="Charge" hint="Pas" value="15" unit={unit} step={2.5} onChange={() => undefined} onClose={() => undefined} />,
+      );
+      expect(html).toContain(`Valider · 15 ${unit}`);
+    }
   });
 
   it("garde un écart cuivré lisible en clair et en sombre", () => {

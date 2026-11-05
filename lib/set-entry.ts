@@ -39,7 +39,7 @@ export function followingOpenWork(exercise: ExerciseLog, fromSetId: string): Set
 }
 
 /** Une seule question, seulement si une série de travail suivante est encore ouverte. */
-export function keepPrompt(exercise: ExerciseLog, fromSetId: string, loadKg: number | null): string | null {
+export function keepPrompt(exercise: ExerciseLog, fromSetId: string, loadKg: number | null, options?: { label?: string }): string | null {
   if (loadKg == null) return null;
   const set = exercise.sets.find((item) => item.id === fromSetId);
   if (!set || set.warmup) return null;
@@ -47,7 +47,7 @@ export function keepPrompt(exercise: ExerciseLog, fromSetId: string, loadKg: num
   if (!later.length) return null;
   const already = later.every((item) => item.loadKg != null && Math.abs(item.loadKg - loadKg) < 0.001);
   if (already) return null;
-  return `Garder ${formatKg(loadKg)} kg pour les séries suivantes ?`;
+  return `Garder ${formatKg(loadKg)} ${options?.label ?? "kg"} pour les séries suivantes ?`;
 }
 
 export function loadGap(value: number | null, planned: number | null): string | null {
