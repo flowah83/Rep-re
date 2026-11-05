@@ -16,9 +16,8 @@ import {
 } from "@/lib/progression";
 import { recallPlan } from "@/lib/snapshot";
 import { closeCopy } from "@/lib/close";
-import { parseDecimalDraft } from "@/lib/contract";
 import { KeepCard, NumberPad, SetChips, StepperCard } from "@/components/set-entry";
-import { keepPrompt, loggedPair, stepField, type FieldDraft } from "@/lib/set-entry";
+import { acceptPadDraft, keepPrompt, loggedPair, stepField, type FieldDraft } from "@/lib/set-entry";
 import { carryLoadForward, lastPerformance, completeSet, firstOpenSlot, noteSetRpe, patchSet, sessionFullyLogged, setSettled, skipSet, stepFor } from "@/lib/session";
 import type { ExerciseLog, Session, SetLog } from "@/lib/types";
 import { formatClock, formatKg } from "@/lib/utils";
@@ -135,8 +134,9 @@ export function SessionScreen({ id }: { id: string }) {
 
   const acceptPad = () => {
     if (!pad) return;
-    const parsed = readNumber(padText);
-    if (parsed != null) writeDraft(padTarget, pad === "load" ? "loadKg" : "reps", parsed);
+    const decision = acceptPadDraft(padText, { integer: pad === "reps" });
+    if (decision.action === "reject") return;
+    if (decision.action === "apply") writeDraft(padTarget, pad === "reps" ? "reps" : "loadKg", decision.value);
     setPad(null);
   };
 
@@ -680,6 +680,7 @@ function ActiveSet({
           value={padText}
           unit={pad === "load" ? gearUnit(exercise) : "répétitions"}
           step={pad === "load" ? stepFor(exercise) : 1}
+          integer={pad === "reps"}
           onChange={onPadText}
           onClose={(accepted) => (accepted ? onAcceptPad() : onClosePad())}
         />
@@ -805,11 +806,6 @@ function restCaption(exercise: ExerciseLog, current: SetLog): string {
 
 function shortName(name: string) {
   return name.replace(/^Développé\s+/i, "");
-}
-
-function readNumber(value: string): number | null {
-  const parsed = parseDecimalDraft(value, { min: 0, max: 1000 });
-  return parsed.kind === "number" ? parsed.value : null;
 }
 
 function lastDoneWork(session: Session): { exercise: ExerciseLog; set: SetLog } | null {

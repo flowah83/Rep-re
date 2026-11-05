@@ -1,3 +1,4 @@
+import { parseDecimalDraft } from "./contract";
 import type { ExerciseLog, SetLog } from "./types";
 import { formatKg } from "./utils";
 
@@ -71,4 +72,45 @@ export function workIndex(exercise: ExerciseLog, set: SetLog): number {
 
 export function chipOpensCorrection(set: SetLog): boolean {
   return set.done === true;
+}
+
+export const PAD_MAX = 1000;
+
+export type PadDecision = { action: "apply"; value: number } | { action: "dismiss" } | { action: "reject"; message: string };
+
+/** Vide : on ferme sans écrire. Au-dessus de 1 000, ou nombre inachevé : on reste, et on le dit. */
+export function acceptPadDraft(raw: string, options?: { integer?: boolean }): PadDecision {
+  const parsed = parseDecimalDraft(raw, { integer: options?.integer === true, min: 0, max: PAD_MAX });
+  if (parsed.kind === "number") return { action: "apply", value: parsed.value };
+  if (parsed.kind === "empty") return { action: "dismiss" };
+  if (parsed.kind === "invalid" && parsed.message.startsWith("Maximum")) return { action: "reject", message: "1 000 est le maximum." };
+  if (parsed.kind === "invalid") return { action: "reject", message: parsed.message };
+  return { action: "reject", message: "Ce n’est pas un nombre." };
+}
+
+/** Les répétitions n’ont pas de virgule. Cinq signes au plus, pour pouvoir atteindre le plafond et le dire. */
+export function typePadKey(value: string, key: string, integer = false): string {
+  if (key === "⌫") return value.slice(0, -1);
+  if (integer && (key === "," || key === ".")) return value;
+  if (key === "," && value.includes(",")) return value;
+  if (value.replace(/[,.-]/g, "").length >= 5) return value;
+  return `${value}${key}`;
+}
+
+export function padConfirmLabel(value: string, unit: string): string {
+  return `Valider · ${value || "0"} ${unit}`;
+}
+
+export function padKeys(integer: boolean): string[] {
+  return integer ? ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"] : ["1", "2", "3", "4", "5", "6", "7", "8", "9", ",", "0", "⌫"];
+}
+
+/** Échap ferme. Tab boucle dans le pavé. `index` vaut -1 quand le focus est encore sur le cadre. */
+export function padKeyAction(key: string, shift: boolean, index: number, count: number): "close" | "default" | number {
+  if (key === "Escape") return "close";
+  if (key !== "Tab" || count === 0) return "default";
+  if (index < 0) return shift ? count - 1 : 0;
+  if (shift && index === 0) return count - 1;
+  if (!shift && index === count - 1) return 0;
+  return "default";
 }

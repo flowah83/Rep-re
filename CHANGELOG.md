@@ -1,5 +1,10 @@
 # Journal
 
+## 2026-11-05 — Effort et pavé
+
+- Hors du bandeau noir, les chiffres d’effort sont en encre sur le papier. Dans le repos, ils restent clairs sur noir. Le chiffre choisi reste cuivré.
+- Le pavé couvre l’écran. Échap ou le voile le ferme. Les répétitions sont entières. Au-dessus de 1 000, une phrase le dit et le pavé reste ouvert. Le bouton dit Valider.
+
 ## 2026-10-31 — Saisie en séance
 
 - Charge et répétitions ont chacune leur brouillon. 75 kg puis 5 répétitions sont notés 75 kg × 5.

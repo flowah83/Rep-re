@@ -4,8 +4,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
-import { SetChips, StepperCard } from "./set-entry";
-import { chipOpensCorrection, loggedPair, shownLoad, shownReps, stepField, type FieldDraft } from "@/lib/set-entry";
+import { NumberPad, SetChips, StepperCard } from "./set-entry";
+import { acceptPadDraft, chipOpensCorrection, loggedPair, padConfirmLabel, padKeyAction, padKeys, shownLoad, shownReps, stepField, typePadKey, type FieldDraft } from "@/lib/set-entry";
 import { stepFor } from "@/lib/session";
 import type { ExerciseLog, SetLog } from "@/lib/types";
 
@@ -69,6 +69,41 @@ describe("saisie d’une série", () => {
     expect(html).toContain("Corriger Série 1");
     expect(html).toContain("en cours");
     expect(html).toContain("set-chip-a");
+  });
+
+  it("refuse un pavé au-dessus de 1 000 et les répétitions à virgule", () => {
+    expect(acceptPadDraft("82,5")).toEqual({ action: "apply", value: 82.5 });
+    expect(acceptPadDraft("1000")).toEqual({ action: "apply", value: 1000 });
+    expect(acceptPadDraft("1001")).toEqual({ action: "reject", message: "1 000 est le maximum." });
+    expect(acceptPadDraft("1000,5")).toEqual({ action: "reject", message: "1 000 est le maximum." });
+    expect(acceptPadDraft("12,")).toEqual({ action: "reject", message: "Ce n’est pas un nombre." });
+    expect(acceptPadDraft("")).toEqual({ action: "dismiss" });
+    expect(acceptPadDraft("6", { integer: true })).toEqual({ action: "apply", value: 6 });
+    expect(acceptPadDraft("6,5", { integer: true })).toEqual({ action: "reject", message: "Il faut un nombre entier." });
+    expect(typePadKey("6", ",", true)).toBe("6");
+    expect(typePadKey("8", "2", false)).toBe("82");
+    expect(typePadKey("82,5", "⌫", false)).toBe("82,");
+    expect(padKeys(true)).not.toContain(",");
+    expect(padKeys(false)).toContain(",");
+    expect(padConfirmLabel("6", "répétitions")).toBe("Valider · 6 répétitions");
+    expect(padConfirmLabel("", "kg · barre")).toBe("Valider · 0 kg · barre");
+    expect(padKeyAction("Escape", false, 2, 8)).toBe("close");
+    expect(padKeyAction("Tab", false, 7, 8)).toBe(0);
+    expect(padKeyAction("Tab", true, 0, 8)).toBe(7);
+    expect(padKeyAction("Tab", false, -1, 8)).toBe(0);
+    expect(padKeyAction("Tab", false, 2, 8)).toBe("default");
+    const reps = renderToStaticMarkup(
+      <NumberPad title="Répétitions" hint="Pas de 1" value="6" unit="répétitions" step={1} integer onChange={() => undefined} onClose={() => undefined} />,
+    );
+    expect(reps).toContain("number-pad-scrim");
+    expect(reps).toContain("Valider · 6 répétitions");
+    expect(reps).not.toContain("OK ·");
+    expect(reps).not.toContain(">,<");
+    const load = renderToStaticMarkup(
+      <NumberPad title="Charge" hint="Pas de 2,5 kg" value="82,5" unit="kg · barre" step={2.5} onChange={() => undefined} onClose={() => undefined} />,
+    );
+    expect(load).toContain("Valider · 82,5 kg · barre");
+    expect(load).toContain(">,<");
   });
 
   it("garde un écart cuivré lisible en clair et en sombre", () => {

@@ -108,4 +108,70 @@ describe("mise en page iPhone 15", () => {
       await browser.close();
     }
   }, 60000);
+
+  it("laisse l’effort lisible sur le papier, et dans le bandeau noir", async () => {
+    const browser = await chromium.launch({
+      executablePath: process.env.CHROME_PATH || "/usr/bin/google-chrome",
+      args: ["--no-sandbox", "--disable-dev-shm-usage"],
+    });
+    try {
+      const page = await browser.newPage({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2 });
+      const lows: string[] = [];
+      const effort = `<div class="rperow" data-testid="effort-row"><span>Effort</span><button type="button">6</button><button type="button" class="on">8</button><p class="fine">6 facile, 10 maximal.</p></div>`;
+      for (const theme of ["light", "dark"]) {
+        await page.setContent(
+          `<!doctype html><html class="${theme}"><head><style>${css}</style></head><body><div class="overlay" data-testid="paper">${effort}</div><section class="restband" data-testid="rest">${effort}</section></body></html>`,
+          { waitUntil: "domcontentloaded" },
+        );
+        const found = await page.evaluate(() => {
+          const bad: string[] = [];
+          const parse = (color: string) => {
+            const parts = color.match(/[\d.]+/g)?.map(Number) ?? [];
+            return { r: parts[0] ?? 0, g: parts[1] ?? 0, b: parts[2] ?? 0, a: parts.length > 3 ? parts[3] : 1 };
+          };
+          const channel = (value: number) => {
+            const c = value / 255;
+            return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+          };
+          const luma = (rgb: { r: number; g: number; b: number }) => 0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b);
+          const over = (fg: { r: number; g: number; b: number; a: number }, bg: { r: number; g: number; b: number }) => ({
+            r: fg.r * fg.a + bg.r * (1 - fg.a),
+            g: fg.g * fg.a + bg.g * (1 - fg.a),
+            b: fg.b * fg.a + bg.b * (1 - fg.a),
+          });
+          const opaque = (node: Element) => {
+            let current: Element | null = node;
+            while (current) {
+              const color = parse(getComputedStyle(current).backgroundColor);
+              if (color.a >= 0.99) return color;
+              current = current.parentElement;
+            }
+            return { r: 255, g: 255, b: 255 };
+          };
+          const pair = (name: string, node: Element, background: Element) => {
+            const fg = parse(getComputedStyle(node).color);
+            const own = parse(getComputedStyle(node).backgroundColor);
+            const base = own.a >= 0.99 ? own : opaque(background);
+            const ink = over(fg, base);
+            const ratio = (Math.max(luma(ink), luma(base)) + 0.05) / (Math.min(luma(ink), luma(base)) + 0.05);
+            if (ratio < 4.5) bad.push(`${name} ${ratio.toFixed(2)}`);
+          };
+          for (const place of ["paper", "rest"]) {
+            const root = document.querySelector(`[data-testid=${place}]`) as HTMLElement;
+            const row = root.querySelector(".rperow") as HTMLElement;
+            pair(`${place} mot`, row.querySelector("span") as Element, root);
+            pair(`${place} chiffre`, row.querySelector("button") as Element, root);
+            pair(`${place} choisi`, row.querySelector("button.on") as Element, row.querySelector("button.on") as Element);
+            const help = row.querySelector(".fine");
+            if (help) pair(`${place} aide`, help, root);
+          }
+          return bad;
+        });
+        for (const item of found) lows.push(`${theme} ${item}`);
+      }
+      expect(lows).toEqual([]);
+    } finally {
+      await browser.close();
+    }
+  }, 60000);
 });
