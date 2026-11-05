@@ -1,5 +1,11 @@
 # Journal
 
+## 2026-11-05 — Semaine, courbe et corps
+
+- Mardi s’écrit Ma, mercredi Me. Aujourd’hui nomme le jour en entier. Progrès et Carnet annoncent l’onglet ouvert.
+- La courbe garde un filet au record tenu. Une séance plus légère reste un point, en dessous. Le milieu de l’axe suit le calendrier du téléphone. Un trou de plus de deux semaines est en pointillés.
+- Le corps fonce avec les séries le jour, et s’éclaircit la nuit. Le dernier palier ne redevient pas plus pâle.
+
 ## 2026-11-05 — Réglages et séance partielle
 
 - Coach ouvre l’adresse et le code. « Ce qui peut partir » est une autre ligne. La météo de Toulon est dite, sans réglage. L’alerte de repos se coupe. Le diagnostic dit si le téléphone a promis de garder les séances.

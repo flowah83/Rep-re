@@ -18,6 +18,15 @@ export type ComparableSession = {
 
 export type BoardPoint = { date: string; loadKg: number; reps: number };
 
+/** Le filet du graphique : il monte ou reste, il ne suit pas une séance plus légère. */
+export function heldLoads(loads: number[]): number[] {
+  let best = Number.NEGATIVE_INFINITY;
+  return loads.map((load) => {
+    best = Math.max(best, load);
+    return best;
+  });
+}
+
 /** Une séance plus légère reste un point. Ce n’est pas la courbe du record cumulé. */
 export function sessionPoints(rows: ComparableSession[]): BoardPoint[] {
   return [...rows]

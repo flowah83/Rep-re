@@ -89,11 +89,11 @@ function Shell() {
             <TodayIcon />
             Aujourd’hui
           </button>
-          <button type="button" className={`tab${app.tab === "progress" ? " on" : ""}`} data-testid="tab-progress" onClick={() => app.setTab("progress")}>
+          <button type="button" className={`tab${app.tab === "progress" ? " on" : ""}`} aria-current={app.tab === "progress" ? "page" : undefined} data-testid="tab-progress" onClick={() => app.setTab("progress")}>
             <TrendIcon />
             Progrès
           </button>
-          <button type="button" className={`tab${app.tab === "history" ? " on" : ""}`} data-testid="tab-history" onClick={() => app.setTab("history")}>
+          <button type="button" className={`tab${app.tab === "history" ? " on" : ""}`} aria-current={app.tab === "history" ? "page" : undefined} data-testid="tab-history" onClick={() => app.setTab("history")}>
             <BookIcon />
             Carnet
           </button>
