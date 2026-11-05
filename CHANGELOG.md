@@ -1,5 +1,10 @@
 # Journal
 
+## 2026-11-05 — Réglages et séance partielle
+
+- Coach ouvre l’adresse et le code. « Ce qui peut partir » est une autre ligne. La météo de Toulon est dite, sans réglage. L’alerte de repos se coupe. Le diagnostic dit si le téléphone a promis de garder les séances.
+- Clore une séance qui a encore des séries ouvertes la laisse partielle, y compris sur l’accueil.
+
 ## 2026-11-05 — Unité affichée
 
 - La charge dit le matériel : barre, haltère, poulie ou machine. Les disques ne s’affichent que pour une barre. Les kilos déjà notés ne changent pas, ni le pas de chaque exercice.

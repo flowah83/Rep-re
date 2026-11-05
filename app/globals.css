@@ -2383,6 +2383,8 @@ button.home-card { appearance: none; }
 .unitsuffix { color: var(--ink-soft); font-size: 0.875rem; flex: none; }
 button.rowline { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }
 button.rowline small { margin-top: 0; }
+.rowcopy { display: block; min-width: 0; flex: 1; }
+button.rowline .rowcopy small { display: block; margin-top: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .switch i { transition: none; }
 }

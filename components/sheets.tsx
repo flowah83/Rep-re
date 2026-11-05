@@ -12,7 +12,7 @@ import { readProgressionRaw } from "@/lib/progression";
 import { exportPlanSnapshots } from "@/lib/snapshot";
 import { toCsv } from "@/lib/db";
 import { INSTALL_LINE, backupProblem, isBackup, sessionsForBackup } from "@/lib/backup";
-import { PRESENTATION } from "@/lib/identity";
+import { PRESENTATION, conservationLine, downloadHonesty, restAlertOn } from "@/lib/identity";
 import { IMPORT_LIMIT, parseDecimalDraft } from "@/lib/contract";
 import { CATALOG, PATTERN_LABEL } from "@/lib/exercises";
 import { GEAR, GEAR_LABEL, buildSportSession, gearAllows, moveItem, readTemplates, sportPace, substituteExercise, toggleGear } from "@/lib/useful";
@@ -31,6 +31,7 @@ export function Sheets() {
       <DialogContent onClose={() => app.setSheet(null)}>
         {app.sheet === "settings" ? <SettingsSheet /> : null}
         {app.sheet === "partage" ? <PartageSheet /> : null}
+        {app.sheet === "coach" ? <CoachSheet /> : null}
         {app.sheet === "calendrier" ? <CalendarSheet /> : null}
         {app.sheet === "diagnostic" ? <DiagnosticSheet /> : null}
         {app.sheet === "import" ? <ImportSheet /> : null}
@@ -219,22 +220,38 @@ function SettingsSheet() {
       </section>
       <h3 className="grouplabel" id="link-label">Connexions</h3>
       <section aria-labelledby="link-label">
-      <div className="rowline">
+      <div className="rowline" data-testid="weather-note">
         <b>Météo</b>
+        <small>Toulon, sur une ligne. Aucune séance n’est envoyée.</small>
       </div>
+      <button type="button" className="rowline" data-testid="open-coach" onClick={() => app.setSheet("coach")}>
+        <span className="rowcopy">
+          <b>Coach</b>
+          <small>Adresse et code, sur ce téléphone.</small>
+        </span>
+        <span aria-hidden="true">›</span>
+      </button>
       <button type="button" className="rowline" data-testid="open-partage" onClick={() => app.setSheet("partage")}>
-        <b>Coach</b>
+        <span className="rowcopy">
+          <b>Ce qui peut partir</b>
+          <small>La liste, avant d’écrire au coach.</small>
+        </span>
         <span aria-hidden="true">›</span>
       </button>
       <button type="button" className="rowline" data-testid="open-calendrier" onClick={() => app.setSheet("calendrier")}>
-        <b>{CALENDAR_NAME}</b>
+        <span className="rowcopy">
+          <b>{CALENDAR_NAME}</b>
+          <small>Un seul calendrier. Les autres restent dehors.</small>
+        </span>
         <span aria-hidden="true">›</span>
       </button>
       <button type="button" className="rowline" data-testid="open-diagnostic" onClick={() => app.setSheet("diagnostic")}>
-        <b>Diagnostic</b>
+        <span className="rowcopy">
+          <b>Diagnostic</b>
+          <small data-testid="conservation-preview">{conservationLine(app.settings.storagePersistent)}</small>
+        </span>
         <span aria-hidden="true">›</span>
       </button>
-      <CoachSettings />
       </section>
       <h3 className="grouplabel" id="help-label">Aide</h3>
       <section aria-labelledby="help-label">
@@ -262,36 +279,49 @@ function copieLabel(iso: string | undefined): string {
 
 function RestAlert() {
   const app = useApp();
-  const [on, setOn] = useState(false);
-  useEffect(() => {
-    setOn(typeof Notification !== "undefined" && Notification.permission === "granted");
-  }, []);
+  const permission = typeof Notification === "undefined" ? "unsupported" : Notification.permission;
+  const on = restAlertOn(app.settings.restAlert, permission);
   return (
-    <div className="prefrow">
-      <b>Alerte de fin de repos</b>
-      <button
-        type="button"
-        role="switch"
-        className={`switch${on ? " on" : ""}`}
-        aria-checked={on}
-        onClick={() => {
-          if (typeof Notification === "undefined") {
-            app.flash("Ce navigateur ne propose pas d’alerte à la fin du repos. Le minuteur reste visible.");
-            return;
-          }
-          if (Notification.permission === "granted") {
-            setOn(true);
-            app.flash("Alerte activée pour la fin du repos.");
-            return;
-          }
-          void Notification.requestPermission().then((permission) => {
-            setOn(permission === "granted");
-            app.flash(permission === "granted" ? "Alerte activée pour la fin du repos." : "Alerte refusée. Le minuteur à l’écran suffit.");
-          });
-        }}
-      >
-        <i />
-      </button>
+    <div>
+      <div className="prefrow">
+        <b>Alerte de fin de repos</b>
+        <button
+          type="button"
+          role="switch"
+          className={`switch${on ? " on" : ""}`}
+          aria-checked={on}
+          data-testid="rest-alert"
+          onClick={() => {
+            if (on) {
+              void app.updateSettings({ restAlert: false });
+              app.flash("Pas d’alerte. Le minuteur à l’écran suffit.");
+              return;
+            }
+            if (typeof Notification === "undefined") {
+              app.flash("Ce navigateur ne propose pas d’alerte à la fin du repos. Le minuteur reste visible.");
+              return;
+            }
+            if (Notification.permission === "denied") {
+              app.flash("Alerte refusée. Le minuteur à l’écran suffit.");
+              return;
+            }
+            if (Notification.permission === "granted") {
+              void app.updateSettings({ restAlert: true });
+              app.flash("Alerte activée pour la fin du repos.");
+              return;
+            }
+            void Notification.requestPermission().then((next) => {
+              void app.updateSettings({ restAlert: next === "granted" });
+              app.flash(next === "granted" ? "Alerte activée pour la fin du repos." : "Alerte refusée. Le minuteur à l’écran suffit.");
+            });
+          }}
+        >
+          <i />
+        </button>
+      </div>
+      <p className="fine" data-testid="rest-alert-note">
+        {on ? "Alerte activée. Le minuteur reste, et l’alerte se coupe ici." : "Pas d’alerte. Le minuteur à l’écran suffit. On peut la couper après l’avoir acceptée."}
+      </p>
     </div>
   );
 }
@@ -427,6 +457,17 @@ function CoachSettings() {
   );
 }
 
+function CoachSheet() {
+  const app = useApp();
+  return (
+    <>
+      <button type="button" className="navline" onClick={() => app.setSheet("settings")}>‹ Réglages</button>
+      <DialogTitle asChild><h2>Coach</h2></DialogTitle>
+      <CoachSettings />
+    </>
+  );
+}
+
 function PartageSheet() {
   const app = useApp();
   const coach = loadCoachConfig();
@@ -514,10 +555,10 @@ function DiagnosticSheet() {
         <p className="lead">Aucun score. Aucune séance n’est envoyée depuis cet écran.</p>
       </DialogDescription>
       <div className="rowline"><b>Application</b><small>Repère, sur ce téléphone.</small></div>
-      <div className="rowline"><b>Dernière copie</b><small>{copy ? `${copy}, téléchargée ici.` : "Aucune copie téléchargée depuis ce téléphone."}</small></div>
+      <div className="rowline"><b>Dernière copie</b><small data-testid="download-honesty">{downloadHonesty(copy)}</small></div>
       <div className="rowline">
         <b>Conservation</b>
-        <small>Les séances restent sur cet appareil.</small>
+        <small data-testid="conservation-line">{conservationLine(app.settings.storagePersistent)}</small>
       </div>
       <div className="rowline"><b>Notes et charges</b><small>Absentes de cet écran. Elles ne partent pas.</small></div>
       <p className="fine">La fluidité se mesure sur l’iPhone, pas ici.</p>

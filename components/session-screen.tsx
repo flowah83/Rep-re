@@ -16,6 +16,7 @@ import {
 } from "@/lib/progression";
 import { recallPlan } from "@/lib/snapshot";
 import { closeCopy } from "@/lib/close";
+import { closureFor, restAlertOn } from "@/lib/identity";
 import { KeepCard, NumberPad, SetChips, StepperCard } from "@/components/set-entry";
 import { acceptPadDraft, keepPrompt, loggedPair, stepField, type FieldDraft } from "@/lib/set-entry";
 import { carryLoadForward, lastPerformance, completeSet, firstOpenSlot, noteSetRpe, patchSet, sessionFullyLogged, setSettled, skipSet, stepFor } from "@/lib/session";
@@ -222,7 +223,7 @@ export function SessionScreen({ id }: { id: string }) {
     const next = {
       ...session,
       status: "done" as const,
-      closed: "full" as const,
+      closed: closureFor(session),
       endedAt: new Date().toISOString(),
       restEndsAt: null,
     };
@@ -845,6 +846,7 @@ function RestBand({
   onRpe: (rpe: number) => void;
   onSkip: () => void;
 }) {
+  const app = useApp();
   const [now, setNow] = useState(() => Date.now());
   const fired = useRef<number | null>(null);
   useEffect(() => {
@@ -862,14 +864,15 @@ function RestBand({
     if (now < endsAt || fired.current === endsAt) return;
     fired.current = endsAt;
     playChime();
-    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+    const permission = typeof Notification === "undefined" ? "unsupported" : Notification.permission;
+    if (restAlertOn(app.settings.restAlert, permission)) {
       try {
         new Notification("Repos terminé", { body: "Vous pouvez enchaîner la série suivante." });
       } catch {
         /* notification indisponible */
       }
     }
-  }, [now, endsAt]);
+  }, [now, endsAt, app.settings.restAlert]);
   const left = Math.max(0, (endsAt - now) / 1000);
   return (
     <section className="restband" data-testid="rest-timer" aria-live="polite">
