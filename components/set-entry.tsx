@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { ExerciseLog, SetLog } from "@/lib/types";
-import { loadGap, repsGap, workIndex } from "@/lib/set-entry";
+import { acceptPadDraft, loadGap, padConfirmLabel, padKeyAction, padKeys, repsGap, typePadKey, workIndex } from "@/lib/set-entry";
 import { formatKg } from "@/lib/utils";
 
 export function SetChips({
@@ -140,6 +140,7 @@ export function NumberPad({
   value,
   unit,
   step,
+  integer = false,
   onChange,
   onClose,
 }: {
@@ -148,51 +149,109 @@ export function NumberPad({
   value: string;
   unit: string;
   step: number;
+  integer?: boolean;
   onChange: (next: string) => void;
   onClose: (accepted: boolean) => void;
 }) {
+  const root = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    const node = root.current;
+    if (!node) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    node.focus();
+    const onKey = (event: KeyboardEvent) => {
+      const items = [...node.querySelectorAll<HTMLElement>("button:not(:disabled)")];
+      const index = items.indexOf(document.activeElement as HTMLElement);
+      const action = padKeyAction(event.key, event.shiftKey, index, items.length);
+      if (action === "close") {
+        event.preventDefault();
+        closeRef.current(false);
+        return;
+      }
+      if (typeof action === "number") {
+        event.preventDefault();
+        items[action]?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      previous?.focus();
+    };
+  }, []);
+  const edit = (next: string) => {
+    setError(null);
+    onChange(next);
+  };
   const nudge = (times: number) => {
     const current = Number(value.replace(",", ".")) || 0;
     const next = Math.max(0, Math.round((current + times * step) * 100) / 100);
-    onChange(String(next).replace(".", ","));
+    edit(String(next).replace(".", ","));
   };
-  const press = (key: string) => {
-    if (key === "⌫") {
-      onChange(value.slice(0, -1));
+  const confirm = () => {
+    const decision = acceptPadDraft(value, { integer });
+    if (decision.action === "reject") {
+      setError(decision.message);
       return;
     }
-    if (key === "," && value.includes(",")) return;
-    if (value.replace(",", "").length >= 5) return;
-    onChange(`${value}${key}`);
+    onClose(true);
   };
-  const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ",", "0", "⌫"];
   return (
-    <div className="numpad" role="dialog" aria-modal="true" aria-label={title} data-testid="number-pad">
-      <header>
-        <b>{title}</b>
-        <small>{hint}</small>
-      </header>
-      <p className="padread num">
-        <b>{value || "0"}</b>
-        <span>{unit}</span>
-      </p>
-      <div className="padjumps">
-        {[-2, -1, 1, 2].map((times) => (
-          <button type="button" key={times} onClick={() => nudge(times)}>
-            {times > 0 ? `+${times}` : times}
-          </button>
-        ))}
+    <div
+      className="numpad-scrim"
+      data-testid="number-pad-scrim"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose(false);
+      }}
+    >
+      <div
+        ref={root}
+        className="numpad"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+        data-testid="number-pad"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <b>{title}</b>
+          <small>{hint}</small>
+        </header>
+        <p className="padread num">
+          <b>{value || "0"}</b>
+          <span>{unit}</span>
+        </p>
+        <div className="padjumps">
+          {[-2, -1, 1, 2].map((times) => (
+            <button type="button" key={times} onClick={() => nudge(times)}>
+              {times > 0 ? `+${times}` : times}
+            </button>
+          ))}
+        </div>
+        <div className="padkeys">
+          {padKeys(integer).map((key) =>
+            key === "" ? (
+              <button type="button" key="blank" tabIndex={-1} disabled aria-hidden="true" />
+            ) : (
+              <button type="button" key={key} aria-label={key === "⌫" ? "Effacer" : key} onClick={() => edit(typePadKey(value, key, integer))}>
+                {key}
+              </button>
+            ),
+          )}
+        </div>
+        {error ? (
+          <p className="err" role="alert" data-testid="pad-error">
+            {error}
+          </p>
+        ) : null}
+        <button type="button" className="btn" data-testid="pad-ok" onClick={confirm}>
+          {padConfirmLabel(value, unit)}
+        </button>
       </div>
-      <div className="padkeys">
-        {keys.map((key) => (
-          <button type="button" key={key} aria-label={key === "⌫" ? "Effacer" : key} onClick={() => press(key)}>
-            {key}
-          </button>
-        ))}
-      </div>
-      <button type="button" className="btn" data-testid="pad-ok" onClick={() => onClose(true)}>
-        OK · {value || "0"} {unit}
-      </button>
     </div>
   );
 }

@@ -1512,19 +1512,23 @@ h1.title {
 .sport-mode .restband b { font-size: clamp(1.75rem, 8vw, 2.25rem); line-height: 1; color: var(--rest-ink); }
 .sport-mode .restband .pass { font-size: 1rem; min-width: 76px; min-height: 44px; color: var(--copper-bright); }
 .rperow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
-.rperow span { font-size: 0.8125rem; color: var(--rest-soft); margin-right: 2px; flex: none; }
+.rperow span { font-size: 0.8125rem; color: var(--ink-soft); margin-right: 2px; flex: none; }
 .rperow button {
   width: 44px;
   height: 44px;
   flex: none;
   border-radius: 12px;
-  border: 1px solid var(--rest-line);
+  border: 1px solid var(--line);
   background: transparent;
-  color: var(--rest-ink);
+  color: var(--ink);
   font-weight: 700;
 }
 .rperow button.on { background: var(--copper-bright); color: #1b120c; border-color: transparent; }
-.rperow .fine { flex: 1 0 100%; margin: 0; color: var(--rest-soft); font-size: 0.75rem; }
+.rperow .fine { flex: 1 0 100%; margin: 0; color: var(--ink-soft); font-size: 0.75rem; }
+.restband .rperow span,
+.restband .rperow .fine { color: var(--rest-soft); }
+.restband .rperow button { color: var(--rest-ink); border-color: var(--rest-line); background: transparent; }
+.restband .rperow button.on { background: var(--copper-bright); color: #1b120c; border-color: transparent; }
 .resttop { display: flex; align-items: center; gap: 10px; }
 .resttop b { flex: none; }
 .resttop p { flex: 1; min-width: 0; margin: 0; }
@@ -1623,16 +1627,26 @@ h1.title {
 .keepcard div { display: flex; gap: 6px; flex: none; }
 .keepcard button { min-width: 64px; min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--ink); font-weight: 700; }
 .keepcard button.yes { background: var(--ink); color: var(--bg); border-color: transparent; }
+.numpad-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12px calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+  background: rgba(27, 25, 22, 0.28);
+}
+html.dark .numpad-scrim { background: rgba(0, 0, 0, 0.45); }
 .numpad {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  z-index: 5;
+  position: relative;
+  width: min(100%, 456px);
+  z-index: 1;
   padding: 12px;
   border-radius: 22px;
   background: var(--bg-elev);
   box-shadow: var(--shadow);
+  outline: none;
 }
 .numpad header { display: flex; justify-content: space-between; gap: 8px; }
 .padread { display: flex; align-items: baseline; justify-content: center; gap: 8px; margin: 6px 0; }
