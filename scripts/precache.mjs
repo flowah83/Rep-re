@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { normalizeBasePath } from "./base-path.mjs";
@@ -11,8 +11,13 @@ export function servedAsset(file) {
   return true;
 }
 
+/** Pont·Line est copié dans out/pontline après le précache : Repère ne l’archive pas. */
+export function isPontlineAsset(file) {
+  return file === "/pontline" || file.startsWith("/pontline/");
+}
+
 export function precacheUrls(files, base) {
-  const urls = files.filter(servedAsset).map((file) => `${base}${file}`);
+  const urls = files.filter((file) => servedAsset(file) && !isPontlineAsset(file)).map((file) => `${base}${file}`);
   const index = `${base}/index.html`;
   if (!urls.includes(index)) urls.push(index);
   return urls;
@@ -25,8 +30,12 @@ function main() {
   function walk(dir) {
     for (const entry of readdirSync(dir)) {
       const full = path.join(dir, entry);
-      if (statSync(full).isDirectory()) walk(full);
-      else files.push("/" + path.relative(outDir, full).split(path.sep).join("/"));
+      if (statSync(full).isDirectory()) {
+        if (entry === "pontline" && dir === outDir) continue;
+        walk(full);
+        continue;
+      }
+      files.push("/" + path.relative(outDir, full).split(path.sep).join("/"));
     }
   }
   walk(outDir);
@@ -37,8 +46,8 @@ function main() {
   const sw = readFileSync(swPath, "utf8");
   const withList = sw.replace("/*__PRECACHE__*/ []", `/*__PRECACHE__*/ ${JSON.stringify(urls)}`);
   const withBase = withList.replace("/*__BASE__*/ \"\"", `/*__BASE__*/ ${JSON.stringify(base)}`);
-  const buildId = `repere-${hash(urls.join("\n"))}${base ? `-${base.replace(/\W+/g, "")}` : ""}`;
-  const withCache = withBase.replace("/*__CACHE__*/ \"repere-dev\"", `/*__CACHE__*/ ${JSON.stringify(buildId)}`);
+  const buildId = `repere-2-${hash(urls.join("\n"))}${base ? `-${base.replace(/\W+/g, "")}` : ""}`;
+  const withCache = withBase.replace("/*__CACHE__*/ \"repere-dev-2\"", `/*__CACHE__*/ ${JSON.stringify(buildId)}`);
   if (withCache === sw) {
     console.error("Le service worker n’a pas les marqueurs de précache.");
     process.exit(1);
@@ -56,9 +65,19 @@ function main() {
   }));
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
-  prefixCss(outDir, base);
-  prefixHtml(outDir, base);
+  prefixCss(outDir, base, outDir);
+  prefixHtml(outDir, base, outDir);
+  copyPontline(outDir);
   console.log(`Précache : ${urls.length} fichiers. Base : ${root}`);
+}
+
+function copyPontline(outDir) {
+  const source = path.join(process.cwd(), "pontline");
+  if (!statSync(source, { throwIfNoEntry: false })?.isDirectory()) {
+    console.error("Pont·Line : le dossier pontline/ est introuvable.");
+    process.exit(1);
+  }
+  cpSync(source, path.join(outDir, "pontline"), { recursive: true });
 }
 
 function assertPrecache(list, dir, prefix) {
@@ -91,13 +110,14 @@ function prefixPublic(src, prefix) {
   return `${prefix}${src}`;
 }
 
-function prefixHtml(dir, prefix) {
+function prefixHtml(dir, prefix, outDir) {
   if (!prefix) return;
   const files = ["manifest.webmanifest", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "icon-maskable.png", "favicon.ico", "og.png"];
   for (const entry of readdirSync(dir)) {
     const full = path.join(dir, entry);
     if (statSync(full).isDirectory()) {
-      prefixHtml(full, prefix);
+      if (entry === "pontline" && dir === outDir) continue;
+      prefixHtml(full, prefix, outDir);
       continue;
     }
     if (!entry.endsWith(".html")) continue;
@@ -111,12 +131,13 @@ function prefixHtml(dir, prefix) {
   }
 }
 
-function prefixCss(dir, prefix) {
+function prefixCss(dir, prefix, outDir) {
   if (!prefix) return;
   for (const entry of readdirSync(dir)) {
     const full = path.join(dir, entry);
     if (statSync(full).isDirectory()) {
-      prefixCss(full, prefix);
+      if (entry === "pontline" && dir === outDir) continue;
+      prefixCss(full, prefix, outDir);
       continue;
     }
     if (!entry.endsWith(".css")) continue;
