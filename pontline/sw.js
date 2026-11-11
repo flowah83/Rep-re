@@ -1,7 +1,6 @@
 /* Pont·Line — service worker (version en ligne uniquement) : met l'app en cache pour marcher hors ligne.
-   Aucune donnée utilisateur n'est mise en cache ni envoyée : seulement les fichiers du programme.
-   Chemins relatifs au dossier de ce fichier. Publié, la portée est /Rep-re/pontline/. */
-var CACHE = 'pontline-v5.3.0';
+   Aucune donnée utilisateur n'est mise en cache ni envoyée : seulement les fichiers du programme. */
+var CACHE = 'pontline-v5.4.0';
 var FICHIERS = [
   './', './index.html', './style.css', './manifest.json', './LISEZMOI.txt',
   './js/temps.js', './js/etat.js', './js/stockage.js', './js/fichier.js', './js/alertes.js', './js/conflits.js', './js/systeme.js',
@@ -18,12 +17,7 @@ self.addEventListener('activate', function (e) {
 });
 // Cache d'abord (marche hors ligne), puis réseau ; seulement pour les fichiers de ce site.
 self.addEventListener('fetch', function (e) {
-  if (e.request.method !== 'GET') return;
-  var url = new URL(e.request.url);
-  if (url.origin !== self.location.origin) return;
-  // Uniquement ce dossier (en ligne : /Rep-re/pontline/), pas le reste du site.
-  var scopePath = new URL(self.registration.scope).pathname;
-  if (url.pathname !== scopePath.replace(/\/$/, '') && url.pathname.indexOf(scopePath) !== 0) return;
+  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(function (r) {
     return r || fetch(e.request).then(function (rep) {
       if (rep.ok) { var copie = rep.clone(); caches.open(CACHE).then(function (c) { c.put(e.request, copie); }); }

@@ -20,7 +20,7 @@ window.PL = window.PL || {};
       var pc = (t - w.debut) / w.span * 100;
       var majeur = ((t - j0) % (60 * MIN)) === 0;
       h += '<div class="tick' + (majeur ? ' h' : '') + '" style="left:' + pc + '%"></div>';
-      if (avecLabels && ((t - j0) % lab) === 0) h += '<div class="tickl" style="left:' + pc + '%">' + T.hm(t, off) + (off ? '<small>' + T.hm(t, 0).replace(':', '') + 'Z</small>' : '') + '</div>'; // V4 (P2-2) : heure Z sous l'heure bord
+      if (avecLabels && ((t - j0) % lab) === 0) h += '<div class="tickl' + (pc < 6 ? ' bordg' : pc > 94 ? ' bordd' : '') + '" style="left:' + pc + '%">' + T.hm(t, off) + (off ? '<small>' + T.hm(t, 0).replace(':', '') + 'Z</small>' : '') + '</div>'; // V4 (P2-2) : heure Z sous l'heure bord
     }
     return h;
   }
@@ -130,8 +130,10 @@ window.PL = window.PL || {};
     document.getElementById('tlMaint').classList.toggle('actif', vue.suivi);
     var sansCartes = cartesMasquees();
     document.body.classList.toggle('sans-cartes', sansCartes);
-    document.getElementById('btnCartes').textContent = sansCartes ? 'Afficher les cartes' : 'Masquer les cartes';
-    document.getElementById('btnTermines').textContent = d.settings.showDone ? 'Masquer les vols terminés' : 'Afficher les vols terminés';
+    // V6 : « Afficher les » / « Masquer les » se masque sur un écran étroit (le texte complet reste en infobulle)
+    var bc = document.getElementById('btnCartes'), bt = document.getElementById('btnTermines'), mc = sansCartes ? 'Afficher les ' : 'Masquer les ', mt = d.settings.showDone ? 'Masquer les ' : 'Afficher les ';
+    bc.innerHTML = '<span class="mot">' + mc + '</span>cartes'; bc.title = mc + 'cartes';
+    bt.innerHTML = '<span class="mot">' + mt + '</span>vols terminés'; bt.title = mt + 'vols terminés';
   }
 
   // V4 (P2-9) : réglage automatique (null) : cartes masquées sur un écran de moins de 800 px de haut

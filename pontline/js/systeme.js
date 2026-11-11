@@ -76,8 +76,7 @@ window.PL = window.PL || {};
     var l = document.createElement('link'); l.rel = 'manifest'; l.href = 'manifest.json';
     document.head.appendChild(l);
     if ('serviceWorker' in navigator) {
-      // Chemins relatifs : la portée est le dossier de l'app. Sur GitHub Pages, /Rep-re/pontline/.
-      navigator.serviceWorker.register('./sw.js', { scope: './' }).then(function (reg) {
+      navigator.serviceWorker.register('sw.js').then(function (reg) {
         reg.addEventListener('updatefound', function () {
           var w = reg.installing;
           if (w) w.addEventListener('statechange', function () {

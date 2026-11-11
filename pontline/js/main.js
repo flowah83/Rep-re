@@ -220,7 +220,7 @@ window.PL = window.PL || {};
     }
     if (F && F.etat === 'erreur') h += '<div class="bandeau warn"><b>SAUVEGARDE FICHIER</b><span class="txt">Écriture impossible dans le dossier (' + esc(F.erreur) + '). Exportez à la main, ou choisissez un autre dossier dans Données.</span><button class="btn petit" id="bReautoriser">Réessayer</button></div>';
     // V3 : jusqu'à 3 alertes visibles à la fois (rouges d'abord), une ligne chacune
-    var visibles = nonAcquittees(), MAXB = window.innerHeight < 820 ? 2 : 3; // V4 (P2-9) : 2 bandeaux d'alerte sur un petit écran
+    var visibles = nonAcquittees(), MAXB = window.innerHeight * 16 / (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16) < 820 ? 2 : 3; // V4 (P2-9) : 2 bandeaux d'alerte sur un petit écran (V6 : hauteur en unités de la mise en page, qui grandit avec l'écran)
     visibles.slice(0, MAXB).forEach(function (a, i) {
       var nom = { danger: '⚠ URGENT', warn: '⚠ ATTENTION', info: 'ℹ RAPPEL' }[a.niveau];
       h += '<div class="bandeau alerte ' + a.niveau + '"><b>' + nom + '</b><span class="txt">' + esc(a.texte) + '</span>' +
