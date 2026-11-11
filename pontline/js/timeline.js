@@ -42,6 +42,11 @@ window.PL = window.PL || {};
     }
     return h;
   }
+  // V5.5 : chaque bloc porte son nom complet (bulle au survol et au clavier, étiquette extérieure si le bloc est trop étroit)
+  function attrSeg(f, id, nom, a, b, off, court) {
+    var h = T.hm(a, off) + '–' + T.hm(b, off) + (off ? ' (' + T.hm(a, 0).replace(':', '') + '–' + T.hm(b, 0).replace(':', '') + 'Z)' : '');
+    return ' data-vol="' + esc(f.id) + '" data-seg="' + esc(id) + '" data-nom="' + esc(nom) + '" data-h="' + esc(h) + '"' + (court ? ' data-court="' + esc(court) + '"' : '') + ' tabindex="-1" role="button" aria-label="' + esc(f.callsign + ' : ' + nom + ', ' + h + ' — Entrée pour ouvrir la fiche') + '"';
+  }
   function ligneMaint(now, w) {
     if (now < w.debut || now > w.fin) return '';
     return '<div class="maint" style="left:' + pc(now, w) + '%"></div>';
@@ -97,21 +102,21 @@ window.PL = window.PL || {};
       if (!volant) {
         var a0 = E.decollage(f), b0 = f.landingActual ? Date.parse(f.landingActual) : (E.appontagePrevu(f) || fin);
         var cls0 = 'seg vol' + (b0 <= now && st !== 'envol' ? ' passe' : (a0 > now ? ' futur' : ''));
-        p += bloc(a0, b0, w, cls0, '<b>Vol' + (f.mission ? ' · ' + esc(f.mission) : '') + '</b><small>' + T.hm(a0, off) + '–' + T.hm(b0, off) + '</small>', ' data-vol="' + esc(f.id) + '"');
+        p += bloc(a0, b0, w, cls0, '<b>Vol' + (f.mission ? ' · ' + esc(f.mission) : '') + '</b><small>' + T.hm(a0, off) + '–' + T.hm(b0, off) + '</small>', attrSeg(f, 'vol0', 'Vol' + (f.mission ? ' · ' + f.mission : ''), a0, b0, off));
       }
       if (seqs.length) {
         seqs.forEach(function (s) {
           var a = Date.parse(s.start), b = E.seqFin(s);
           var cls = 'seg ' + s.kind + (b <= now ? ' passe' : (a > now ? ' futur' : '')) + (seqConf[s.id] ? ' conflit' : '');
           var nom = s.label || (E.SEQ_TYPES.filter(function (x) { return x[0] === s.kind; })[0] || ['', ''])[1];
-          p += bloc(a, b, w, cls, '<b>' + esc(nom) + '</b><small>' + T.hm(a, off) + '–' + T.hm(b, off) + '</small>', ' data-vol="' + esc(f.id) + '"');
+          p += bloc(a, b, w, cls, '<b>' + esc(nom) + '</b><small>' + T.hm(a, off) + '–' + T.hm(b, off) + '</small>', attrSeg(f, s.id, nom, a, b, off));
         });
       }
       // V4 (audit V3b, P2-8) : vol encore en l'air après l'appontage prévu / la fin d'autonomie : prolongé jusqu'à maintenant
       if (st === 'envol') {
         var finPrevue = E.appontagePrevu(f) || fin; // V5 : suit l'ETA (appontage prévu, sinon fin des séquences de vol)
-        if (now > finPrevue && finPrevue < fin) p += bloc(finPrevue, Math.min(now, fin), w, 'seg prolonge', '<b>En vol</b><small>appontage prévu dépassé</small>', ' data-vol="' + esc(f.id) + '"');
-        if (now > fin) p += bloc(fin, now, w, 'seg depasse', '<b>+' + T.fmtDuree(Math.round((now - fin) / MIN)) + '</b><small>au-delà de la fin d\'autonomie</small>', ' data-vol="' + esc(f.id) + '" title="' + esc(f.callsign) + ' en l\'air au-delà de sa fin d\'autonomie"');
+        if (now > finPrevue && finPrevue < fin) p += bloc(finPrevue, Math.min(now, fin), w, 'seg prolonge', '<b>En vol</b><small>appontage prévu dépassé</small>', attrSeg(f, 'prolonge', 'En vol, appontage prévu dépassé', finPrevue, Math.min(now, fin), off, 'En vol'));
+        if (now > fin) p += bloc(fin, now, w, 'seg depasse', '<b>+' + T.fmtDuree(Math.round((now - fin) / MIN)) + '</b><small>au-delà de la fin d\'autonomie</small>', attrSeg(f, 'depasse', '+' + T.fmtDuree(Math.round((now - fin) / MIN)) + ' au-delà de la fin d\'autonomie', fin, now, off, '+' + T.fmtDuree(Math.round((now - fin) / MIN))));
       }
       if (f.takeoffActual) { var ta = Date.parse(f.takeoffActual); if (ta >= w.debut && ta <= w.fin) p += '<div class="evt" style="left:' + pc(ta, w) + '%">▲ ' + T.hm(ta, off) + '</div>'; }
       if (f.landingActual) { var la = Date.parse(f.landingActual); if (la >= w.debut && la <= w.fin) p += '<div class="evt" style="left:' + pc(la, w) + '%">▼ ' + T.hm(la, off) + '</div>'; }
@@ -120,10 +125,11 @@ window.PL = window.PL || {};
         p += repere(fin, w, 'fin', 'Fin auto. ' + T.hm(fin, off), true);
       }
       p += ligneMaint(now, w);
-      html += '<div class="lane" data-vol="' + esc(f.id) + '"><div class="lab" data-vol="' + esc(f.id) + '" tabindex="0" role="group" aria-label="' + esc(f.callsign + ', ' + E.STATUT_NOMS[st] + (actif ? ', H-30 ' + T.hm(h30, off) + ', fin d\'autonomie ' + T.hm(fin, off) : '') + ' — Entrée pour ouvrir la fiche, S pour ajouter une séquence') + '">' + lab + '</div><div class="piste" data-vol="' + esc(f.id) + '">' + p + '</div></div>';
+      html += '<div class="lane" data-vol="' + esc(f.id) + '"><div class="lab" data-vol="' + esc(f.id) + '" tabindex="0" role="group" aria-label="' + esc(f.callsign + ', ' + E.STATUT_NOMS[st] + (actif ? ', H-30 ' + T.hm(h30, off) + ', fin d\'autonomie ' + T.hm(fin, off) : '') + ' — Entrée pour ouvrir la fiche, S pour ajouter une séquence, flèche droite pour parcourir les séquences') + '">' + lab + '</div><div class="piste" data-vol="' + esc(f.id) + '">' + p + '</div></div>';
     });
     if (caches) html += '<div class="vide hors" id="tlHors">' + caches + ' autre' + (caches > 1 ? 's vols' : ' vol') + ' en dehors de la fenêtre affichée (◀ ▶ ou zoom pour ' + (caches > 1 ? 'les' : 'le') + ' voir).</div>';
     PL.ui.poser(document.getElementById('tlLanes'), html); // V4 (P2-7) : focus et défilement gardés
+    PL.etiquettes.placer(); // V5.5 : noms des séquences proches / superposées toujours lisibles
 
     var z = document.querySelectorAll('#zoom button');
     for (var i = 0; i < z.length; i++) z[i].classList.toggle('actif', +z[i].getAttribute('data-z') === d.settings.zoomH);

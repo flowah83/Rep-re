@@ -599,3 +599,37 @@ html { font-size: clamp(14px, min(calc(6.137px + 0.722vw), calc(6.154px + 1.282v
 .seg small, .evt { font-size: 0.75rem; }
 .reperel { font-size: 0.8125rem; line-height: 1.25; }
 .pontplan { height: 0.9375rem; line-height: 0.6875rem; }
+
+/* ===== V5.5 : noms des séquences toujours lisibles ===== */
+.seg.etroit > * { visibility: hidden; }
+.seg.sousl { padding-top: 0; padding-bottom: 0; }
+.seg.sousl small { display: none; }
+.seg.coupe b { display: block; overflow: hidden; text-overflow: ellipsis; }
+.seg:focus { outline: none; }
+.seg:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; z-index: 6; }
+.segl { position: absolute; z-index: 3; font-size: 0.75rem; font-weight: 700; line-height: 1.25; padding: 0 0.3125rem; white-space: nowrap; border-radius: 4px; background: var(--panel); border: 1px solid var(--ligne); border-left: 4px solid var(--autre-b); color: var(--txt); cursor: copy; }
+.segl.vol, .segl.treuil, .segl.vertrep, .segl.prolonge { border-left-color: var(--vol-b); }
+.segl.mer { border-left-color: var(--mer-b); }
+.segl.ravito { border-left-color: var(--ravito-b); }
+.segl.pax { border-left-color: var(--pax-b); }
+.segl.depasse { border-left-color: var(--danger); }
+.segfil { position: absolute; width: 0; border-left: 1px dashed var(--txt3); z-index: 2; pointer-events: none; }
+#tipSeg { position: fixed; z-index: 70; background: var(--txt); color: var(--panel); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8125rem; pointer-events: none; white-space: nowrap; max-width: calc(100vw - 8px); overflow: hidden; text-overflow: ellipsis; box-shadow: var(--ombre); }
+html[data-theme="nuit"] #tipSeg { background: var(--panel2); color: var(--txt); border: 1px solid var(--txt); }
+/* V5.5 : bande du haut de chaque ligne réservée aux heures ▲ / ▼ : elles ne cachent plus le nom des séquences */
+.seg { top: 0.875rem; height: 2rem; padding-top: 1px; padding-bottom: 0; line-height: 1.1; }
+.seg.sousl { font-size: 0.75rem; }
+.seg.sousl b { font-size: 0.75rem; }
+.evt { top: -1px; line-height: 1.1; }
+/* V5.5 : place de la barre de défilement réservée : la largeur des lignes ne bouge plus quand une ligne grandit */
+#tlLanes { scrollbar-gutter: stable; }
+.seg.lie { box-shadow: 0 0 0 3px var(--accent); z-index: 5; }
+@media (max-width: 1100px) { #top #btnAnnuler { max-width: 7.5rem; } }
+@media (max-width: 1000px) { #top #btnAnnuler { max-width: 5.5rem; } }
+.segl { line-height: 1.1; padding-top: 0; padding-bottom: 0; }
+.segl.haut { font-size: 0.6875rem; line-height: 1.05; border-width: 1px 1px 1px 3px; }
+.evt.evtg { transform: none; }
+.evt.evtd { transform: translateX(-100%); }
+.evt.evtc { font-size: 0; }
+.evt.evtc::before { content: attr(data-g); font-size: 0.6875rem; }
+.evt.evtx { display: none; }
