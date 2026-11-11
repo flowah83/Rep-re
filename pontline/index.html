@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="jour" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data:; connect-src 'none'; manifest-src 'self'; worker-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Pont·Line</title>
+  <link rel="icon" href="icones/icone-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="top">
+  <div class="marque"><b>PONT·LINE</b><small>Aide personnelle — non certifiée</small><span id="sauve"></span></div>
+  <button class="btn petit etat-fichier" id="btnFichier" title="État de la sauvegarde sur le disque">Dernier export : —</button>
+  <span id="sonEtat" class="hidden" title="Le navigateur bloque le son tant qu'on n'a pas cliqué dans la page"></span>
+  <div class="horloge"><b id="hBord">--:--:--</b><span id="lBord">HEURE BORD</span></div>
+  <div class="horloge"><b id="hZ">--:--:--Z</b><span id="lZ">ZULU</span></div>
+  <button id="pont" title="État du pont (cliquer pour changer)">PONT ?</button>
+  <div id="prochain"></div>
+  <span id="essai" class="hidden" title="Version en ligne : ne pas saisir de données réelles">VERSION D'ESSAI EN LIGNE</span>
+  <span id="demo" class="hidden">DONNÉES DE DÉMONSTRATION</span>
+  <button class="btn" id="btnAnnuler" title="Annuler la dernière action sur les vols ou le pont programmé (Ctrl+Z)" disabled>↶ Annuler</button>
+  <button class="btn primaire" id="btnVol" title="Nouveau vol">+ Vol</button>
+  <button class="btn" id="btnTheme">Mode nuit</button>
+  <button class="btn" id="btnPlein" title="Plein écran">⛶</button>
+  <button class="btn" id="btnDonnees">Données</button>
+</header>
+
+<div id="bandeaux"></div>
+<div id="annonce" class="sr" role="alert" aria-live="assertive"></div>
+
+<div id="main">
+  <section id="gauche">
+    <div id="tlBarre">
+      <h2>Timeline</h2>
+      <div class="groupe" id="zoom">
+        <button data-z="2">2 h</button><button data-z="6">6 h</button><button data-z="12">12 h</button><button data-z="24">24 h</button>
+      </div>
+      <div class="groupe">
+        <button id="tlAvant" title="Reculer">◀</button><button id="tlMaint">Maintenant</button><button id="tlApres" title="Avancer">▶</button>
+      </div>
+      <button class="btn petit" id="btnTermines">Afficher les vols terminés</button>
+      <button class="btn petit" id="btnCartes">Masquer les cartes</button>
+      <button class="btn petit conflit hidden" id="btnConflits"></button>
+      <div class="legende">
+        <span><i style="background:var(--vol);border-color:var(--vol-b)"></i>Vol</span>
+        <span><i style="background:var(--mer);border-color:var(--mer-b)"></i>Mise en route</span>
+        <span><i style="background:var(--ravito);border-color:var(--ravito-b)"></i>Ravito</span>
+        <span><i style="background:var(--pax);border-color:var(--pax-b)"></i>Pax</span>
+        <span><i style="background:var(--passe);border-color:var(--ligne)"></i>Passé</span>
+        <span style="color:var(--warn)">┆ H-30</span>
+        <span style="color:var(--danger)">│ Fin d'autonomie</span>
+      </div>
+    </div>
+    <div id="bandeZone" class="bande-zone hidden"><button type="button" class="btn bande-fl" id="bandeG" aria-controls="bande" aria-disabled="true"><span class="fl" aria-hidden="true">◀</span><span class="nb" id="bandeGn"></span></button><div id="bande" class="bande" role="region" aria-label="Bande des vols"></div><button type="button" class="btn bande-fl" id="bandeD" aria-controls="bande" aria-disabled="true"><span class="nb" id="bandeDn"></span><span class="fl" aria-hidden="true">▶</span></button></div>
+    <div id="listeConflits" class="carte-zone hidden"></div>
+    <div id="tl" class="carte-zone">
+      <div id="tlAxe"></div>
+      <div id="tlLanes" tabindex="-1" aria-label="Lignes de vol de la timeline"></div>
+    </div>
+    <div id="cartesZone">
+      <div id="cartes" aria-label="Cartes des vols"></div>
+    </div>
+  </section>
+
+  <aside id="journal" class="carte-zone">
+    <h2>Main courante <span id="jCompte" class="mono" style="font-size:12px;color:var(--txt3)"></span></h2>
+    <select id="jVol" class="champ" title="Vol concerné" aria-label="Vol concerné par la prochaine saisie"></select>
+    <div class="rapides" id="rapides">
+      <button data-k="dec">Décollage</button>
+      <button data-k="app">Appontage</button>
+      <button data-k="pax">Pax…</button>
+      <button data-k="fuel">Carburant…</button>
+      <button data-k="deck-vert">Pont vert</button>
+      <button data-k="deck-rouge">Pont rouge</button>
+      <button data-k="radio">Contact radio</button>
+      <button data-k="incident">Incident…</button>
+    </div>
+    <div class="ligne-heure" id="jHeureMoins"><label for="jHeure">Heure de l'action</label><input id="jHeure" class="champ mono" placeholder="maintenant" maxlength="7" autocomplete="off" title="Vide = maintenant. Sinon HH:MM bord, ou 0702Z"><button class="btn petit" data-moins="1" title="Il y a 1 minute">−1</button><button class="btn petit" data-moins="2" title="Il y a 2 minutes">−2</button><button class="btn petit" data-moins="5" title="Il y a 5 minutes">−5 min</button><span id="jHeureAide" class="aide" aria-live="polite"></span></div>
+    <div id="jPending" class="hidden"></div>
+    <div class="ligne-saisie">
+      <input id="jTexte" class="champ" autocomplete="off" maxlength="2000" title="Raccourci : N" aria-label="Texte de la ligne de main courante" aria-keyshortcuts="N" placeholder="Écrire une note… (Entrée = horodater)">
+      <button class="btn primaire" id="jAjout">OK</button>
+    </div>
+    <div class="filtres">
+      <select id="jFiltre" class="champ" aria-label="Filtrer la main courante"></select>
+      <input id="jRecherche" class="champ" placeholder="Rechercher…" autocomplete="off" aria-label="Rechercher dans la main courante">
+    </div>
+    <div id="jListe" tabindex="0" aria-label="Lignes de la main courante, la plus récente en haut"></div>
+  </aside>
+</div>
+
+<!-- Fenêtre : fiche vol -->
+<div id="modalVol" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="fvTitre">
+  <div class="fen">
+    <div class="fen-tete">
+      <h2 id="fvTitre">Nouveau vol</h2>
+      <div class="esp"></div>
+      <button class="btn petit" id="fvDupliquer">Dupliquer</button>
+      <button class="btn petit" id="fvAnnulerVol">Vol annulé…</button>
+      <button class="btn petit" id="fvClore">Clore le vol</button>
+      <button class="btn petit danger" id="fvSupprimer">Supprimer…</button>
+    </div>
+    <div class="grille">
+      <div><label for="fvIndicatif">Indicatif *</label><input id="fvIndicatif" class="champ" autocomplete="off" maxlength="20" placeholder="ex. FAUCON 32"></div>
+      <div><label for="fvType">Type *</label><select id="fvType" class="champ"></select></div>
+      <div><label for="fvEquipage">Équipage</label><input id="fvEquipage" class="champ" autocomplete="off" maxlength="60" placeholder="trigrammes ou noms"><div class="aide">Commandant de bord en premier</div></div>
+      <div><label for="fvPax">Pax</label><input id="fvPax" class="champ" inputmode="numeric" autocomplete="off" maxlength="2" placeholder="0"></div>
+
+      <div class="large"><label for="fvMission">Mission</label><input id="fvMission" class="champ" list="listeMissions" autocomplete="off" maxlength="60"><datalist id="listeMissions"></datalist></div>
+      <div class="large"><label for="fvDecH">Décollage prévu * (heure bord, ou 0430Z)</label>
+        <div class="duo"><input id="fvDecH" class="champ mono" autocomplete="off" maxlength="6" placeholder="HH:MM" title="Heure bord HH:MM, ou heure Z suivie de Z (ex. 0430Z)"><select id="fvDecJ" class="champ" aria-label="Jour du décollage prévu"></select></div><div class="aide" id="fvDecAide" aria-live="polite"></div></div>
+
+      <div><label for="fvAuto">Autonomie *</label><input id="fvAuto" class="champ mono" autocomplete="off" maxlength="12" placeholder="ex. 1h50"><div class="aide" id="fvAutoAide">Durée depuis le décollage (ex. 1h50)</div></div>
+      <div><label for="fvAppH">Appontage prévu</label><input id="fvAppH" class="champ mono" autocomplete="off" maxlength="6" placeholder="HH:MM" title="Heure bord HH:MM, ou heure Z suivie de Z (ex. 0430Z)"><div class="aide">Sinon : fin des séquences de vol</div></div>
+
+      <div><label for="fvDecReel">Décollage réel</label><input id="fvDecReel" class="champ mono" autocomplete="off" maxlength="6" placeholder="HH:MM" title="Heure bord HH:MM, ou heure Z suivie de Z (ex. 0430Z)"><div class="aide">Rempli par le bouton Décollage</div></div>
+      <div><label for="fvAppReel">Appontage réel</label><input id="fvAppReel" class="champ mono" autocomplete="off" maxlength="6" placeholder="HH:MM" title="Heure bord HH:MM, ou heure Z suivie de Z (ex. 0430Z)"><div class="aide">Rempli par le bouton Appontage</div></div>
+      <div><label for="fvOps">Rappel ops normal (min)</label><input id="fvOps" class="champ mono" inputmode="numeric" autocomplete="off" maxlength="3"><div class="aide" id="fvOpsAide">Vide = réglage général · 0 = pas de rappel</div></div>
+      <div class="large"><label for="fvNotes">Remarques</label><input id="fvNotes" class="champ" autocomplete="off" maxlength="1000"></div>
+    </div>
+    <div class="calc" id="fvCalc"></div>
+    <div class="fen-tete" style="margin-top:18px">
+      <div class="section-titre" style="margin:0">Séquences du vol</div>
+      <div class="esp"></div>
+      <button class="btn petit" id="fvModPax">Modèle : rotation pax</button>
+      <button class="btn petit" id="fvModRavito">Modèle : ravito rotors tournants</button>
+      <button class="btn petit primaire" id="fvAjRavito" title="Ajoute un ravitaillement programmé (heure modifiable) : un bandeau demandera de confirmer à l'heure">+ Ravitaillement</button>
+      <button class="btn petit" id="fvAjSeq">+ Séquence</button>
+    </div>
+    <div class="seqs" id="fvSeqs"></div>
+    <div class="pied">
+      <span class="erreurs" id="fvErreurs"></span>
+      <span class="info-ligne">Chaque modification est tracée dans la main courante.</span>
+      <div class="esp"></div>
+      <button class="btn" id="fvAnnuler">Fermer sans enregistrer</button>
+      <button class="btn primaire" id="fvEnregistrer">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fenêtre : données et réglages -->
+<div id="modalReglages" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="rgTitre">
+  <div class="fen" style="width:min(820px,100%)">
+    <div class="fen-tete"><h2 id="rgTitre">Données et réglages</h2><div class="esp"></div><button class="btn" id="rgFermer">Fermer</button></div>
+
+    <div class="section-titre">Sauvegarde automatique dans un dossier (recommandé)</div>
+    <div class="info-ligne">Choisissez une fois un dossier sur le PC (par exemple <b>Documents\PontLine-sauvegardes</b>). Pont·Line y écrit tout seul, quelques secondes après chaque saisie, le fichier <b>pontline-sauvegarde.json</b> et une copie par jour. Si le navigateur est vidé, il suffit d'importer ce fichier.</div>
+    <div class="info-ligne" id="rgDossierEtat"></div>
+    <div class="pied" style="margin-top:6px"><button class="btn primaire" id="rgDossier">Choisir le dossier de sauvegarde…</button><button class="btn" id="rgDossierOublier">Ne plus utiliser ce dossier</button></div>
+
+    <div class="section-titre">Sauvegarde</div>
+    <div class="info-ligne" id="rgInfo"></div>
+    <div class="pied" style="margin-top:6px">
+      <button class="btn primaire" id="rgExportJSON">Exporter la sauvegarde (JSON)</button>
+      <button class="btn" id="rgExportCSV">Exporter la main courante (CSV)</button>
+      <button class="btn" id="rgImprimer">Imprimer la main courante</button>
+      <button class="btn" id="rgCompteRendu">Compte rendu de quart…</button>
+      <input id="rgCRDebut" class="champ mono" style="max-width:240px" placeholder="depuis HH:MM" title="Vide = les 12 dernières heures" autocomplete="off" aria-label="Début du compte rendu (heure bord)">
+      <button class="btn" id="rgImport">Importer une sauvegarde…</button>
+      <input type="file" id="rgFichier" accept=".json,application/json" class="hidden">
+    </div>
+
+    <div class="section-titre">Nouvelle mission / archivage</div>
+    <div class="info-ligne" id="rgStockage"></div>
+    <div class="info-ligne">Avant une nouvelle mission (ou quand la jauge dépasse 70 %) : tout est exporté dans un fichier d'archive (Téléchargements, et le dossier de sauvegarde s'il est actif), puis Pont·Line ne garde que les vols en cours et les 7 derniers jours. Rien n'est perdu : l'archive se réimporte.</div>
+    <div class="pied"><button class="btn" id="rgArchiver">Nouvelle mission / archiver…</button></div>
+
+    <div class="section-titre">Heure</div>
+    <div class="grille deux">
+      <div><label for="rgOffset">Fuseau du bord</label><select id="rgOffset" class="champ"></select><div class="aide">Change l'affichage seulement ; les heures sont stockées en Z.</div></div>
+      <div><label for="rgFinQuart">Fin de quart (rappel d'export)</label><input id="rgFinQuart" class="champ mono" placeholder="HH:MM (vide = pas de rappel)"></div>
+      <div class="tout"><label for="rgMissions">Missions proposées (séparées par des virgules)</label><input id="rgMissions" class="champ"></div>
+      <div><label for="rgConflits">Détection des conflits de pont</label><select id="rgConflits" class="champ"><option value="1">Activée (pont à une seule place)</option><option value="0">Désactivée</option></select></div>
+      <div><label for="rgMarge">Marge autour d'un décollage / appontage (min)</label><input id="rgMarge" class="champ mono" inputmode="numeric"></div>
+      <div><label for="rgEveil">Garder l'écran allumé</label><select id="rgEveil" class="champ"><option value="1">Oui</option><option value="0">Non</option></select><div class="aide" id="rgEveilEtat"></div></div>
+      <div><label for="rgSon">Son pour les alertes</label><select id="rgSon" class="champ"><option value="1">Oui (par défaut)</option><option value="0">Non — alertes silencieuses</option></select><div class="aide">Rouge : 3 bips répétés toutes les 30 s jusqu'à « Acquitter ». H-30 : un bip grave.</div><button class="btn petit" id="rgTestSon" style="margin-top:6px">Tester le son</button></div>
+      <div><label for="rgAutoClore">Clore les vols posés après (min)</label><input id="rgAutoClore" class="champ mono" inputmode="numeric"><div class="aide">0 = jamais. Un vol clos quitte la timeline (toujours visible avec « Afficher les vols terminés »).</div></div>
+      <div><label for="rgOps">Rappel « ops normal » par défaut (min)</label><input id="rgOps" class="champ mono" inputmode="numeric" maxlength="3"><div class="aide">Contact radio attendu toutes les N minutes pour chaque vol en l'air (bandeau orange, un seul bip). 0 = jamais. Réglable aussi par vol dans sa fiche.</div></div>
+      <div><label for="rgAutoDl">Téléchargement automatique de secours (heures)</label><input id="rgAutoDl" class="champ mono" inputmode="numeric"><div class="aide">Si aucun dossier n'est actif : une sauvegarde va dans Téléchargements toutes les N heures. 0 = jamais.</div></div>
+    </div>
+    <div class="info-ligne" id="rgPC"></div>
+    <div class="pied"><button class="btn primaire" id="rgAppliquer">Appliquer les réglages</button></div>
+
+    <div class="section-titre">Vols supprimés</div>
+    <div id="rgSupprimes" class="info-ligne"></div>
+
+    <div class="section-titre" style="color:var(--danger)">Tout effacer</div>
+    <div class="info-ligne">Efface tous les vols et la main courante de ce navigateur. Une sauvegarde est téléchargée avant.</div>
+    <div class="pied"><button class="btn danger" id="rgEffacer">Tout effacer…</button></div>
+    <div class="info-ligne" style="margin-top:18px" id="rgVersion">Pont·Line V2 — outil d'aide personnel, non certifié. Les procédures du bord font foi. Aucune donnée ne quitte cet appareil.</div>
+  </div>
+</div>
+
+<!-- Fenêtre : confirmation d'une saisie importante -->
+<div id="popSeq" class="pop hidden" role="dialog" aria-labelledby="psTitre">
+  <div class="pop-titre" id="psTitre">Nouvelle séquence</div>
+  <div class="pop-ligne"><label for="psDebut">Début</label><input id="psDebut" class="champ mono" maxlength="6" autocomplete="off" title="Heure bord HH:MM, ou heure Z suivie de Z"><span id="psDebutAide" class="aide"></span></div>
+  <div class="pop-ligne" role="radiogroup" aria-label="Type de séquence" id="psTypes"></div>
+  <div class="pop-ligne" role="radiogroup" aria-label="Durée" id="psDurees"><span class="pop-lib">Durée</span><button class="btn petit" data-ps-d="15">15</button><button class="btn petit" data-ps-d="30">30</button><button class="btn petit" data-ps-d="45">45</button><button class="btn petit" data-ps-d="60">60</button><input id="psDur" class="champ mono" maxlength="4" inputmode="numeric" aria-label="Durée en minutes"><span class="pop-lib">min</span></div>
+  <div id="psResume" class="aide"></div>
+  <div id="psAvert" class="pop-avert hidden" role="status"></div>
+  <div class="pop-pied"><button class="btn petit" id="psFiche">Ouvrir la fiche</button><span class="esp"></span><button class="btn petit" id="psAnnuler">Annuler (Échap)</button><button class="btn petit primaire" id="psAjouter">Ajouter (Entrée)</button></div>
+</div>
+<div id="popPont" class="pop hidden" role="dialog" aria-labelledby="ppTitre">
+  <div class="pop-titre" id="ppTitre">Programmer l'état du pont</div>
+  <div class="pop-ligne" role="radiogroup" aria-label="État du pont prévu" id="ppTypes"></div>
+  <div class="pop-ligne"><label for="ppDebut">À</label><input id="ppDebut" class="champ mono" maxlength="6" autocomplete="off" title="Heure bord HH:MM, ou heure Z suivie de Z"><span id="ppDebutAide" class="aide"></span></div>
+  <div class="pop-ligne"><label for="ppFin">Jusqu'à</label><input id="ppFin" class="champ mono" maxlength="6" autocomplete="off" placeholder="—" title="Facultatif : heure de fin (bord HH:MM ou 0430Z)"><span id="ppFinAide" class="aide"></span></div>
+  <div id="ppListe" class="pop-ligne"></div>
+  <div id="ppResume" class="aide"></div>
+  <div id="ppPasse" class="pop-avert hidden" role="status">Heure déjà passée : le bandeau de confirmation apparaîtra tout de suite.</div>
+  <div class="pop-pied"><button type="button" class="btn petit danger hidden" id="ppSupprimer">Supprimer</button><span class="esp"></span><button type="button" class="btn petit" id="ppAnnuler">Annuler (Échap)</button><button type="button" class="btn petit primaire" id="ppAjouter">Programmer (Entrée)</button></div>
+</div>
+<div id="modalConf" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="cfTitre">
+  <div class="fen conf">
+    <h2 id="cfTitre"></h2>
+    <div class="calc" id="cfTexte"></div>
+    <div id="cfZone" class="hidden"><label for="cfChamp" id="cfLib"></label><input id="cfChamp" class="champ mono" autocomplete="off" maxlength="12"><div id="cfAide" class="aide" aria-live="polite"></div></div>
+    <div class="pied"><div class="esp"></div><button class="btn hidden" id="cfAutre"></button><button class="btn" id="cfNon">Annuler</button><button class="btn primaire" id="cfOui">Confirmer</button></div>
+  </div>
+</div>
+
+<div id="toast" class="hidden" role="status"></div>
+
+<script src="js/temps.js"></script>
+<script src="js/etat.js"></script>
+<script src="js/stockage.js"></script>
+<script src="js/fichier.js"></script>
+<script src="js/alertes.js"></script>
+<script src="js/conflits.js"></script>
+<script src="js/systeme.js"></script>
+<script src="js/rapport.js"></script>
+<script src="js/timeline.js"></script>
+<script src="js/vols.js"></script>
+<script src="js/journal.js"></script>
+<script src="js/bande.js"></script>
+<script src="js/seqclic.js"></script>
+<script src="js/pontprog.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

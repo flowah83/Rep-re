@@ -14,7 +14,7 @@ import { parsePlan } from "./plan";
 import { keepsCoachPlan, suggestForExercise } from "./progression";
 import { bestE1rmLabel } from "./session";
 import { applySessionEdit } from "./session-edit";
-import { cachesToDelete, shouldStoreResponse } from "./sw-policy";
+import { cachesToDelete, isPontlinePath, shouldStoreResponse } from "./sw-policy";
 import type { BackupFile, ExerciseLog, Session, SetLog } from "./types";
 
 const MARKER = "MARQUEUR-PRIVE-XYZ";
@@ -418,5 +418,22 @@ describe("lot A, scénarios 1 à 23", () => {
     expect(odd).toMatch(/soit 60 kg/);
     expect(odd).toMatch(/n’est pas atteignable/);
     expect(odd).toMatch(/Il reste/);
+  });
+
+  it("24. le service worker ignore Pont·Line et laisse son cache tranquille", () => {
+    expect(isPontlinePath("/pontline", "")).toBe(true);
+    expect(isPontlinePath("/pontline/", "")).toBe(true);
+    expect(isPontlinePath("/pontline/index.html", "")).toBe(true);
+    expect(isPontlinePath("/Rep-re/pontline", "/Rep-re")).toBe(true);
+    expect(isPontlinePath("/Rep-re/pontline/", "/Rep-re")).toBe(true);
+    expect(isPontlinePath("/Rep-re/pontline/sw.js", "/Rep-re")).toBe(true);
+    expect(isPontlinePath("/Rep-re/index.html", "/Rep-re")).toBe(false);
+    expect(isPontlinePath("/Rep-re/pontliner", "/Rep-re")).toBe(false);
+    expect(isPontlinePath("/", "")).toBe(false);
+    expect(cachesToDelete(["repere-ancien", "repere-actuel", "pontline-v5.3.0"], "repere-actuel")).toEqual(["repere-ancien"]);
+    const source = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
+    expect(source).toContain('const CACHE = /*__CACHE__*/ "repere-dev-2"');
+    expect(source).toContain("const pontline = `${BASE}/pontline`");
+    expect(source).toContain('url.pathname === pontline || url.pathname.startsWith(`${pontline}/`)');
   });
 });

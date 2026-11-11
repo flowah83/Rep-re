@@ -1,0 +1,372 @@
+{
+  "app": "pontline",
+  "schemaVersion": 2,
+  "demoNow": "2026-01-15T14:42:00.000Z",
+  "settings": {
+    "offsetMin": 60,
+    "theme": "jour",
+    "zoomH": 6,
+    "finQuart": "",
+    "showDone": false,
+    "missions": [
+      "Liaison",
+      "SAR",
+      "Surveillance",
+      "VERTREP",
+      "Entraînement",
+      "Transfert pax"
+    ],
+    "demo": true,
+    "conflits": true,
+    "conflictMarginMin": 5,
+    "eveil": true,
+    "son": false
+  },
+  "flights": [
+    {
+      "id": "fdemo1",
+      "callsign": "MOUETTE 12",
+      "type": "DPN",
+      "crew": "ROC, VAL",
+      "pax": 4,
+      "mission": "Transfert pax",
+      "notes": "Démo",
+      "takeoffPlanned": "2026-01-15T10:52:00.000Z",
+      "landingPlanned": null,
+      "enduranceMin": 150,
+      "takeoffActual": "2026-01-15T10:54:00.000Z",
+      "landingActual": "2026-01-15T12:40:00.000Z",
+      "fuel": null,
+      "closed": false,
+      "deleted": false,
+      "sequences": [
+        {
+          "id": "s11",
+          "kind": "vol",
+          "label": "Transfert pax",
+          "start": "2026-01-15T10:52:00.000Z",
+          "dur": 105
+        }
+      ],
+      "createdAt": "2026-01-15T10:22:00.000Z",
+      "updatedAt": "2026-01-15T14:36:00.000Z"
+    },
+    {
+      "id": "fdemo2",
+      "callsign": "RAPACE 21",
+      "type": "CMN",
+      "crew": "BRT, KER, ROU",
+      "pax": 0,
+      "mission": "SAR",
+      "notes": "Entraînement treuillage — démo",
+      "takeoffPlanned": "2026-01-15T13:02:00.000Z",
+      "landingPlanned": null,
+      "enduranceMin": 126,
+      "takeoffActual": "2026-01-15T13:04:00.000Z",
+      "landingActual": null,
+      "fuel": null,
+      "closed": false,
+      "deleted": false,
+      "sequences": [
+        {
+          "id": "s21",
+          "kind": "mer",
+          "label": "Mise en route",
+          "start": "2026-01-15T12:47:00.000Z",
+          "dur": 15
+        },
+        {
+          "id": "s22",
+          "kind": "treuil",
+          "label": "SAR · treuillage",
+          "start": "2026-01-15T13:02:00.000Z",
+          "dur": 125
+        }
+      ],
+      "createdAt": "2026-01-15T10:22:00.000Z",
+      "updatedAt": "2026-01-15T14:36:00.000Z"
+    },
+    {
+      "id": "fdemo3",
+      "callsign": "FAUCON 32",
+      "type": "PTR",
+      "crew": "LMN, DUP",
+      "pax": 2,
+      "mission": "Surveillance",
+      "notes": "Démo",
+      "takeoffPlanned": "2026-01-15T14:02:00.000Z",
+      "landingPlanned": null,
+      "enduranceMin": 120,
+      "takeoffActual": "2026-01-15T14:04:00.000Z",
+      "landingActual": null,
+      "fuel": {
+        "at": "2026-01-15T14:36:00.000Z",
+        "min": 86
+      },
+      "closed": false,
+      "deleted": false,
+      "sequences": [
+        {
+          "id": "s31",
+          "kind": "mer",
+          "label": "Mise en route",
+          "start": "2026-01-15T13:47:00.000Z",
+          "dur": 15
+        },
+        {
+          "id": "s32",
+          "kind": "vol",
+          "label": "Surveillance",
+          "start": "2026-01-15T14:02:00.000Z",
+          "dur": 70
+        }
+      ],
+      "createdAt": "2026-01-15T10:22:00.000Z",
+      "updatedAt": "2026-01-15T14:36:00.000Z"
+    },
+    {
+      "id": "fdemo4",
+      "callsign": "PÉLICAN 45",
+      "type": "DPN",
+      "crew": "MOR, GIL",
+      "pax": 6,
+      "mission": "Liaison",
+      "notes": "Liaison terre — démo",
+      "takeoffPlanned": "2026-01-15T16:22:00.000Z",
+      "landingPlanned": null,
+      "enduranceMin": 130,
+      "takeoffActual": null,
+      "landingActual": null,
+      "fuel": null,
+      "closed": false,
+      "deleted": false,
+      "sequences": [
+        {
+          "id": "s41",
+          "kind": "mer",
+          "label": "Mise en route",
+          "start": "2026-01-15T16:07:00.000Z",
+          "dur": 15
+        },
+        {
+          "id": "s42",
+          "kind": "pax",
+          "label": "Embarquement pax",
+          "start": "2026-01-15T16:12:00.000Z",
+          "dur": 10
+        },
+        {
+          "id": "s43",
+          "kind": "vol",
+          "label": "Liaison · 6 pax",
+          "start": "2026-01-15T16:22:00.000Z",
+          "dur": 80
+        }
+      ],
+      "createdAt": "2026-01-15T10:22:00.000Z",
+      "updatedAt": "2026-01-15T14:36:00.000Z"
+    },
+    {
+      "id": "fdemo5",
+      "callsign": "FAUCON 33",
+      "type": "PTR",
+      "crew": "LMN, TAR",
+      "pax": 0,
+      "mission": "Entraînement",
+      "notes": "Démo",
+      "takeoffPlanned": "2026-01-15T17:32:00.000Z",
+      "landingPlanned": "2026-01-15T18:47:00.000Z",
+      "enduranceMin": 110,
+      "takeoffActual": null,
+      "landingActual": null,
+      "fuel": null,
+      "closed": false,
+      "deleted": false,
+      "sequences": [],
+      "createdAt": "2026-01-15T10:22:00.000Z",
+      "updatedAt": "2026-01-15T14:36:00.000Z"
+    }
+  ],
+  "log": [
+    {
+      "id": 1,
+      "at": "2026-01-15T10:20:00.000Z",
+      "kind": "note",
+      "text": "Prise de quart. Vent 040/18 kt, mer 3, visibilité > 10 km (démo)",
+      "flightId": null
+    },
+    {
+      "id": 2,
+      "at": "2026-01-15T10:22:00.000Z",
+      "kind": "system",
+      "text": "Vol créé : MOUETTE 12 (DPN)",
+      "flightId": "fdemo1",
+      "callsign": "MOUETTE 12"
+    },
+    {
+      "id": 3,
+      "at": "2026-01-15T10:42:00.000Z",
+      "kind": "deck",
+      "text": "Pont vert",
+      "flightId": null,
+      "deck": "vert"
+    },
+    {
+      "id": 4,
+      "at": "2026-01-15T10:54:00.000Z",
+      "kind": "dec",
+      "text": "Décollage — 4 pax",
+      "flightId": "fdemo1",
+      "callsign": "MOUETTE 12"
+    },
+    {
+      "id": 5,
+      "at": "2026-01-15T11:02:00.000Z",
+      "kind": "deck",
+      "text": "Pont rouge",
+      "flightId": null,
+      "deck": "rouge"
+    },
+    {
+      "id": 6,
+      "at": "2026-01-15T11:22:00.000Z",
+      "kind": "system",
+      "text": "Vol créé : RAPACE 21 (CMN)",
+      "flightId": "fdemo2",
+      "callsign": "RAPACE 21"
+    },
+    {
+      "id": 7,
+      "at": "2026-01-15T11:32:00.000Z",
+      "kind": "system",
+      "text": "Vol créé : FAUCON 32 (PTR)",
+      "flightId": "fdemo3",
+      "callsign": "FAUCON 32"
+    },
+    {
+      "id": 8,
+      "at": "2026-01-15T12:34:00.000Z",
+      "kind": "deck",
+      "text": "Pont vert",
+      "flightId": null,
+      "deck": "vert"
+    },
+    {
+      "id": 9,
+      "at": "2026-01-15T12:40:00.000Z",
+      "kind": "app",
+      "text": "Appontage",
+      "flightId": "fdemo1",
+      "callsign": "MOUETTE 12"
+    },
+    {
+      "id": 10,
+      "at": "2026-01-15T12:44:00.000Z",
+      "kind": "pax",
+      "text": "Pax : 4 pax débarqués",
+      "flightId": "fdemo1",
+      "callsign": "MOUETTE 12"
+    },
+    {
+      "id": 11,
+      "at": "2026-01-15T12:58:00.000Z",
+      "kind": "deck",
+      "text": "Pont vert",
+      "flightId": null,
+      "deck": "vert"
+    },
+    {
+      "id": 12,
+      "at": "2026-01-15T13:04:00.000Z",
+      "kind": "dec",
+      "text": "Décollage",
+      "flightId": "fdemo2",
+      "callsign": "RAPACE 21"
+    },
+    {
+      "id": 13,
+      "at": "2026-01-15T13:10:00.000Z",
+      "kind": "deck",
+      "text": "Pont rouge",
+      "flightId": null,
+      "deck": "rouge"
+    },
+    {
+      "id": 14,
+      "at": "2026-01-15T13:22:00.000Z",
+      "kind": "radio",
+      "text": "Contact radio — 3 pax à bord",
+      "flightId": "fdemo2",
+      "callsign": "RAPACE 21"
+    },
+    {
+      "id": 15,
+      "at": "2026-01-15T13:24:00.000Z",
+      "kind": "correction",
+      "text": "0 pax à bord (erreur de saisie)",
+      "flightId": "fdemo2",
+      "callsign": "RAPACE 21",
+      "correctsId": 14
+    },
+    {
+      "id": 16,
+      "at": "2026-01-15T13:57:00.000Z",
+      "kind": "deck",
+      "text": "Pont vert",
+      "flightId": null,
+      "deck": "vert"
+    },
+    {
+      "id": 17,
+      "at": "2026-01-15T14:04:00.000Z",
+      "kind": "dec",
+      "text": "Décollage — 2 pax",
+      "flightId": "fdemo3",
+      "callsign": "FAUCON 32"
+    },
+    {
+      "id": 18,
+      "at": "2026-01-15T14:09:00.000Z",
+      "kind": "deck",
+      "text": "Pont rouge",
+      "flightId": null,
+      "deck": "rouge"
+    },
+    {
+      "id": 19,
+      "at": "2026-01-15T14:12:00.000Z",
+      "kind": "system",
+      "text": "Vol créé : PÉLICAN 45 (DPN)",
+      "flightId": "fdemo4",
+      "callsign": "PÉLICAN 45"
+    },
+    {
+      "id": 20,
+      "at": "2026-01-15T14:22:00.000Z",
+      "kind": "system",
+      "text": "Vol créé : FAUCON 33 (PTR)",
+      "flightId": "fdemo5",
+      "callsign": "FAUCON 33"
+    },
+    {
+      "id": 21,
+      "at": "2026-01-15T14:36:00.000Z",
+      "kind": "fuel",
+      "text": "Carburant : autonomie restante 1 h 26",
+      "flightId": "fdemo3",
+      "callsign": "FAUCON 32",
+      "value": 86
+    },
+    {
+      "id": 22,
+      "at": "2026-01-15T14:40:00.000Z",
+      "kind": "radio",
+      "text": "Contact radio — RAS, secteur nord",
+      "flightId": "fdemo2",
+      "callsign": "RAPACE 21"
+    }
+  ],
+  "nextLogId": 23,
+  "lastExport": null,
+  "updatedAt": "2026-01-15T14:42:00.000Z"
+}

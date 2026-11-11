@@ -1,5 +1,5 @@
 const BASE = /*__BASE__*/ "";
-const CACHE = /*__CACHE__*/ "repere-dev";
+const CACHE = /*__CACHE__*/ "repere-dev-2";
 const INDEX = `${BASE}/index.html`;
 const PRECACHE = /*__PRECACHE__*/ [];
 
@@ -44,6 +44,9 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (BASE && !url.pathname.startsWith(`${BASE}/`) && url.pathname !== BASE) return;
+  // Pont·Line est une autre application (en ligne : /Rep-re/pontline/). Ne pas l’intercepter ni la mettre en cache.
+  const pontline = `${BASE}/pontline`;
+  if (url.pathname === pontline || url.pathname.startsWith(`${pontline}/`)) return;
 
   if (request.mode === "navigate") {
     event.respondWith(

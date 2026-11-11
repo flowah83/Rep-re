@@ -1,0 +1,188 @@
+PONT·LINE — Version 5.3
+Aide personnelle pour suivre les vols d'hélicoptères à bord. Fonctionne sans Internet.
+Outil NON CERTIFIÉ : les procédures du bord, la radio et les documents officiels font toujours foi.
+
+=== PASSER DE LA VERSION 4 À LA VERSION 5 (5 minutes) ===
+1. Dans la version 4 : « Données » > « Exporter la sauvegarde (JSON) ». Garder ce fichier (clé USB par exemple).
+2. Fermer toutes les fenêtres Pont·Line.
+3. Extraire pontline-v5.zip, puis copier le contenu du dossier PontLine à la place de l'ancien
+   (par exemple Documents\PontLine), en remplaçant les fichiers.
+4. Double-cliquer sur index.html, avec le MÊME navigateur qu'avant. Vos vols et votre main courante
+   reviennent tout seuls ; une ligne « Données de la version 4 migrées automatiquement vers la version 5 »
+   s'ajoute. Le dossier de sauvegarde reste le même (si le bandeau « SAUVEGARDE FICHIER en pause »
+   apparaît : cliquer « Autoriser »).
+5. Normal juste après : chaque vol en l'air depuis plus de 30 min sans « Contact radio » noté affiche
+   un bandeau orange « OPS NORMAL attendu ». Cliquer « Radio ✓ » quand le contact est fait.
+6. Si rien n'apparaît au point 4 : voir plus bas « NAVIGATEUR VIDÉ : REPRENDRE D'ABORD ».
+On peut revenir à la version 4 en remettant ses fichiers, mais gardez plutôt la V5 : les lignes « ETA » et
+« Séquence » y deviendraient de simples notes.
+
+=== VERSION 5.3 (programmer à l'avance : pont vert / rouge et ravitaillement) ===
+Programmer l'état du pont à une heure (exemple : pont vert de 16:30 à 17:00) :
+  1. Cliquer sur la ligne ÉTAT DU PONT de la timeline, à peu près à l'heure voulue
+     (ou bouton PONT en haut, puis « Programmer… » ; ou Tab jusqu'à « ÉTAT DU PONT » puis Entrée).
+  2. Une petite fenêtre s'ouvre : choisir « Pont vert » ou « Pont rouge », corriger l'heure si besoin
+     (heure bord 16:30, ou heure Z : 1330Z). « Jusqu'à » est facultatif (heure de fin).
+  3. Entrée (ou « Programmer »). Une bande en pointillés hachurés « vert 16:30–17:00 » apparaît en bas de
+     la ligne ÉTAT DU PONT. Le pont réel reste dessiné en plein, en haut de la même ligne.
+  Le pont NE CHANGE JAMAIS tout seul. À 16:30, un bandeau orange (un bip) demande
+  « Pont vert prévu 16:30 (13:30Z) — confirmer ? » :
+     - « Confirmer : pont vert » = le changement est noté dans la main courante à l'heure réelle ;
+     - « Ignorer » = rien ne change (noté « rappel ignoré »).
+  Si une fin est prévue, à 17:00 : « Fin du pont vert prévue 17:00 — passer au pont rouge ? ».
+  Modifier ou supprimer : cliquer sur la bande en pointillés (ou sur son bouton dans la petite fenêtre).
+  Programmer, modifier, supprimer et ignorer s'annulent avec « ↶ Annuler » en haut ; tout est écrit
+  dans la main courante avec le mot « prévu ».
+Programmer un ravitaillement (c'était déjà possible, c'est plus rapide) :
+  - cliquer dans la ligne du vol à l'heure voulue : « Ravitaillement » est le premier choix (déjà choisi) ;
+  - ou dans la fiche du vol : bouton « + Ravitaillement », puis taper l'heure.
+  À l'heure prévue, un bandeau « ALPHA : ravitaillement prévu 17:10 — confirmer ? » : « Confirmer » note
+  « Ravitaillement commencé » ; pour la nouvelle autonomie, utiliser ensuite « Carburant… ».
+Passer de la 5.0, 5.1 ou 5.2 à la 5.3 : mêmes étapes que plus haut (exporter, remplacer les fichiers,
+rouvrir). Les données sont converties toutes seules (ligne « migrées automatiquement vers la version 6 »).
+
+=== VERSION 5.2 (PC à la souris, sans écran tactile) ===
+Voir les autres hélicoptères de la bande quand ils ne tiennent pas tous à l'écran :
+- boutons ◀ et ▶ aux deux bouts de la bande : un clic = une case. « +2 vols » sous la flèche dit combien
+  de vols sont cachés de ce côté. Flèche grisée = rien de plus de ce côté ;
+- ou la molette de la souris, la flèche de la souris posée sur la bande (pas besoin de la touche Maj) ;
+- ou la barre de défilement sous la bande ;
+- au clavier : Tab jusqu'à ◀ ou ▶ puis Entrée ; Tab sur les boutons d'une case cachée l'affiche aussi.
+Rien dans Pont·Line ne demande d'écran tactile ni de geste au pavé tactile.
+Passer de la 5.0 ou 5.1 à la 5.2 : mêmes étapes que plus haut ; les données ne changent pas de format.
+
+=== VERSION 5.1 (petite mise à jour de la 5) ===
+- Les cases des hélicoptères (bande au-dessus de la timeline) sont plus hautes et moins larges, sur 3 lignes :
+  1. indicatif en gros, type, état (En vol / Prévu / Posé) ;
+  2. temps restant en gros, fin d'autonomie et appontage prévu (heure bord et Z) ;
+  3. boutons plus grands : Décollage ou Appontage, ETA +5 / +10 / +15, Radio ✓.
+- Les cartes sous la timeline sont masquées par défaut (la bande les remplace) : bouton « Afficher les cartes ».
+- Passer de la 5.0 à la 5.1 : mêmes étapes que plus haut (exporter, remplacer les fichiers, rouvrir) ; les données ne changent pas de format.
+
+=== CE QUI CHANGE EN VERSION 5 ===
+- Ajouter une séquence en cliquant sur la timeline :
+  1. Cliquer dans la ligne d'un vol, à l'heure voulue (exemple : 19:00). Une petite fenêtre s'ouvre,
+     l'heure de début est déjà remplie (arrondie à 5 min, modifiable : 19:10 ou 1610Z).
+  2. Choisir le type (Ravito, Pax, Treuil, VERTREP, Mise en route, Vol, Autre) et la durée (15, 30, 45, 60
+     ou un nombre de minutes). Pont·Line se souvient du dernier choix.
+  3. Entrée (ou « Ajouter ») : c'est fait, et c'est écrit dans la main courante. Échap : rien n'est ajouté.
+  Si la séquence finit après la fin d'autonomie, un cadre orange le dit, mais l'ajout se fait quand même.
+  Erreur ? Bouton « Annuler » en haut. Au clavier : Tab jusqu'au nom du vol, puis touche S.
+  La fiche du vol s'ouvre toujours en cliquant sur son NOM (à gauche de la ligne, ou dans la bande),
+  ou avec « Ouvrir la fiche » dans la petite fenêtre.
+- Bande des vols (au-dessus de la timeline, toujours visible, même sur un écran 1366×768) :
+  une case par vol avec son état, le temps restant, la fin d'autonomie, l'appontage prévu, et les boutons
+  Décollage / Appontage / ETA / Radio ✓. Orange à 30 min de la fin d'autonomie, rouge à la fin.
+  Vols en l'air en premier ; s'il y a beaucoup de vols, faire défiler la bande vers la droite.
+- ETA en un clic : après un message radio « retard de 10 minutes », cliquer « +10 » sur la case du vol
+  (ou « ETA +5 », « +15 »). L'appontage prévu est décalé et une ligne « ETA » s'écrit dans la main courante.
+  La fin d'autonomie et le H-30 ne bougent JAMAIS avec l'ETA. Erreur ? « Annuler ».
+- Rappel « ops normal » : pour chaque vol en l'air, si aucun contact radio n'est noté depuis 30 min,
+  bandeau orange « OPS NORMAL attendu » (un seul bip, pas de sonnerie répétée ; sans contact,
+  nouveau rappel à chaque intervalle, même si le bandeau a été acquitté).
+  « Radio ✓ » (sur le bandeau ou la case du vol) note « Contact radio — ops normal » et remet à zéro.
+  La saisie rapide « Contact radio » pour ce vol remet aussi à zéro.
+  Régler : « Données » > « Rappel ops normal par défaut » (0 = jamais), ou par vol dans sa fiche
+  (« Rappel ops normal », vide = réglage général, 0 = jamais pour ce vol).
+
+=== VERSION 4 (rappel) ===
+- Sauvegarde dossier plus sûre : si le fichier du dossier contient des lignes que ce navigateur n'a pas
+  (navigateur vidé, autre PC), Pont·Line N'ÉCRIT RIEN et affiche un bandeau rouge « DOSSIER » :
+  « Reprendre ces données » (conseillé) ou « Écraser quand même… » (une copie est gardée).
+- Une copie par heure en plus (pontline-h-AAAAMMJJ-HH.json, les 48 dernières sont gardées).
+- Heure de l'action : sous la main courante, champ « Heure de l'action ». Vide = maintenant.
+  Boutons −1, −2, −5 min, ou taper 10:42 (heure bord) ou 0942Z. Pratique quand on note après coup.
+- Après chaque action, le choix du vol revient à « Aucun vol » : pas de note rangée sur le mauvais vol.
+- Toute action importante (décollage, appontage, suppression, import, effacement) demande une confirmation
+  dans une fenêtre Pont·Line, qui rappelle le vol et l'heure.
+- « Vol annulé… » (fiche vol, ou bandeau « décollage non saisi ») : le vol ne partira pas, plus d'alerte.
+- Heure Z affichée sur les cartes, l'axe du temps et la fiche vol, en plus de l'heure bord.
+- Vol en retard sur son appontage prévu : le bloc devient hachuré, on le voit de loin.
+- Boutons d'action directement sur les cartes et les lignes de vol.
+- Le son est actif par défaut. Il ne sonne que dans la fenêtre qui « a la main ».
+- Une alerte acquittée le reste, même après fermeture et réouverture.
+- Petit écran : affichage compact, cartes cachées automatiquement sous 800 pixels de haut, 2 bandeaux max.
+- Lecteur d'écran et clavier : Tab va sur les cartes et les vols, Entrée ou Espace les ouvre.
+- La touche V ne crée plus de vol (trop facile à taper par erreur). La touche N écrit toujours une note.
+- Le bouton « Annuler » dit ce qu'il va annuler.
+- Archivage et jauge de stockage (voir plus bas).
+
+=== PREMIER JOUR (nouvel utilisateur, 10 minutes) ===
+1. Copier pontline-v5.zip sur le PC. Clic droit > « Extraire tout… » > Documents\PontLine.
+2. Double-cliquer sur index.html. Il doit s'ouvrir dans Chrome ou Edge (pas Firefox, voir plus bas).
+   Pas besoin d'Internet.
+3. Raccourci : clic droit sur index.html > « Envoyer vers » > « Bureau (créer un raccourci) ».
+4. Bandeau « AUCUNE DONNÉE » : c'est normal la première fois, cliquer « Ignorer ».
+5. « Données » : choisir le fuseau du bord.
+6. « Données » > « Choisir le dossier de sauvegarde… » (voir plus bas). Ne pas sauter cette étape.
+7. « Données » > « Tester le son » : vérifier qu'on l'entend (haut-parleurs allumés).
+8. Comparer l'heure bord et l'heure Z en haut avec l'horloge du bord, puis « Heures justes ».
+9. Pour essayer sans risque : « Données » > « Importer une sauvegarde… » > demo\pontline-demo.json.
+   Avant de commencer pour de vrai : « Données » > « Effacer » (taper EFFACER).
+
+=== NAVIGATEUR VIDÉ : REPRENDRE D'ABORD, SAISIR ENSUITE ===
+Si Pont·Line s'ouvre vide alors que vous aviez des données (nettoyage du navigateur, autre PC, autre navigateur) :
+1. NE RIEN SAISIR.
+2. Sur le bandeau « AUCUNE DONNÉE » : « Reprendre depuis le dossier de sauvegarde… », choisir le dossier
+   habituel et autoriser. Ou « Importer un fichier… » > pontline-sauvegarde.json (ou le dernier export).
+3. Vérifier que les vols et la main courante sont revenus, puis seulement reprendre les saisies.
+Si vous avez déjà saisi quelque chose : pas de panique, le dossier n'est pas écrasé. Le bandeau rouge
+« DOSSIER » propose « Reprendre ces données » : les lignes du fichier reviennent, et ce que vous avez saisi
+entre-temps est ajouté à la suite.
+
+=== SAUVEGARDE AUTOMATIQUE DANS UN DOSSIER (à faire une fois) ===
+1. « Données » > « Choisir le dossier de sauvegarde… ».
+2. Créer ou choisir un dossier, par exemple Documents\PontLine-sauvegardes, puis valider
+   (bouton « Sélectionner un dossier » ou « Ouvrir » selon le PC).
+3. Le navigateur demande s'il peut modifier les fichiers de ce dossier : cliquer le bouton qui autorise
+   (« Autoriser » ou « Modifier les fichiers »).
+4. En haut de l'écran : « Fichier ✓ 11:06 » = heure de la dernière copie. Pont·Line réécrit
+   pontline-sauvegarde.json quelques secondes après chaque saisie, plus une copie par jour
+   (pontline-AAAAMMJJ.json) et une par heure (pontline-h-AAAAMMJJ-HH.json).
+5. Après un redémarrage du PC ou du navigateur : bandeau « SAUVEGARDE FICHIER en pause ».
+   Cliquer « Autoriser » sur le bandeau, puis accepter la question du navigateur. C'est tout.
+Sans dossier (ou si l'écriture est impossible) : un fichier pontline-…-auto.json est téléchargé tout seul
+toutes les 4 heures s'il y a du nouveau.
+
+=== ARCHIVER (nouvelle mission, ou jauge au-dessus de 70 %) ===
+Le navigateur a une place limitée. « Données » montre la jauge « Stockage du navigateur utilisé ».
+Au-dessus de 70 %, un bandeau « STOCKAGE » apparaît.
+« Données » > « Nouvelle mission / archiver… » : tout est exporté dans un fichier …-archive.json
+(Téléchargements, et le dossier de sauvegarde s'il est actif), puis Pont·Line ne garde que les vols en cours
+et les 7 derniers jours. Rien n'est perdu : l'archive se réimporte si besoin.
+
+=== UTILISER ===
+- « + Vol » : indicatif, type (PTR, CMN, DPN), décollage prévu, autonomie avec l'unité (« 2h30 », « 150min »).
+  H-30 et fin d'autonomie se placent seuls.
+- Main courante (à droite) : choisir le vol, puis Décollage, Appontage, Pont vert… ou écrire une note + Entrée.
+- On n'efface jamais une ligne : « Corriger » ajoute une correction, l'ancienne reste barrée.
+- Carburant : autonomie RESTANTE en durée (« 1h10 »), jamais en kg.
+- Bouton « Nuit » : écran noir et rouge.
+- Son : se répète toutes les 30 s pour une alerte rouge. « 🔇 Son bloqué » en haut si le navigateur le bloque :
+  cliquer n'importe où dans Pont·Line.
+
+=== NAVIGATEUR PAR DÉFAUT ===
+Si index.html s'ouvre dans Firefox (ou un autre navigateur) : clic droit sur index.html > « Ouvrir avec »
+> Microsoft Edge ou Google Chrome. Pour que ce soit toujours le cas : « Ouvrir avec » > « Choisir une autre
+application » > Edge ou Chrome > cocher « Toujours utiliser cette application ».
+Firefox ne sait pas écrire dans un dossier de sauvegarde. Toujours utiliser le même navigateur.
+
+=== CONFIDENTIALITÉ ===
+- Ne saisir AUCUNE information classifiée. Rien ne quitte le PC, mais l'outil n'est pas homologué.
+- Dans ce navigateur, n'ouvrez pas d'autres pages HTML enregistrées sur le PC (elles pourraient lire les
+  données Pont·Line). Le mieux : un profil Chrome/Edge réservé à Pont·Line. Raccourci avec, dans « Cible » :
+  "C:\Program Files\Google\Chrome\Application\chrome.exe" --user-data-dir="C:\PontLine-profil" "C:\Users\…\Documents\PontLine\index.html"
+  (toujours ouvrir Pont·Line par ce raccourci, sinon les données ne sont pas au même endroit).
+
+=== BON À SAVOIR ===
+- Ne pas utiliser la navigation privée et ne pas vider les données du navigateur.
+- Les données sont dans le navigateur, pas dans le dossier PontLine : une copie du dossier ailleurs
+  sur le même PC voit les mêmes données. Un autre navigateur, lui, ne les voit pas.
+- Une seule fenêtre à la fois : une deuxième passe en « LECTURE SEULE » (bouton « Prendre la main ici »).
+  Si la fenêtre qui avait la main est fermée ou bloquée, l'autre la reprend seule en quelques secondes.
+- Fenêtre réduite longtemps : Chrome ralentit la page, une alerte peut arriver jusqu'à 1 min en retard.
+  Garder Pont·Line visible.
+- Si le PC s'éteint d'un coup moins d'une seconde après une saisie, cette dernière saisie peut manquer
+  (vérifié : une saisie de plus de 20 millisecondes est déjà enregistrée).
+- Vérification technique : double-cliquer sur tests.html, tout doit être vert.
+- sw.js, manifest.json et icones ne servent qu'à la version en ligne : les laisser.
