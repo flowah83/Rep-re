@@ -1,4 +1,4 @@
-PONT·LINE — Version 5.3
+PONT·LINE — Version 5.4
 Aide personnelle pour suivre les vols d'hélicoptères à bord. Fonctionne sans Internet.
 Outil NON CERTIFIÉ : les procédures du bord, la radio et les documents officiels font toujours foi.
 
@@ -16,6 +16,14 @@ Outil NON CERTIFIÉ : les procédures du bord, la radio et les documents officie
 6. Si rien n'apparaît au point 4 : voir plus bas « NAVIGATEUR VIDÉ : REPRENDRE D'ABORD ».
 On peut revenir à la version 4 en remettant ses fichiers, mais gardez plutôt la V5 : les lignes « ETA » et
 « Séquence » y deviendraient de simples notes.
+
+=== VERSION 5.4 (affichage adapté à tous les PC) ===
+L'écran s'adapte tout seul à la taille du PC : petit portable (1024×600, 1366×768), écran de bureau
+(1920×1080), grand écran ou écran 4K. Sur un grand écran, tout est simplement plus grand et plus lisible ;
+sur un petit écran, tout tient sans faire défiler la page. Le zoom du navigateur (Ctrl + molette,
+de 80 % à 150 %) et la mise à l'échelle de Windows (125 %, 150 %) sont pris en compte.
+Rien à régler. Vos données ne changent pas (pas de migration).
+Conseil : pour avoir le plus de place, mettre le navigateur en plein écran (bouton ⛶ ou touche F11).
 
 === VERSION 5.3 (programmer à l'avance : pont vert / rouge et ravitaillement) ===
 Programmer l'état du pont à une heure (exemple : pont vert de 16:30 à 17:00) :

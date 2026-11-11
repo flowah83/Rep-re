@@ -66,7 +66,7 @@
   </section>
 
   <aside id="journal" class="carte-zone">
-    <h2>Main courante <span id="jCompte" class="mono" style="font-size:12px;color:var(--txt3)"></span></h2>
+    <h2>Main courante <span id="jCompte" class="mono" style="font-size:0.75rem;color:var(--txt3)"></span></h2>
     <select id="jVol" class="champ" title="Vol concerné" aria-label="Vol concerné par la prochaine saisie"></select>
     <div class="rapides" id="rapides">
       <button data-k="dec">Décollage</button>
@@ -78,7 +78,7 @@
       <button data-k="radio">Contact radio</button>
       <button data-k="incident">Incident…</button>
     </div>
-    <div class="ligne-heure" id="jHeureMoins"><label for="jHeure">Heure de l'action</label><input id="jHeure" class="champ mono" placeholder="maintenant" maxlength="7" autocomplete="off" title="Vide = maintenant. Sinon HH:MM bord, ou 0702Z"><button class="btn petit" data-moins="1" title="Il y a 1 minute">−1</button><button class="btn petit" data-moins="2" title="Il y a 2 minutes">−2</button><button class="btn petit" data-moins="5" title="Il y a 5 minutes">−5 min</button><span id="jHeureAide" class="aide" aria-live="polite"></span></div>
+    <div class="ligne-heure" id="jHeureMoins"><label for="jHeure">Heure<span class="mot"> de l'action</span></label><input id="jHeure" class="champ mono" placeholder="maintenant" maxlength="7" autocomplete="off" title="Vide = maintenant. Sinon HH:MM bord, ou 0702Z"><button class="btn petit" data-moins="1" title="Il y a 1 minute">−1</button><button class="btn petit" data-moins="2" title="Il y a 2 minutes">−2</button><button class="btn petit" data-moins="5" title="Il y a 5 minutes">−5 min</button><span id="jHeureAide" class="aide" aria-live="polite"></span></div>
     <div id="jPending" class="hidden"></div>
     <div class="ligne-saisie">
       <input id="jTexte" class="champ" autocomplete="off" maxlength="2000" title="Raccourci : N" aria-label="Texte de la ligne de main courante" aria-keyshortcuts="N" placeholder="Écrire une note… (Entrée = horodater)">
@@ -122,7 +122,7 @@
       <div class="large"><label for="fvNotes">Remarques</label><input id="fvNotes" class="champ" autocomplete="off" maxlength="1000"></div>
     </div>
     <div class="calc" id="fvCalc"></div>
-    <div class="fen-tete" style="margin-top:18px">
+    <div class="fen-tete" style="margin-top:1.125rem">
       <div class="section-titre" style="margin:0">Séquences du vol</div>
       <div class="esp"></div>
       <button class="btn petit" id="fvModPax">Modèle : rotation pax</button>
@@ -143,22 +143,22 @@
 
 <!-- Fenêtre : données et réglages -->
 <div id="modalReglages" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="rgTitre">
-  <div class="fen" style="width:min(820px,100%)">
+  <div class="fen" style="width:min(51.25rem,100%)">
     <div class="fen-tete"><h2 id="rgTitre">Données et réglages</h2><div class="esp"></div><button class="btn" id="rgFermer">Fermer</button></div>
 
     <div class="section-titre">Sauvegarde automatique dans un dossier (recommandé)</div>
     <div class="info-ligne">Choisissez une fois un dossier sur le PC (par exemple <b>Documents\PontLine-sauvegardes</b>). Pont·Line y écrit tout seul, quelques secondes après chaque saisie, le fichier <b>pontline-sauvegarde.json</b> et une copie par jour. Si le navigateur est vidé, il suffit d'importer ce fichier.</div>
     <div class="info-ligne" id="rgDossierEtat"></div>
-    <div class="pied" style="margin-top:6px"><button class="btn primaire" id="rgDossier">Choisir le dossier de sauvegarde…</button><button class="btn" id="rgDossierOublier">Ne plus utiliser ce dossier</button></div>
+    <div class="pied" style="margin-top:0.375rem"><button class="btn primaire" id="rgDossier">Choisir le dossier de sauvegarde…</button><button class="btn" id="rgDossierOublier">Ne plus utiliser ce dossier</button></div>
 
     <div class="section-titre">Sauvegarde</div>
     <div class="info-ligne" id="rgInfo"></div>
-    <div class="pied" style="margin-top:6px">
+    <div class="pied" style="margin-top:0.375rem">
       <button class="btn primaire" id="rgExportJSON">Exporter la sauvegarde (JSON)</button>
       <button class="btn" id="rgExportCSV">Exporter la main courante (CSV)</button>
       <button class="btn" id="rgImprimer">Imprimer la main courante</button>
       <button class="btn" id="rgCompteRendu">Compte rendu de quart…</button>
-      <input id="rgCRDebut" class="champ mono" style="max-width:240px" placeholder="depuis HH:MM" title="Vide = les 12 dernières heures" autocomplete="off" aria-label="Début du compte rendu (heure bord)">
+      <input id="rgCRDebut" class="champ mono" style="max-width:15rem" placeholder="depuis HH:MM" title="Vide = les 12 dernières heures" autocomplete="off" aria-label="Début du compte rendu (heure bord)">
       <button class="btn" id="rgImport">Importer une sauvegarde…</button>
       <input type="file" id="rgFichier" accept=".json,application/json" class="hidden">
     </div>
@@ -176,7 +176,7 @@
       <div><label for="rgConflits">Détection des conflits de pont</label><select id="rgConflits" class="champ"><option value="1">Activée (pont à une seule place)</option><option value="0">Désactivée</option></select></div>
       <div><label for="rgMarge">Marge autour d'un décollage / appontage (min)</label><input id="rgMarge" class="champ mono" inputmode="numeric"></div>
       <div><label for="rgEveil">Garder l'écran allumé</label><select id="rgEveil" class="champ"><option value="1">Oui</option><option value="0">Non</option></select><div class="aide" id="rgEveilEtat"></div></div>
-      <div><label for="rgSon">Son pour les alertes</label><select id="rgSon" class="champ"><option value="1">Oui (par défaut)</option><option value="0">Non — alertes silencieuses</option></select><div class="aide">Rouge : 3 bips répétés toutes les 30 s jusqu'à « Acquitter ». H-30 : un bip grave.</div><button class="btn petit" id="rgTestSon" style="margin-top:6px">Tester le son</button></div>
+      <div><label for="rgSon">Son pour les alertes</label><select id="rgSon" class="champ"><option value="1">Oui (par défaut)</option><option value="0">Non — alertes silencieuses</option></select><div class="aide">Rouge : 3 bips répétés toutes les 30 s jusqu'à « Acquitter ». H-30 : un bip grave.</div><button class="btn petit" id="rgTestSon" style="margin-top:0.375rem">Tester le son</button></div>
       <div><label for="rgAutoClore">Clore les vols posés après (min)</label><input id="rgAutoClore" class="champ mono" inputmode="numeric"><div class="aide">0 = jamais. Un vol clos quitte la timeline (toujours visible avec « Afficher les vols terminés »).</div></div>
       <div><label for="rgOps">Rappel « ops normal » par défaut (min)</label><input id="rgOps" class="champ mono" inputmode="numeric" maxlength="3"><div class="aide">Contact radio attendu toutes les N minutes pour chaque vol en l'air (bandeau orange, un seul bip). 0 = jamais. Réglable aussi par vol dans sa fiche.</div></div>
       <div><label for="rgAutoDl">Téléchargement automatique de secours (heures)</label><input id="rgAutoDl" class="champ mono" inputmode="numeric"><div class="aide">Si aucun dossier n'est actif : une sauvegarde va dans Téléchargements toutes les N heures. 0 = jamais.</div></div>
@@ -190,7 +190,7 @@
     <div class="section-titre" style="color:var(--danger)">Tout effacer</div>
     <div class="info-ligne">Efface tous les vols et la main courante de ce navigateur. Une sauvegarde est téléchargée avant.</div>
     <div class="pied"><button class="btn danger" id="rgEffacer">Tout effacer…</button></div>
-    <div class="info-ligne" style="margin-top:18px" id="rgVersion">Pont·Line V2 — outil d'aide personnel, non certifié. Les procédures du bord font foi. Aucune donnée ne quitte cet appareil.</div>
+    <div class="info-ligne" style="margin-top:1.125rem" id="rgVersion">Pont·Line V2 — outil d'aide personnel, non certifié. Les procédures du bord font foi. Aucune donnée ne quitte cet appareil.</div>
   </div>
 </div>
 
