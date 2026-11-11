@@ -641,6 +641,6 @@ window.PL = window.PL || {};
     annuler: annuler, prochaineAnnulation: prochaineAnnulation, viderPile: viderPile, memoriser: memoriser, ajouterAvant: ajouterAvant,
     ajouterSequence: ajouterSequence, eta: eta, baseEta: baseEta, opsNormal: opsNormal, dernierContact: dernierContact, opsEnRetard: opsEnRetard, radioOk: radioOk, nomSeq: nomSeq,
     planParId: planParId, programmerPont: programmerPont, modifierPlan: modifierPlan, supprimerPlan: supprimerPlan, confirmerPlan: confirmerPlan, ignorerPlan: ignorerPlan, rappelsPont: rappelsPont, rappelsRavito: rappelsRavito, traiterRavito: traiterRavito, libPlan: libPlan, plageOk: plageOk,
-    cloreAuto: cloreAuto, controleAction: controleAction, ligneParId: ligneParId, corrigeable: corrigeable, simulerCorrection: simulerCorrection, corrigerAction: corrigerAction, redecoller: redecoller, controleAutonomie: controleAutonomie, AUTO_SEUIL: AUTO_SEUIL, AUTO_MIN: AUTO_MIN, AUTO_MAX: AUTO_MAX, VERSION: '5.4'
+    cloreAuto: cloreAuto, controleAction: controleAction, ligneParId: ligneParId, corrigeable: corrigeable, simulerCorrection: simulerCorrection, corrigerAction: corrigerAction, redecoller: redecoller, controleAutonomie: controleAutonomie, AUTO_SEUIL: AUTO_SEUIL, AUTO_MIN: AUTO_MIN, AUTO_MAX: AUTO_MAX, VERSION: '5.5'
   };
 })(window.PL);

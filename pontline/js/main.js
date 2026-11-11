@@ -15,7 +15,7 @@ window.PL = window.PL || {};
   /* ---- V4 (audit V3b, P2-7) : mise à jour ciblée d'une zone ----
      Rien ne change si le contenu est identique (sélection de texte, focus et défilement intacts) ; sinon le focus
      clavier est remis sur l'élément équivalent (même id ou mêmes attributs data-…). */
-  var CLES = ['data-ack', 'data-act', 'data-cor', 'data-decolle', 'data-annule', 'data-vol', 'data-k', 'data-restaurer', 'data-radio', 'data-eta', 'data-ouvrir', 'data-pconf', 'data-pign', 'data-rconf', 'data-rign'];
+  var CLES = ['data-ack', 'data-act', 'data-cor', 'data-decolle', 'data-annule', 'data-vol', 'data-k', 'data-restaurer', 'data-radio', 'data-eta', 'data-ouvrir', 'data-pconf', 'data-pign', 'data-rconf', 'data-rign', 'data-seg'];
   function cleFocus(el) {
     if (!el || !el.getAttribute) return null;
     if (el.id) return '#' + CSS.escape(el.id);
@@ -436,7 +436,7 @@ window.PL = window.PL || {};
     demarrageVide = !PL.etat.data.flights.length && !PL.etat.data.log.length;
     S.persister();
     Y.initEnLigne();
-    PL.timeline.init(); PL.vols.init(); PL.journal.init(); PL.bande.init(); PL.seqclic.init(); PL.pontprog.init();
+    PL.timeline.init(); PL.etiquettes.init(); PL.vols.init(); PL.journal.init(); PL.bande.init(); PL.seqclic.init(); PL.pontprog.init();
     S.initVerrou(function () { S.ouvrirIDB(function () {
       S.recupererSiPlusRecent(function (repris) {
         if (repris) toast('Dernières saisies récupérées depuis le stockage principal.');
