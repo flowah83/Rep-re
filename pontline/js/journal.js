@@ -13,6 +13,28 @@ window.PL = window.PL || {};
     correction: 'Correction : écrire le texte corrigé, puis Entrée'
   };
 
+  // V5.6 (audit V8, P1-1) : après un décollage ou un appontage noté, les boutons d'état de CE vol sont verrouillés
+  // ~1,5 s : un double-clic ne note plus un appontage juste après le décollage. Un seul clic suffit toujours, sans fenêtre.
+  var verrous = {}, verrouTimer = null;
+  function verrouReste(id) { var v = verrous[id]; if (!v) return 0; var r = v - Date.now(); if (r <= 0) { delete verrous[id]; return 0; } return r; }
+  function verrouiller(id) {
+    var ms = PL.journal && PL.journal.VERROU_MS != null ? PL.journal.VERROU_MS : 1500; if (!(ms > 0)) return;
+    verrous[id] = Date.now() + ms;
+    clearInterval(verrouTimer);
+    verrouTimer = setInterval(function () { // compte à rebours : on change seulement le texte des boutons (ils ne sont pas remplacés sous la souris), puis un dessin complet à la fin
+      var reste = Object.keys(verrous).some(function (k) { return verrouReste(k) > 0; });
+      if (reste) {
+        [].forEach.call(document.querySelectorAll('.btn.verrou[data-vol]'), function (b) { var v = btnVerrou(b.getAttribute('data-vol'), ''); if (v.cls && b.textContent !== v.lib) b.textContent = v.lib; });
+      } else { clearInterval(verrouTimer); verrouTimer = null; if (PL.ui && PL.ui.renderTout) PL.ui.renderTout(); }
+    }, 200);
+  }
+  function deverrouiller() { verrous = {}; clearInterval(verrouTimer); verrouTimer = null; }
+  // attributs + libellé d'un bouton d'état (Décollage / Appontage) pendant le verrou : aria-disabled (pas « disabled », pour qu'un clic ne tombe pas sur la ligne)
+  function btnVerrou(id, lib) {
+    var r = verrouReste(id);
+    return r > 0 ? { cls: ' verrou', attr: ' aria-disabled="true"', lib: '✓ noté ' + (Math.ceil(r / 100) / 10).toFixed(1).replace('.', ',') + ' s', titre: 'Changement d\'état noté : bouton verrouillé 1,5 s (évite le double-clic). « Annuler » reste disponible.' } : { cls: '', attr: '', lib: lib, titre: null };
+  }
+
   function volChoisi() { return $('jVol').value || null; }
   // V4 (audit V3b, P1-2) : heure de l'action (vide = maintenant). Renvoie { at } (ms, ou null = maintenant) ou { err }.
   function heureAction() {
@@ -34,9 +56,13 @@ window.PL = window.PL || {};
   // V4 (P2-10) : action lancée depuis une carte ou une ligne de la timeline
   function actionVol(id, k) {
     if (!E.peutEcrire()) return;
+    if ((k === 'dec' || k === 'app') && verrouReste(id) > 0) return; // clic répété : ignoré (V5.6)
     majSelects(); $('jVol').value = id;
     if ($('jVol').value !== id) { PL.ui.toast('Ce vol n\'est plus dans la liste des vols actifs.', true); return; }
+    var avant = (k === 'dec' || k === 'app') ? E.statut(E.volParId(id)) : null;
     rapide(k);
+    // V5.6 : état changé par ce clic (ou une rotation proposée puis validée plus tard : pas de verrou) -> verrou ~1,5 s et affichage tout de suite
+    if (avant && E.volParId(id) && E.statut(E.volParId(id)) !== avant) { verrouiller(id); if (PL.ui.renderTout) PL.ui.renderTout(); }
   }
 
   function majSelects() {
@@ -227,5 +253,5 @@ window.PL = window.PL || {};
     });
   }
 
-  PL.journal = { init: init, render: render, nomVol: nomVol, actionVol: actionVol };
+  PL.journal = { init: init, render: render, nomVol: nomVol, actionVol: actionVol, verrouReste: verrouReste, deverrouiller: deverrouiller, btnVerrou: btnVerrou, VERROU_MS: 1500 };
 })(window.PL);

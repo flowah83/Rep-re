@@ -13,7 +13,7 @@ window.PL = window.PL || {};
   function zz(ms) { return ' <small class="zh">' + T.z(ms) + '</small>'; }
   // V4 (P2-10) : actions directes selon le statut
   function actions(f, st) {
-    var b = function (k, lib, t) { return '<button class="btn petit act" data-act="' + k + '" data-vol="' + esc(f.id) + '" title="' + esc(t) + '">' + lib + '</button>'; };
+    var b = function (k, lib, t) { var v = k === 'dec' || k === 'app' ? PL.journal.btnVerrou(f.id, lib) : { cls: '', attr: '', lib: lib, titre: null }; return '<button class="btn petit act' + v.cls + '" data-act="' + k + '" data-vol="' + esc(f.id) + '"' + v.attr + ' title="' + esc(v.titre || t) + '">' + v.lib + '</button>'; };
     if (st === 'prevu') return b('dec', 'Décollage', 'Décollage de ' + f.callsign + ' maintenant (ou à l\'heure du champ « Heure de l\'action »)');
     if (st === 'envol') return b('app', 'Appontage', 'Appontage de ' + f.callsign) + b('fuel', 'Carburant…', 'Autonomie restante de ' + f.callsign);
     if (st === 'pose') return b('dec', 'Redécollage', 'Nouvelle rotation de ' + f.callsign);

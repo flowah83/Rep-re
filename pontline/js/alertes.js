@@ -3,6 +3,7 @@ window.PL = window.PL || {};
 (function (PL) {
   'use strict';
   var T = PL.temps, MIN = T.MIN;
+  var RAPPEL_DEPASSE_MIN = 5; // V5.6 (audit V8, P2-2) : « DÉPASSÉE » acquittée revient toutes les 5 min tant que le vol est en l'air
 
   // Renvoie les alertes triées (danger > warn > info), plus urgentes d'abord
   function calculer(data, now) {
@@ -18,13 +19,13 @@ window.PL = window.PL || {};
       var dec = E.decollage(f), oublie = st === 'prevu' && now >= dec;
       var suff = oublie ? ' (décollage non saisi, calcul sur l\'heure prévue)' : '';
       if (st === 'envol' || oublie) {
-        if (reste <= 0) out.push({ niveau: 'danger', cle: f.id + ':depasse', vol: f.id, texte: cs + ' : fin d\'autonomie DÉPASSÉE (' + T.hm(fin, off) + ')' + suff });
-        else if (now >= h30) out.push({ niveau: 'warn', cle: f.id + ':h30', vol: f.id, texte: cs + ' : H-30 passé — fin d\'autonomie ' + T.hm(fin, off) + ' (dans ' + T.fmtDuree(reste) + ')' + suff });
+        if (reste <= 0) out.push({ niveau: 'danger', cle: f.id + ':depasse', vol: f.id, sous: 0, urg: fin, rappelMin: RAPPEL_DEPASSE_MIN, texte: cs + ' : fin d\'autonomie DÉPASSÉE (' + T.hm(fin, off) + ')' + suff + ' — depuis ' + T.fmtDuree(Math.max(1, -reste)) });
+        else if (now >= h30) out.push({ niveau: 'warn', cle: f.id + ':h30', vol: f.id, sous: 2, urg: fin, texte: cs + ' : H-30 passé — fin d\'autonomie ' + T.hm(fin, off) + ' (dans ' + T.fmtDuree(reste) + ')' + suff });
       }
       if (app != null && app > fin) {
-        out.push({ niveau: 'danger', cle: f.id + ':app>' + app, vol: f.id, texte: cs + ' : appontage prévu ' + T.hm(app, off) + ' APRÈS la fin d\'autonomie ' + T.hm(fin, off) });
+        out.push({ niveau: 'danger', cle: f.id + ':app>' + app, vol: f.id, sous: 1, urg: fin, texte: cs + ' : appontage prévu ' + T.hm(app, off) + ' APRÈS la fin d\'autonomie ' + T.hm(fin, off) });
       } else if (app != null && app > h30) {
-        out.push({ niveau: 'warn', cle: f.id + ':apph30>' + app, vol: f.id, texte: cs + ' : appontage prévu ' + T.hm(app, off) + ' après H-30 (' + T.hm(h30, off) + ')' });
+        out.push({ niveau: 'warn', cle: f.id + ':apph30>' + app, vol: f.id, sous: 3, urg: fin, texte: cs + ' : appontage prévu ' + T.hm(app, off) + ' après H-30 (' + T.hm(h30, off) + ')' });
       }
       // V5 : rappel « ops normal » : contact radio attendu toutes les N min (orange, un seul bip par rappel ; acquitté, il revient à l'intervalle suivant)
       var ops = st === 'envol' && E.opsEnRetard ? E.opsEnRetard(f, now) : null;
@@ -57,7 +58,9 @@ window.PL = window.PL || {};
     var rang = { danger: 0, warn: 1, info: 2 };
     // audit V5 : le rappel « ops normal » passe APRÈS les autres alertes orange (décollage non saisi, H-30…), pour ne jamais les cacher
     var r = function (x) { return rang[x.niveau] + (x.ops ? 0.5 : (x.pont || x.ravito) ? 0.3 : 0); };
-    out.sort(function (a, b) { return r(a) - r(b); });
+    // V5.6 (audit V8, P2-1) : à niveau égal, le plus urgent d'abord : DÉPASSÉE (la plus ancienne d'abord), puis appontage prévu après la fin,
+    // puis la fin d'autonomie la plus proche. Le tri est stable : le reste garde son ordre.
+    out.sort(function (a, b) { return r(a) - r(b) || (a.sous != null && b.sous != null ? (a.sous - b.sous || a.urg - b.urg) : 0); });
     return out;
   }
 

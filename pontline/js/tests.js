@@ -584,6 +584,30 @@
   eq('V5.3 ravito : pas de rappel pour un vol annulé', (function () { var v = E.enregistrerVol({ callsign: 'RAV 2', type: 'PTR', takeoffPlanned: i5(30), enduranceMin: 150, sequences: [] }); E.ajouterSequence(v.id, { kind: 'ravito', start: at3(40), dur: 15 }); E.annulerVol(v.id, true); return E.rappelsRavito(at3(41)).filter(function (r) { return r.vol.id === v.id; }).length; })(), 0);
   PL.stockage.save = save53; E.viderPile();
 
+  // ================= V5.6 (lot A de l'audit V8) =================
+  (function () {
+    var n0 = Z('2026-11-11T12:00:00Z'), iso = function (m) { return new Date(n0 + m * MIN).toISOString(); };
+    var fl = function (id, cs, decMin, auto, app) { return { id: id, callsign: cs, type: 'PTR', takeoffPlanned: iso(decMin), takeoffActual: iso(decMin), enduranceMin: auto, landingPlanned: app == null ? null : iso(app), sequences: [] }; };
+    var D = E.normaliser({ app: 'pontline', schemaVersion: 6, flights: [
+      fl('v1', 'ALPHA', -100, 110),            // fin d'autonomie dans 10 min : H-30 passé
+      fl('v2', 'BRAVO', -140, 130),            // fin d'autonomie dépassée depuis 10 min
+      fl('v3', 'CHARLIE', -200, 140),          // dépassée depuis 60 min : la plus ancienne
+      fl('v4', 'DELTA', -50, 100, 70)          // appontage prévu après la fin d'autonomie (dans 50 min : fin à +50 : égal -> pas), voir ci-dessous
+    ], log: [] });
+    var al = PL.alertes.calculer(D, n0), rouges = al.filter(function (a) { return a.niveau === 'danger'; }).map(function (a) { return a.vol + ':' + a.cle.split(':')[1]; });
+    eq('V5.6 P2-1 DÉPASSÉE : la plus ancienne en premier (CHARLIE avant BRAVO)', rouges.slice(0, 2), ['v3:depasse', 'v2:depasse']);
+    eq('V5.6 P2-1 les rouges passent avant les oranges', al.map(function (a) { return a.niveau; }).join(',').replace(/(danger,)+/, 'D,').charAt(0), 'D');
+    var D2 = E.normaliser({ app: 'pontline', schemaVersion: 6, flights: [fl('a', 'AAA', -10, 100, 120), fl('b', 'BBB', -10, 100, 150), fl('c', 'CCC', -300, 100)], log: [] });
+    var r2 = PL.alertes.calculer(D2, n0).filter(function (a) { return a.niveau === 'danger'; }).map(function (a) { return a.vol + ':' + a.cle.split(':')[1].replace(/>.*/, ''); });
+    eq('V5.6 P2-1 DÉPASSÉE avant « appontage prévu après la fin », puis fin d\'autonomie la plus proche', r2, ['c:depasse', 'a:app', 'b:app']);
+    eq('V5.6 P2-2 DÉPASSÉE : rappel toutes les 5 min après acquittement, texte « depuis N min »', [al.filter(function (a) { return a.cle === 'v3:depasse'; })[0].rappelMin, /depuis 1 h/.test(al.filter(function (a) { return a.cle === 'v3:depasse'; })[0].texte)], [5, true]);
+    eq('V5.6 P2-2 les autres alertes n\'ont pas de rappel automatique', al.filter(function (a) { return a.niveau === 'warn'; }).every(function (a) { return !a.rappelMin; }), true);
+    // P2-3 : avertissement de version plus récente seulement si le schéma est vraiment plus récent (fonction pure : le stockage réel n'est pas touché)
+    var sv = E.etatVide().schemaVersion;
+    eq('V5.6 P2-3 données de la version actuelle ou plus ancienne : pas d\'avertissement', [PL.stockage.plusRecent({ schemaVersion: sv }), PL.stockage.plusRecent({ schemaVersion: sv - 1 }), PL.stockage.plusRecent({ schemaVersion: 4 }), PL.stockage.plusRecent({ schemaVersion: 5 })], [false, false, false, false]);
+    eq('V5.6 P2-3 données d\'une version plus récente : avertissement', [PL.stockage.plusRecent({ schemaVersion: sv + 1 }), PL.stockage.plusRecent({})], [true, false]);
+  })();
+
   var res = document.getElementById('resume');
   res.textContent = (ko ? '✘ ' + ko + ' ÉCHEC(S), ' : '✔ TOUS LES TESTS PASSENT — ') + ok + ' réussi(s)';
   res.className = ko ? 'ko' : 'ok';
