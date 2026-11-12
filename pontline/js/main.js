@@ -4,7 +4,7 @@ window.PL = window.PL || {};
   'use strict';
   var T = PL.temps, E = PL.etat, S = PL.stockage, Y = PL.systeme, esc = E.esc, MIN = T.MIN;
   var $ = function (id) { return document.getElementById(id); };
-  var acks = lireAcks(), avertissementVu = false, essaiVu = false, toastTimer = null, videVu = false, demarrageVide = false, confCb = null, confOuvertA = 0, confFocus = null, dernierSecours = Date.now();
+  var acks = lireAcks(), ackT = lireAckT(), alertesDeployees = false, avertissementVu = false, essaiVu = false, toastTimer = null, videVu = false, demarrageVide = false, confCb = null, confOuvertA = 0, confFocus = null, dernierSecours = Date.now();
   PL.alertesCourantes = []; PL.conflitsCourants = [];
 
   function toast(msg, ko) {
@@ -82,6 +82,7 @@ window.PL = window.PL || {};
 
   // V4 (audit V3b, P2-3) : les acquittements sont gardés (rechargement, redémarrage) ; nettoyés quand le vol n'est plus actif
   function lireAcks() { try { return JSON.parse(localStorage.getItem('pontline.acks') || '{}') || {}; } catch (e) { return {}; } }
+  function lireAckT() { try { return JSON.parse(localStorage.getItem('pontline.ackt') || '{}') || {}; } catch (e) { return {}; } }
   function garderAcks() {
     var g = {}, n = 0;
     Object.keys(acks).forEach(function (k) {
@@ -89,9 +90,16 @@ window.PL = window.PL || {};
       if ((!f && /^quart:/.test(k)) || st === 'prevu' || st === 'envol') { g[k] = acks[k]; n++; }
     });
     acks = g;
-    try { localStorage.setItem('pontline.acks', JSON.stringify(g)); } catch (e) { /* stockage plein : l'acquittement reste pour cette session */ }
+    var gt = {}; Object.keys(g).forEach(function (k) { if (ackT[k]) gt[k] = ackT[k]; }); ackT = gt;
+    try { localStorage.setItem('pontline.acks', JSON.stringify(g)); localStorage.setItem('pontline.ackt', JSON.stringify(gt)); } catch (e) { /* stockage plein : l'acquittement reste pour cette session */ }
   }
-  function nonAcquittees() { return (PL.alertesCourantes || []).filter(function (a) { return acks[a.cle] !== a.niveau; }); }
+  // V5.6 (audit V8, P2-2) : une alerte avec « rappelMin » (DÉPASSÉE) revient quand son acquittement a plus de N min ; l'heure d'acquittement est gardée
+  function acquittee(a, now) {
+    if (acks[a.cle] !== a.niveau) return false;
+    if (a.rappelMin && ackT[a.cle] && (now || Date.now()) - ackT[a.cle] >= a.rappelMin * MIN) return false;
+    return true;
+  }
+  function nonAcquittees() { var now = Date.now(); return (PL.alertesCourantes || []).filter(function (a) { return !acquittee(a, now); }); }
 
   /* ---- état de la sauvegarde fichier et du son, toujours visibles en haut ---- */
   function depuis(ms) {
@@ -221,16 +229,21 @@ window.PL = window.PL || {};
     if (F && F.etat === 'erreur') h += '<div class="bandeau warn"><b>SAUVEGARDE FICHIER</b><span class="txt">Écriture impossible dans le dossier (' + esc(F.erreur) + '). Exportez à la main, ou choisissez un autre dossier dans Données.</span><button class="btn petit" id="bReautoriser">Réessayer</button></div>';
     // V3 : jusqu'à 3 alertes visibles à la fois (rouges d'abord), une ligne chacune
     var visibles = nonAcquittees(), MAXB = window.innerHeight * 16 / (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16) < 820 ? 2 : 3; // V4 (P2-9) : 2 bandeaux d'alerte sur un petit écran (V6 : hauteur en unités de la mise en page, qui grandit avec l'écran)
-    visibles.slice(0, MAXB).forEach(function (a, i) {
+    // V5.6 (audit V8, P2-1) : « +N autre(s) » est un bouton qui déploie TOUTES les alertes (la liste défile si elle est longue) ; « Réduire » la referme
+    if (visibles.length <= MAXB) alertesDeployees = false;
+    var aff = alertesDeployees ? visibles : visibles.slice(0, MAXB), cachees = visibles.length - MAXB, cachRouges = visibles.slice(MAXB).filter(function (x) { return x.niveau === 'danger'; }).length;
+    if (alertesDeployees) h += '<div class="alertes-liste">';
+    aff.forEach(function (a, i) {
       var nom = { danger: '⚠ URGENT', warn: '⚠ ATTENTION', info: 'ℹ RAPPEL' }[a.niveau];
       h += '<div class="bandeau alerte ' + a.niveau + '"><b>' + nom + '</b><span class="txt">' + esc(a.texte) + '</span>' +
-        (i === MAXB - 1 && visibles.length > MAXB ? '<span class="autres">+' + (visibles.length - MAXB) + ' autre(s)</span>' : '') +
+        (i === aff.length - 1 && visibles.length > MAXB ? '<button class="btn petit autres" id="bAutres" aria-expanded="' + alertesDeployees + '" title="' + (alertesDeployees ? 'Ne plus afficher que les plus urgentes' : 'Afficher toutes les alertes (' + cachees + ' de plus)') + '">' + (alertesDeployees ? 'Réduire ▴' : '+' + cachees + ' autre(s)' + (cachRouges ? ' dont ' + cachRouges + ' URGENT' : '') + ' ▾') + '</button>' : '') +
         (a.action && a.action.decolle ? '<button class="btn petit" data-decolle="' + esc(a.action.decolle) + '">Décollé à ' + T.hm(a.action.t, PL.etat.data.settings.offsetMin) + '</button><button class="btn petit" data-annule="' + esc(a.action.decolle) + '" title="Le vol ne partira pas : plus d\'alerte">Vol annulé…</button>' : '') +
         (a.action && a.action.radio ? '<button class="btn petit primaire" data-radio="1" data-vol="' + esc(a.action.radio) + '" title="Contact radio reçu : ops normal (écrit dans la main courante)">Radio ✓</button>' : '') +
         (a.action && a.action.pont ? '<button class="btn petit primaire" data-pconf="' + esc(a.action.pont) + '" data-phase="' + esc(a.action.phase) + '" title="Noter maintenant le changement de pont dans la main courante">Confirmer : pont ' + esc(a.action.deck) + '</button><button class="btn petit" data-pign="' + esc(a.action.pont) + '" data-phase="' + esc(a.action.phase) + '" title="Le pont ne change pas">Ignorer</button>' : '') +
         (a.action && a.action.ravito ? '<button class="btn petit primaire" data-rconf="' + esc(a.action.ravito) + '" data-seq="' + esc(a.action.seq) + '" title="Noter le début du ravitaillement dans la main courante">Confirmer</button><button class="btn petit" data-rign="' + esc(a.action.ravito) + '" data-seq="' + esc(a.action.seq) + '">Ignorer</button>' : '') +
         (a.pont || a.ravito ? '' : '<button class="btn petit" data-ack="' + esc(a.cle) + '" data-niv="' + esc(a.niveau) + '">Acquitter</button>') + '</div>';
     });
+    if (alertesDeployees) h += '</div>';
     if (!S.lectureSeule && pctCache >= 70) h += '<div class="bandeau warn"><b>STOCKAGE</b><span class="txt">Stockage du navigateur rempli à ' + pctCache + ' % : archivez (Données → Nouvelle mission / archiver) avant qu\'il soit plein.</span><button class="btn petit" id="bArchiver">Archiver…</button></div>';
     // rappels (heure du jour, démarrage à vide) APRÈS les alertes
     var ctl = controleHeureDu();
@@ -277,7 +290,9 @@ window.PL = window.PL || {};
   }
 
   function annuler() {
+    PL.journal.deverrouiller(); // V5.6 : après « Annuler », les boutons Décollage / Appontage sont tout de suite disponibles
     var m = E.annuler();
+    if (m) PL.ui.renderTout();
     if (m) toast('Annulé : ' + m.libelle + ' (ligne de correction ajoutée à la main courante).');
   }
 
@@ -481,7 +496,8 @@ window.PL = window.PL || {};
     });
     $('bandeaux').addEventListener('click', function (e) {
       var a = e.target.closest('[data-ack]');
-      if (a) { acks[a.getAttribute('data-ack')] = a.getAttribute('data-niv'); garderAcks(); renderBandeaux(); return; }
+      if (a) { var ck = a.getAttribute('data-ack'); acks[ck] = a.getAttribute('data-niv'); ackT[ck] = Date.now(); Y.oublierSon(ck); garderAcks(); renderBandeaux(); return; }
+      if (e.target.closest('#bAutres')) { alertesDeployees = !alertesDeployees; renderBandeaux(); return; }
       var ro = e.target.closest('[data-radio]'); // V5 : ops normal
       if (ro) { if (E.peutEcrire() && E.radioOk(ro.getAttribute('data-vol'))) toast('Contact radio ' + ((E.volParId(ro.getAttribute('data-vol')) || {}).callsign || '') + ' noté : ops normal.'); return; }
       var pc = e.target.closest('[data-pconf]'); // V5.3 : pont programmé

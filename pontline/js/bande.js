@@ -17,7 +17,8 @@ window.PL = window.PL || {};
     });
   }
   function bouton(f, attrs, lib, titre, cls) {
-    return '<button class="btn petit' + (cls ? ' ' + cls : '') + '" data-vol="' + esc(f.id) + '" ' + attrs + ' title="' + esc(titre) + '" aria-label="' + esc(titre) + '">' + lib + '</button>';
+    var v = /data-act="(dec|app)"/.test(attrs) ? PL.journal.btnVerrou(f.id, lib) : { cls: '', attr: '', lib: lib, titre: null };
+    return '<button class="btn petit' + (cls ? ' ' + cls : '') + v.cls + '" data-vol="' + esc(f.id) + '" ' + attrs + v.attr + ' title="' + esc(v.titre || titre) + '" aria-label="' + esc(v.titre || titre) + '">' + v.lib + '</button>';
   }
   // V5.1 (retour Florian) : case haute et étroite, sur 3 lignes : indicatif / temps / boutons
   function hz(t, off) { return T.hm(t, off) + (off ? ' <small>' + T.hm(t, 0) + 'Z</small>' : ''); }

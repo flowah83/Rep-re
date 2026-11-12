@@ -11,6 +11,9 @@ window.PL = window.PL || {};
     try { var t = '__pl_test'; localStorage.setItem(t, '1'); localStorage.removeItem(t); return true; } catch (e) { return false; }
   }
 
+  // V5.6 (audit V8, P2-3) : « plus récente » = schéma strictement supérieur à celui de cette version (6 en V5.6)
+  S.plusRecent = function (e) { return !!e && typeof e.schemaVersion === 'number' && e.schemaVersion > PL.etat.etatVide().schemaVersion; };
+
   S.load = function () {
     if (!lsDispo()) { S.erreur = 'Le navigateur bloque la sauvegarde locale (mode privé ?). Rien ne sera conservé.'; return PL.etat.etatVide(); }
     var brut = localStorage.getItem(KEY);
@@ -19,7 +22,7 @@ window.PL = window.PL || {};
     try {
       var e = JSON.parse(brut);
       if (!e || e.app !== 'pontline') throw new Error('format');
-      if (e.schemaVersion > 4) S.avertissement = 'Données créées par une version plus récente de Pont·Line.';
+      if (S.plusRecent(e)) S.avertissement = 'Données créées par une version plus récente de Pont·Line.';
       var n = PL.etat.normaliser(e); delete n.rejets;
       return n;
     } catch (err) {

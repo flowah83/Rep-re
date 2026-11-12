@@ -47,6 +47,11 @@ window.PL = window.PL || {};
     var h = T.hm(a, off) + '–' + T.hm(b, off) + (off ? ' (' + T.hm(a, 0).replace(':', '') + '–' + T.hm(b, 0).replace(':', '') + 'Z)' : '');
     return ' data-vol="' + esc(f.id) + '" data-seg="' + esc(id) + '" data-nom="' + esc(nom) + '" data-h="' + esc(h) + '"' + (court ? ' data-court="' + esc(court) + '"' : '') + ' tabindex="-1" role="button" aria-label="' + esc(f.callsign + ' : ' + nom + ', ' + h + ' — Entrée pour ouvrir la fiche') + '"';
   }
+  // V5.6 : bouton d'état verrouillé ~1,5 s après un changement (anti double-clic)
+  function btnEtat(f, k, lib, titre) {
+    var v = PL.journal.btnVerrou(f.id, lib);
+    return '<button class="btn petit act' + v.cls + '" data-act="' + k + '" data-vol="' + esc(f.id) + '"' + v.attr + ' title="' + esc(v.titre || titre) + '">' + v.lib + '</button>';
+  }
   function ligneMaint(now, w) {
     if (now < w.debut || now > w.fin) return '';
     return '<div class="maint" style="left:' + pc(now, w) + '%"></div>';
@@ -86,8 +91,8 @@ window.PL = window.PL || {};
       var lab = '<b>' + (PL.conflits.pourVol(conf, f.id).length ? '<span class="conf-ico" title="Conflit de planning">⚠</span> ' : '') + esc(f.callsign) + (f.rotation > 1 ? ' <small>rot. ' + esc(f.rotation) + '</small>' : '') + ' <small class="tyc">' + esc(f.type) + '</small></b><span>' + esc(f.type) + (f.crew ? ' · ' + esc(f.crew) : '') + '</span>' +
         '<span>' + (f.pax ? esc(f.pax) + ' pax' : '0 pax') + (f.mission ? ' · ' + esc(f.mission) : '') + '</span>' +
         '<span class="pill ' + st + '">' + E.STATUT_NOMS[st] + '</span>' +
-        (st === 'prevu' ? '<button class="btn petit act" data-act="dec" data-vol="' + esc(f.id) + '" title="Décollage de ' + esc(f.callsign) + '">Décollage</button>' :
-          st === 'envol' ? '<button class="btn petit act" data-act="app" data-vol="' + esc(f.id) + '" title="Appontage de ' + esc(f.callsign) + '">Appontage</button>' : ''); // V4 (P2-10)
+        (st === 'prevu' ? btnEtat(f, 'dec', 'Décollage', 'Décollage de ' + f.callsign) :
+          st === 'envol' ? btnEtat(f, 'app', 'Appontage', 'Appontage de ' + f.callsign) : ''); // V4 (P2-10)
       var p = fond, cf = PL.conflits.pourVol(conf, f.id), seqConf = {};
       cf.forEach(function (c) {
         c.seqs.forEach(function (sid) { seqConf[sid] = true; });

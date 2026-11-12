@@ -633,3 +633,9 @@ html[data-theme="nuit"] #tipSeg { background: var(--panel2); color: var(--txt); 
 .evt.evtc { font-size: 0; }
 .evt.evtc::before { content: attr(data-g); font-size: 0.6875rem; }
 .evt.evtx { display: none; }
+
+/* ===== V5.6 : boutons d'état verrouillés après un clic, alertes dépliables ===== */
+.btn.verrou, .btn[aria-disabled="true"].act { opacity: .6; cursor: progress; background: var(--panel2); border-style: dashed; }
+.bv .btn.verrou { min-width: 7.5rem; }
+.bandeau .btn.autres { white-space: nowrap; font-weight: 700; }
+.alertes-liste { display: flex; flex-direction: column; gap: 0.25rem; max-height: 42vh; overflow-y: auto; }

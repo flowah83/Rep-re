@@ -1,4 +1,4 @@
-PONT·LINE — Version 5.5
+PONT·LINE — Version 5.6
 Aide personnelle pour suivre les vols d'hélicoptères à bord. Fonctionne sans Internet.
 Outil NON CERTIFIÉ : les procédures du bord, la radio et les documents officiels font toujours foi.
 
@@ -16,6 +16,16 @@ Outil NON CERTIFIÉ : les procédures du bord, la radio et les documents officie
 6. Si rien n'apparaît au point 4 : voir plus bas « NAVIGATEUR VIDÉ : REPRENDRE D'ABORD ».
 On peut revenir à la version 4 en remettant ses fichiers, mais gardez plutôt la V5 : les lignes « ETA » et
 « Séquence » y deviendraient de simples notes.
+
+=== VERSION 5.6 (alertes et double-clic) ===
+- Double-clic : après Décollage ou Appontage, les boutons du vol sont verrouillés ~1,5 s (voir plus bas, ligne
+  « Décollage et Appontage se notent en UN SEUL clic »). Plus d'appontage noté par erreur juste après le décollage.
+- Alertes rouges classées par urgence : fin d'autonomie DÉPASSÉE la plus ancienne d'abord, puis appontage prévu
+  après la fin d'autonomie, puis la fin d'autonomie la plus proche. « +N autre(s) » est maintenant un bouton :
+  il déploie toutes les alertes (« Réduire » pour refermer). Aucune alerte rouge n'est cachée.
+- « DÉPASSÉE » acquittée : l'alerte revient toute seule après 5 min (un bip) tant que le vol est en l'air au-delà de
+  sa fin d'autonomie, avec « depuis N min ». La case du vol reste rouge « DÉPASSÉE » en permanence.
+- Le faux message « Données créées par une version plus récente » à l'ouverture a disparu.
 
 === VERSION 5.5 (noms des séquences toujours lisibles) ===
 Quand des séquences d'un vol sont très proches ou se chevauchent (mise en route, embarquement pax,
@@ -114,8 +124,11 @@ Passer de la 5.0 ou 5.1 à la 5.2 : mêmes étapes que plus haut ; les données 
 - Heure de l'action : sous la main courante, champ « Heure de l'action ». Vide = maintenant.
   Boutons −1, −2, −5 min, ou taper 10:42 (heure bord) ou 0942Z. Pratique quand on note après coup.
 - Après chaque action, le choix du vol revient à « Aucun vol » : pas de note rangée sur le mauvais vol.
-- Toute action importante (décollage, appontage, suppression, import, effacement) demande une confirmation
-  dans une fenêtre Pont·Line, qui rappelle le vol et l'heure.
+- Décollage et Appontage se notent en UN SEUL clic, sans fenêtre de confirmation (rapide). Pour qu'un
+  double-clic n'enregistre pas un appontage juste après le décollage, les boutons d'état du vol sont
+  verrouillés environ 1,5 s après le changement (« ✓ noté 1,2 s »). « Annuler » (↶, ou Ctrl+Z) rétablit l'état
+  d'avant et rend les boutons tout de suite. Suppression, import, effacement et redécollage demandent
+  une confirmation dans une fenêtre Pont·Line, qui rappelle le vol et l'heure.
 - « Vol annulé… » (fiche vol, ou bandeau « décollage non saisi ») : le vol ne partira pas, plus d'alerte.
 - Heure Z affichée sur les cartes, l'axe du temps et la fiche vol, en plus de l'heure bord.
 - Vol en retard sur son appontage prévu : le bloc devient hachuré, on le voit de loin.

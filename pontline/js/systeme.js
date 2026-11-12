@@ -57,6 +57,7 @@ window.PL = window.PL || {};
     } catch (e) { return false; }
   };
   // alertes = alertes affichées et NON acquittées
+  Y.oublierSon = function (cle) { delete dejaSonne[cle]; }; // V5.6 : un rappel qui revient sonne tout de suite
   Y.sonnerSiNouveau = function (alertes, now) {
     if (!PL.etat.data.settings.son) return;
     if (PL.stockage.lectureSeule) return; // V4 (P2-6) : seule la fenêtre qui a la main sonne
